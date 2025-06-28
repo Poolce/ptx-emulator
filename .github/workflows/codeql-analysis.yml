@@ -1,0 +1,46 @@
+name: "CodeQL"
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - cpp
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y cmake ninja-build ccache
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}
+          create-symlink: true
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -GNinja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      - name: Build
+        run: |
+          cmake --build build --parallel
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3

@@ -1,0 +1,155 @@
+name: Build application
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 8 * * *'
+
+jobs:
+  ubuntu-gcc-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y cmake ninja-build ccache
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}
+          create-symlink: true
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -GNinja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      - name: Build
+        run: |
+          cmake --build build --parallel
+
+  ubuntu-clang-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y cmake ninja-build ccache
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}
+          create-symlink: true
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -GNinja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      - name: Build
+        run: |
+          cmake --build build --parallel
+
+  windows-msvc-build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          windows_compile_environment: msvc
+      - name: CMake configure
+        shell: bash
+        run: >
+          cmake -S . -B build
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      - name: Build
+        shell: bash
+        run: |
+          cmake --build build --config Release --parallel
+
+  macos-clang-build:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          brew install ninja
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}
+          create-symlink: true
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -GNinja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      - name: Build
+        run: |
+          cmake --build build --parallel
+
+  ubuntu-gcc-build-codecov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y cmake ninja-build ccache gcovr lcov
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}
+          create-symlink: true
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -GNinja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_C_FLAGS="--coverage"
+          -DCMAKE_CXX_FLAGS="--coverage"
+      - name: Build
+        run: |
+          cmake --build build --parallel
+      - name: Test
+        run: |
+          build/bin/run_tests
+        env:
+          CTEST_OUTPUT_ON_FAILURE: 1
+      - name: Generate lcov Coverage Data
+        run: |
+          cd build
+          lcov --capture --directory . --output-file ../coverage.info
+          lcov --remove ../coverage.info '*/3rdparty/*' '/usr/*' '*/test/*' --output-file ../coverage.info
+          cd ..
+          genhtml coverage.info --output-directory cov-report
+        continue-on-error: true
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cov-report
+          path: 'cov-report'
+      - name: Generate gcovr Coverage Data
+        run: |
+          cd build
+          gcovr -r ../include ../src --xml --output ../coverage.xml
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5.4.3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
