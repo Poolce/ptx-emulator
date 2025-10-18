@@ -1,6 +1,7 @@
 #pragma once
 
-namespace ptx {
+namespace Emulator {
+namespace Ptx {
 
 class Instruction {
  private:
@@ -14,4 +15,5 @@ class Instruction {
   virtual ~Instruction();
 };
 
-}  // namespace ptx
+}  // namespace Ptx
+}  // namespace Emulator

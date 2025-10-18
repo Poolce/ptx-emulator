@@ -6,8 +6,10 @@ namespace Context {
 class GlobalContext {
  private:
   std::vector<BlockContext> block_contecsts;
-  std::vector<uint8_t> global_memory;
+
   std::shared_ptr<ptx::Module> ptx_module_;
+
+  std::vector<uint8_t> global_memory;
 
  public:
   GlobalContext() = default;
