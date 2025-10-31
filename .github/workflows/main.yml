@@ -140,7 +140,7 @@ jobs:
           genhtml coverage.info --output-directory cov-report
         continue-on-error: true
       - name: Upload coverage report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cov-report
           path: 'cov-report'
