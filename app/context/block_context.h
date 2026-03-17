@@ -4,12 +4,15 @@
 #include <memory>
 #include <vector>
 
-namespace Emulator {
-namespace Ptx {
+namespace Emulator
+{
+namespace Ptx
+{
 class Module;
 } // namespace Ptx
 
-namespace Context {
+namespace Context
+{
 
 class GlobalContext;
 class WarpContext;

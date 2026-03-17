@@ -5,8 +5,10 @@
 #include <memory>
 #include <vector>
 
-namespace Emulator {
-namespace Ptx {
+namespace Emulator
+{
+namespace Ptx
+{
 class Module;
 enum class RegType;
 template <RegType>
@@ -14,7 +16,8 @@ struct Btype;
 enum class SprReg;
 } // namespace Ptx
 
-namespace Context {
+namespace Context
+{
 
 class WarpContext;
 

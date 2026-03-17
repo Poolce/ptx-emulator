@@ -12,7 +12,8 @@ namespace Emulator
 namespace Ptx
 {
 
-namespace {
+namespace
+{
 const std::unordered_map<std::string, FuncType> kStrToFuncType{
     {"", FuncType::kUndefined},
     {"entry", FuncType::kEntry},
