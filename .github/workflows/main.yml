@@ -19,7 +19,8 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          ./venv/bin/python3 -m pip install -r app/ptx/codegen/requirements.txt
+          source ./venv/bin/activate
+          python3 -m pip install jinja2
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -30,7 +31,6 @@ jobs:
           cmake -S . -B build
           -GNinja
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          -DPython3_EXECUTABLE=${{ github.workspace }}/venv/bin/python3
       - name: Build
         run: |
           cmake --build build --parallel
@@ -50,7 +50,8 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          ./venv/bin/python3 -m pip install -r app/ptx/codegen/requirements.txt
+          source ./venv/bin/activate
+          python3 -m pip install jinja2
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -61,7 +62,6 @@ jobs:
           cmake -S . -B build
           -GNinja
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          -DPython3_EXECUTABLE=${{ github.workspace }}/venv/bin/python3
       - name: Build
         run: |
           cmake --build build --parallel
@@ -81,7 +81,8 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          ./venv/bin/python3 -m pip install -r app/ptx/codegen/requirements.txt
+          source ./venv/bin/activate
+          python3 -m pip install jinja2
       - uses: actions/checkout@v5
         with:
           submodules: true
@@ -97,7 +98,6 @@ jobs:
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCMAKE_C_FLAGS="--coverage"
           -DCMAKE_CXX_FLAGS="--coverage"
-          -DPython3_EXECUTABLE=${{ github.workspace }}/venv/bin/python3
       - name: Build
         run: |
           cmake --build build --parallel
