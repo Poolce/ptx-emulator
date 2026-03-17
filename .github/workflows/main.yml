@@ -19,8 +19,7 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          ./venv/bin/python -m pip install --upgrade pip
-          ./venv/bin/python -m pip install jinja2
+          ./venv/bin/python3 -m pip install -r requirements.txt
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -31,6 +30,7 @@ jobs:
           cmake -S . -B build
           -GNinja
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DPython3_EXECUTABLE=${{ github.workspace }}/venv/bin/python3
       - name: Build
         run: |
           cmake --build build --parallel
@@ -50,8 +50,7 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          ./venv/bin/python -m pip install --upgrade pip
-          ./venv/bin/python -m pip install jinja2
+          ./venv/bin/python3 -m pip install -r requirements.txt
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -62,6 +61,7 @@ jobs:
           cmake -S . -B build
           -GNinja
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DPython3_EXECUTABLE=${{ github.workspace }}/venv/bin/python3
       - name: Build
         run: |
           cmake --build build --parallel
@@ -83,16 +83,15 @@ jobs:
         with:
           windows_compile_environment: msvc
       - name: Install Python deps (codegen)
-        if: runner.os == 'Windows'
         run: |
           python3 -m venv ./venv
-          ./venv/Scripts/python.exe -m pip install --upgrade pip
-          ./venv/Scripts/python.exe -m pip install jinja2
+          ./venv/Scripts/python.exe -m pip install -r requirements.txt
       - name: CMake configure
         shell: bash
         run: >
           cmake -S . -B build
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DPython3_EXECUTABLE=${{ github.workspace }}/venv/Scripts/python.exe
       - name: Build
         shell: bash
         run: |
@@ -103,19 +102,18 @@ jobs:
           ctest --test-dir build -C Release --output-on-failure
 
   macos-clang-build:
-    runs-on: macos-latest
+    runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Install dependencies
         run: |
-          brew install cmake ninja ccache
+          brew install ninja
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          ./venv/bin/python -m pip install --upgrade pip
-          ./venv/bin/python -m pip install jinja2
+          ./venv/bin/python3 -m pip install -r requirements.txt
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -126,6 +124,7 @@ jobs:
           cmake -S . -B build
           -GNinja
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DPython3_EXECUTABLE=${{ github.workspace }}/venv/bin/python3
       - name: Build
         run: |
           cmake --build build --parallel
@@ -145,8 +144,7 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          ./venv/bin/python -m pip install --upgrade pip
-          ./venv/bin/python -m pip install jinja2
+          ./venv/bin/python3 -m pip install -r requirements.txt
       - uses: actions/checkout@v5
         with:
           submodules: true
@@ -162,6 +160,7 @@ jobs:
           -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCMAKE_C_FLAGS="--coverage"
           -DCMAKE_CXX_FLAGS="--coverage"
+          -DPython3_EXECUTABLE=${{ github.workspace }}/venv/bin/python3
       - name: Build
         run: |
           cmake --build build --parallel
