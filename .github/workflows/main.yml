@@ -19,8 +19,8 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          source ./venv/bin/activate
-          python3 -m pip install jinja2
+          ./venv/bin/python -m pip install --upgrade pip
+          ./venv/bin/python -m pip install jinja2
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -50,8 +50,8 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          source ./venv/bin/activate
-          python3 -m pip install jinja2
+          ./venv/bin/python -m pip install --upgrade pip
+          ./venv/bin/python -m pip install jinja2
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -83,10 +83,11 @@ jobs:
         with:
           windows_compile_environment: msvc
       - name: Install Python deps (codegen)
+        if: runner.os == 'Windows'
         run: |
           python3 -m venv ./venv
-          source ./venv/bin/activate
-          python3 -m pip install jinja2
+          ./venv/Scripts/python.exe -m pip install --upgrade pip
+          ./venv/Scripts/python.exe -m pip install jinja2
       - name: CMake configure
         shell: bash
         run: >
@@ -102,19 +103,19 @@ jobs:
           ctest --test-dir build -C Release --output-on-failure
 
   macos-clang-build:
-    runs-on: macOS-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Install dependencies
         run: |
-          brew install ninja
+          brew install cmake ninja ccache
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          source ./venv/bin/activate
-          python3 -m pip install jinja2
+          ./venv/bin/python -m pip install --upgrade pip
+          ./venv/bin/python -m pip install jinja2
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -144,8 +145,8 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          source ./venv/bin/activate
-          python3 -m pip install jinja2
+          ./venv/bin/python -m pip install --upgrade pip
+          ./venv/bin/python -m pip install jinja2
       - uses: actions/checkout@v5
         with:
           submodules: true
