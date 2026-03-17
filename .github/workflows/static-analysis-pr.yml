@@ -16,8 +16,7 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          source ./venv/bin/activate
-          python3 -m pip install jinja2
+          ./venv/bin/python3 -m pip install jinja2
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -27,6 +26,9 @@ jobs:
         name: Run clang-tidy
         with:
           build_dir: build
+          install_commands: |
+            apt-get update
+            apt-get install -y --no-install-recommends ninja-build clang-16 ccache
           cmake_command: >
             cmake -S . -B build
             -GNinja
@@ -34,6 +36,7 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
             -DCMAKE_BUILD_TYPE=Release
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+            -DPython3_EXECUTABLE=${{ github.workspace }}/venv/bin/python3
             && cmake --build build --target encoder_codegen --parallel
           config_file: .clang-tidy
           exclude: 3rdparty
