@@ -12,7 +12,8 @@ jobs:
       - name: Install Python deps (codegen)
         run: |
           python3 -m venv ./venv
-          ./venv/bin/python3 -m pip install -r app/ptx/codegen/requirements.txt
+          source ./venv/bin/activate
+          python3 -m pip install jinja2
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
