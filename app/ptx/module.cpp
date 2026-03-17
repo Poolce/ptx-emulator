@@ -2,6 +2,11 @@
 
 #include "function.h"
 
+#include <iostream>
+#include <regex>
+#include <stdexcept>
+#include <string_view>
+
 namespace Emulator
 {
 namespace Ptx
@@ -9,11 +14,11 @@ namespace Ptx
 
 std::shared_ptr<Module> Module::Make(const std::string& ptx)
 {
-    auto module_ = std::make_shared<Module>();
-    constexpr std::string_view pattern = "(.*)\\s\\.(entry|func)\\s([A-z0-9_]+)\\(([\\s\\S]+)\\)\\n?\\{([\\s\\S]+)}";
-    static std::regex re(pattern.data(), std::regex::ECMAScript | std::regex::optimize);
+    auto module = std::make_shared<Module>();
+    constexpr std::string_view kPattern = R"((.*)\s\.(entry|func)\s([A-z0-9_]+)\(([\s\S]+)\)\n?\{([\s\S]+)})";
+    static const std::regex kRe(kPattern.data(), std::regex::ECMAScript | std::regex::optimize);
 
-    auto begin = std::sregex_iterator(ptx.begin(), ptx.end(), re);
+    auto begin = std::sregex_iterator(ptx.begin(), ptx.end(), kRe);
     auto end = std::sregex_iterator();
 
     for (auto it = begin; it != end; ++it)
@@ -26,14 +31,14 @@ std::shared_ptr<Module> Module::Make(const std::string& ptx)
             std::string name = match[3].str();
             std::string content = match[4].str() + match[5].str();
             auto func = Function::Make(attrs, type, name, content);
-            module_->function_map_[name] = func;
+            module->function_map_[name] = func;
         }
         else
         {
             throw std::runtime_error("Function is not matched");
         }
     }
-    return module_;
+    return module;
 }
 
 void Module::Dump()

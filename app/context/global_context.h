@@ -1,28 +1,36 @@
 #pragma once
 
-namespace Emulator
-{
-namespace Context
-{
+#include <cstdint>
+#include <memory>
+#include <vector>
+
+namespace Emulator {
+namespace Ptx {
+class Module;
+} // namespace Ptx
+
+namespace Context {
+
+class BlockContext;
 
 class GlobalContext
 {
   private:
-    std::vector<BlockContext> block_contecsts;
+    std::vector<BlockContext> block_contexts_;
 
-    std::shared_ptr<ptx::Module> ptx_module_;
+    std::shared_ptr<Ptx::Module> ptx_module_;
 
-    std::vector<uint8_t> global_memory;
+    std::vector<std::uint8_t> global_memory_;
 
   public:
     GlobalContext() = default;
     ~GlobalContext() = default;
 
     template <typename T>
-    T GlobalLoad(uint64_t address);
+    T GlobalLoad(std::uint64_t address);
 
     template <typename T>
-    void GlobalStore(uint64_t address, T value);
+    void GlobalStore(std::uint64_t address, T value);
 };
 
 } // namespace Context

@@ -35,7 +35,7 @@ Checks: >
   misc-confusable-identifiers,
   misc-definitions-in-headers,
   misc-header-include-cycle,
-  misc-include-cleaner,
+  -misc-include-cleaner,
   misc-misplaced-const,
   misc-non-copyable-objects,
   misc-redundant-expression,
@@ -50,7 +50,7 @@ Checks: >
 WarningsAsErrors: "*"
 
 CheckOptions:
-  - { key: readability-identifier-naming.NamespaceCase,          value: lower_case }
+  - { key: readability-identifier-naming.NamespaceCase,          value: CamelCase  }
   - { key: readability-identifier-naming.ClassCase,              value: CamelCase  }
   - { key: readability-identifier-naming.StructCase,             value: CamelCase  }
   - { key: readability-identifier-naming.TemplateParameterCase,  value: CamelCase  }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace Emulator
 {
 namespace Ptx

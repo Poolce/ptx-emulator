@@ -2,6 +2,10 @@
 
 #include "instructions.h"
 
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace Emulator
 {
 namespace Ptx

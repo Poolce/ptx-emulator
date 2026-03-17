@@ -1,33 +1,42 @@
 #pragma once
 
-namespace Emulator
-{
-namespace Context
-{
+#include <cstdint>
+#include <memory>
+#include <vector>
 
-class BlockContext
+namespace Emulator {
+namespace Ptx {
+class Module;
+} // namespace Ptx
+
+namespace Context {
+
+class BlockContext;
+class ThreadContext;
+
+class WarpContext
 {
   private:
     std::shared_ptr<BlockContext> block_context_;
-    std::vector<ThreadContext> thread_contecsts_;
+    std::vector<ThreadContext> thread_contexts_;
 
-    std::shared_ptr<ptx::Module> ptx_module_;
+    std::shared_ptr<Ptx::Module> ptx_module_;
 
   public:
-    BlockContext() = default;
-    ~BlockContext() = default;
+    WarpContext() = default;
+    ~WarpContext() = default;
 
     template <typename T>
-    T SharedLoad(uint64_t address);
+    T SharedLoad(std::uint64_t address);
 
     template <typename T>
-    void SharedStore(uint64_t address, T value);
+    void SharedStore(std::uint64_t address, T value);
 
     template <typename T>
-    T GlobalLoad(uint64_t address);
+    T GlobalLoad(std::uint64_t address);
 
     template <typename T>
-    void GlobalStore(uint64_t address, T value);
+    void GlobalStore(std::uint64_t address, T value);
 };
 
 } // namespace Context

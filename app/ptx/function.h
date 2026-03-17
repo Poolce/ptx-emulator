@@ -2,7 +2,10 @@
 
 #include "basic_block.h"
 
+#include <memory>
 #include <set>
+#include <string>
+#include <vector>
 
 namespace Emulator
 {
@@ -12,14 +15,14 @@ using BasicBlockList = std::vector<std::shared_ptr<BasicBlock>>;
 
 enum class FuncType
 {
-    UNDEFINED,
-    Entry,
-    Func
+    kUndefined,
+    kEntry,
+    kFunc
 };
 
 enum class FuncAttr
 {
-    Visible
+    kVisible
 };
 
 class Function
@@ -28,7 +31,7 @@ class Function
     BasicBlockList basic_blocks_ = BasicBlockList();
     std::string name_ = "";
     std::vector<FuncAttr> attrs_ = {};
-    FuncType type_ = FuncType::UNDEFINED;
+    FuncType type_ = FuncType::kUndefined;
 
   public:
     static std::shared_ptr<Function>

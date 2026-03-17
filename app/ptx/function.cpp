@@ -2,6 +2,9 @@
 
 #include "utils.h"
 
+#include <regex>
+#include <stdexcept>
+#include <string_view>
 #include <unordered_map>
 
 namespace Emulator
@@ -9,31 +12,37 @@ namespace Emulator
 namespace Ptx
 {
 
-static std::unordered_map<std::string, FuncType> StrToFuncType{{"", FuncType::UNDEFINED},
-                                                               {"entry", FuncType::Entry},
-                                                               {"func", FuncType::Func}};
+namespace {
+const std::unordered_map<std::string, FuncType> kStrToFuncType{
+    {"", FuncType::kUndefined},
+    {"entry", FuncType::kEntry},
+    {"func", FuncType::kFunc},
+};
 
-static std::unordered_map<std::string, FuncAttr> StrToFuncAttr{{"visible", FuncAttr::Visible}};
+const std::unordered_map<std::string, FuncAttr> kStrToFuncAttr{
+    {"visible", FuncAttr::kVisible},
+};
+} // namespace
 
 template <>
 FuncType FromString(const std::string& str)
 {
-    return StrToFuncType[str];
+    return kStrToFuncType.at(str);
 }
 
 template <>
 FuncAttr FromString(const std::string& str)
 {
-    return StrToFuncAttr[str];
+    return kStrToFuncAttr.at(str);
 }
 
 static std::vector<FuncAttr> parseAttributes(const std::string& attrs)
 {
-    constexpr std::string_view pattern = "\\.([A-Za-z0-9_]+)";
-    static std::regex re(pattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
+    constexpr std::string_view kPattern = "\\.([A-Za-z0-9_]+)";
+    static const std::regex kRe(kPattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
 
     std::vector<FuncAttr> res{};
-    auto begin = std::sregex_iterator(attrs.begin(), attrs.end(), re);
+    auto begin = std::sregex_iterator(attrs.begin(), attrs.end(), kRe);
     auto end = std::sregex_iterator();
 
     for (auto it = begin; it != end; ++it)
@@ -58,10 +67,10 @@ Function::Make(const std::string& attrs, const std::string& type, const std::str
     func->name_ = name;
     func->attrs_ = parseAttributes(attrs);
     func->type_ = FromString<FuncType>(type);
-    constexpr std::string_view pattern = "^\\$([A-Za-z0-9_]+):$";
-    static std::regex re(pattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
+    constexpr std::string_view kPattern = "^\\$([A-Za-z0-9_]+):$";
+    static const std::regex kRe(kPattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
 
-    auto begin = std::sregex_iterator(content.begin(), content.end(), re);
+    auto begin = std::sregex_iterator(content.begin(), content.end(), kRe);
     auto end = std::sregex_iterator();
     std::string bb_name = "entry";
     int pos = 0;
