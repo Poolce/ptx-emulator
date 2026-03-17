@@ -26,7 +26,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           config_file: .clang-tidy
-          exclude: 3rdparty
+          exclude: 3rdparty|/build/|/autogen/
           split_workflow: true
           lgtm_comment_body: ""
         env:
