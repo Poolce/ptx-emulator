@@ -1,0 +1,67 @@
+#pragma once
+
+#include <unordered_map>
+#include <string>
+#include <cstdint>
+
+
+namespace Emulator {
+namespace Ptx {
+
+class registerOperand : public std::string {
+public:
+    registerOperand() = default;
+    registerOperand(const std::string& str) : std::string(str) {}
+};
+
+class sprRegisterOperand : public std::string {
+public:
+    sprRegisterOperand() = default;
+    sprRegisterOperand(const std::string& str) : std::string(str) {}
+};
+
+class addressOperand : public std::string {
+public:
+    addressOperand() = default;
+    addressOperand(const std::string& str) : std::string(str) {}
+};
+
+class symbolOperand : public std::string {
+public:
+    symbolOperand() = default;
+    symbolOperand(const std::string& str) : std::string(str) {}
+};
+
+using immediateOperand = uint64_t;
+
+
+{% for i_name, i_param in isa.instructions.items() %}
+{% if i_param.params %}
+{% for p_name, p_param in i_param.params.items() %}
+{% if p_param.arg_type == "qualifier" %}
+{% set name = funcs.get_type_name(i_name, p_name, p_param) %}
+
+
+enum class {{ name }} {
+    UNDEFINED,
+{% for item in p_param["values"] %}    {{ funcs.process_pname(item) }},
+{% endfor %}
+};
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+{% for p_name, p_param in isa.types.items() %}
+{% set name = p_name %}
+
+
+enum class {{ name }} {
+    UNDEFINED,
+{% for item in p_param["values"] %}    {{ funcs.process_pname(item) }},
+{% endfor %}
+};
+{% endfor %}
+
+} // Ptx
+} // Emulator
