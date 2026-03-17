@@ -7,6 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 # Custom methods
 regexp_map = {}
 
+
 class CustomFunctions:
     def make_regexp(instr):
         tmp = instr["regexp_template"]
@@ -32,32 +33,36 @@ class CustomFunctions:
         elif "Operand" in arg_type:
             return arg_type
         return ""
-    
+
     def process_pname(name):
-        l = name.split("::")
-        return "".join([i.capitalize() for i in l])
+        sname = name.split("::")
+        return "".join([i.capitalize() for i in sname])
 
 
 # Code generation
 _SCRIPT_DIR = Path(__file__).resolve().parent
 env = Environment(loader=FileSystemLoader(str(_SCRIPT_DIR / "templates")),
-                    trim_blocks=True,
-                    lstrip_blocks=True)
+                  trim_blocks=True,
+                  lstrip_blocks=True)
+
 
 def gen_instruction_header(isa):
     header_template = env.get_template("instruction.h.j2")
     return header_template.render(instructions=isa["instructions"],
                                   funcs=CustomFunctions)
 
+
 def gen_instruction_source(isa):
     header_template = env.get_template("instruction.cpp.j2")
     return header_template.render(instructions=isa["instructions"],
                                   funcs=CustomFunctions)
 
+
 def gen_types_header(isa):
     header_template = env.get_template("ptx_types.h.j2")
     return header_template.render(isa=isa,
                                   funcs=CustomFunctions)
+
 
 def gen_types_source(isa):
     header_template = env.get_template("ptx_types.cpp.j2")
