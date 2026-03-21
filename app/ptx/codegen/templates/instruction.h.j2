@@ -1,0 +1,46 @@
+#pragma once
+
+#include "ptx_types.h"
+#include <memory>
+#include <regex>
+#include <iostream>
+#include <cstdint>
+
+
+namespace Emulator {
+namespace Ptx {
+
+class Instruction {
+public:
+    Instruction() = default;
+    virtual void Execute() = 0;
+    virtual void Dump() = 0;
+
+};
+
+
+{% for i_name, instr in instructions.items() %}
+{% if instr.regexp_template %}
+
+class {{ i_name }}Instruction : public Instruction {
+ public:
+{% for name, type in instr.params.items() %}  {{ funcs.get_type_name(i_name, name, type) }} {{ name }}_ = {{ funcs.get_type_name(i_name, name, type) }}();
+{% endfor %}
+
+ public:
+    {{ i_name }}Instruction() {};
+    void Execute() override;
+    static std::shared_ptr<{{ i_name }}Instruction> Make(const std::string& line);
+    
+    void Dump() override;
+
+    friend std::shared_ptr<Instruction> makeInstruction(const std::string& line);
+};
+
+{% endif %}
+{% endfor %}
+
+std::shared_ptr<Instruction> makeInstruction(const std::string& name, const std::string& line);
+
+} // Ptx
+} // Emulator

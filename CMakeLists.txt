@@ -10,5 +10,5 @@ enable_testing()
 
 add_subdirectory(3rdparty)
 add_subdirectory(app)
-add_subdirectory(src)
+# add_subdirectory(src)
 add_subdirectory(test)

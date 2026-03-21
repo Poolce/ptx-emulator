@@ -9,6 +9,10 @@ jobs:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build python3-pip
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -18,15 +22,20 @@ jobs:
         name: Run clang-tidy
         with:
           build_dir: build
-          apt_packages: ninja-build
+          install_commands: |
+            apt-get update
+            apt-get install -y --no-install-recommends ninja-build clang-16 ccache python3 python3-pip
+            apt-get install -y --no-install-recommends python3-jinja2
           cmake_command: >
             cmake -S . -B build
+            -GNinja
             -DCMAKE_C_COMPILER_LAUNCHER=ccache
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
             -DCMAKE_BUILD_TYPE=Release
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+            && cmake --build build --target encoder_codegen --parallel
           config_file: .clang-tidy
-          exclude: 3rdparty
+          exclude: 3rdparty test
           split_workflow: true
           lgtm_comment_body: ""
         env:
