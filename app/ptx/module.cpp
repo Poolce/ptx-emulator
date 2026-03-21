@@ -15,10 +15,10 @@ namespace Ptx
 std::shared_ptr<Module> Module::Make(const std::string& ptx)
 {
     auto module = std::make_shared<Module>();
-    constexpr std::string_view kPattern = R"((.*)\s\.(entry|func)\s([A-z0-9_]+)\(([\s\S]+)\)\n?\{([\s\S]+)})";
-    static const std::regex kRe(kPattern.data(), std::regex::ECMAScript | std::regex::optimize);
+    constexpr std::string_view Pattern = R"((.*)\s\.(entry|func)\s([A-Za-z0-9_]+)\(([\s\S]+)\)\n?\{([\s\S]+)})";
+    static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize);
 
-    auto begin = std::sregex_iterator(ptx.begin(), ptx.end(), kRe);
+    auto begin = std::sregex_iterator(ptx.begin(), ptx.end(), Re);
     auto end = std::sregex_iterator();
 
     for (auto it = begin; it != end; ++it)

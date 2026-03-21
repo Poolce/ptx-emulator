@@ -13,10 +13,10 @@ std::shared_ptr<BasicBlock> BasicBlock::Make(const std::string& name, const std:
 {
     auto bb = std::make_shared<BasicBlock>();
     bb->name_ = name;
-    constexpr std::string_view kPattern = "^\\.?(@%p[0-9]+\\s)?([a-z]+).*$";
-    static const std::regex kRe(kPattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
+    constexpr std::string_view Pattern = "^\\.?(@%p[0-9]+\\s)?([a-z]+).*$";
+    static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
 
-    auto begin = std::sregex_iterator(content.begin(), content.end(), kRe);
+    auto begin = std::sregex_iterator(content.begin(), content.end(), Re);
     auto end = std::sregex_iterator();
 
     for (auto it = begin; it != end; ++it)
