@@ -18,8 +18,10 @@ class Module
     FunctionMap function_map_;
 
   public:
-    void Dump();
     static std::shared_ptr<Module> Make(const std::string& ptx);
+
+    void Dump();
+    std::shared_ptr<Function> GetEntryFunc() const;
 };
 } // namespace Ptx
 } // namespace Emulator

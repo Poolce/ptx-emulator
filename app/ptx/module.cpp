@@ -49,5 +49,16 @@ void Module::Dump()
         func->Dump();
     }
 }
+
+std::shared_ptr<Function> Module::GetEntryFunc() const
+{
+    for (const auto& [name, func] : function_map_)
+    {
+        if (func->isEntry())
+            return func;
+    }
+    throw std::runtime_error("Entry function did not found");
+}
+
 } // namespace Ptx
 } // namespace Emulator

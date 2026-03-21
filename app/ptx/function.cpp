@@ -106,5 +106,18 @@ void Function::Dump()
     }
 }
 
+bool Function::isEntry() const
+{
+    bool fl = false;
+    for (const auto& attr : attrs_)
+    {
+        if (attr == FuncAttr::Visible)
+        {
+            fl = true;
+        }
+    }
+    return fl & (type_ == FuncType::Entry);
+}
+
 } // namespace Ptx
 } // namespace Emulator

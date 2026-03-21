@@ -38,6 +38,7 @@ class Function
     Make(const std::string& attrs, const std::string& type, const std::string& name, const std::string& content);
 
     void Dump();
+    bool isEntry() const;
 };
 } // namespace Ptx
 
