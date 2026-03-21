@@ -15,7 +15,7 @@ namespace Ptx
 namespace
 {
 const std::unordered_map<std::string, FuncType> kStrToFuncType{
-    {"", FuncType::kUndefined},
+    {"", FuncType::Undefined},
     {"entry", FuncType::kEntry},
     {"func", FuncType::kFunc},
 };
