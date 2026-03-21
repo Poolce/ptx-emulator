@@ -15,14 +15,14 @@ using BasicBlockList = std::vector<std::shared_ptr<BasicBlock>>;
 
 enum class FuncType : uint8_t
 {
-    Undefined,
-    kEntry,
-    kFunc
+    undefined,
+    entry,
+    func
 };
 
 enum class FuncAttr : uint8_t
 {
-    kVisible
+    visible
 };
 
 class Function
@@ -31,7 +31,7 @@ class Function
     BasicBlockList basic_blocks_;
     std::string name_;
     std::vector<FuncAttr> attrs_;
-    FuncType type_ = FuncType::Undefined;
+    FuncType type_ = FuncType::undefined;
 
   public:
     static std::shared_ptr<Function>

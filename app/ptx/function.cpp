@@ -15,29 +15,16 @@ namespace Ptx
 namespace
 {
 const std::unordered_map<std::string, FuncType> kStrToFuncType{
-    {"", FuncType::Undefined},
-    {"entry", FuncType::kEntry},
-    {"func", FuncType::kFunc},
+    {"", FuncType::undefined},
+    {"entry", FuncType::entry},
+    {"func", FuncType::func},
 };
 
 const std::unordered_map<std::string, FuncAttr> kStrToFuncAttr{
-    {"visible", FuncAttr::kVisible},
+    {"visible", FuncAttr::visible},
 };
-} // namespace
 
-template <>
-FuncType FromString(const std::string& str)
-{
-    return kStrToFuncType.at(str);
-}
-
-template <>
-FuncAttr FromString(const std::string& str)
-{
-    return kStrToFuncAttr.at(str);
-}
-
-static std::vector<FuncAttr> parseAttributes(const std::string& attrs)
+std::vector<FuncAttr> parseAttributes(const std::string& attrs)
 {
     constexpr std::string_view kPattern = "\\.([A-Za-z0-9_]+)";
     static const std::regex kRe(kPattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
@@ -60,6 +47,22 @@ static std::vector<FuncAttr> parseAttributes(const std::string& attrs)
     }
     return res;
 }
+
+} // namespace
+
+template <>
+FuncType FromString(const std::string& str)
+{
+    return kStrToFuncType.at(str);
+}
+
+template <>
+FuncAttr FromString(const std::string& str)
+{
+    return kStrToFuncAttr.at(str);
+}
+
+
 
 std::shared_ptr<Function>
 Function::Make(const std::string& attrs, const std::string& type, const std::string& name, const std::string& content)

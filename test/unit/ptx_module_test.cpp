@@ -17,8 +17,8 @@ class CoutCapture
     std::string Str() const { return buf_.str(); }
 
   private:
-    std::ostringstream buf_{};
-    std::streambuf* old_{};
+    std::ostringstream buf_;
+    std::streambuf* old_;
 };
 
 } // namespace
