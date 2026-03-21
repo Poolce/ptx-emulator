@@ -14,13 +14,13 @@ namespace Ptx
 
 namespace
 {
-const std::unordered_map<std::string, FuncType> kStrToFuncType{
+const std::unordered_map<std::string, FuncType> StrToFuncType{
     {"", FuncType::Undefined},
     {"entry", FuncType::Entry},
     {"func", FuncType::Func},
 };
 
-const std::unordered_map<std::string, FuncAttr> kStrToFuncAttr{
+const std::unordered_map<std::string, FuncAttr> StrToFuncAttr{
     {"visible", FuncAttr::Visible},
 };
 } // namespace
@@ -28,13 +28,13 @@ const std::unordered_map<std::string, FuncAttr> kStrToFuncAttr{
 template <>
 FuncType FromString(const std::string& str)
 {
-    return kStrToFuncType.at(str);
+    return StrToFuncType.at(str);
 }
 
 template <>
 FuncAttr FromString(const std::string& str)
 {
-    return kStrToFuncAttr.at(str);
+    return StrToFuncAttr.at(str);
 }
 
 static std::vector<FuncAttr> parseAttributes(const std::string& attrs)
