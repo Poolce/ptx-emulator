@@ -15,13 +15,13 @@ namespace Ptx
 namespace
 {
 const std::unordered_map<std::string, FuncType> kStrToFuncType{
-    {"", FuncType::undefined},
-    {"entry", FuncType::entry},
-    {"func", FuncType::func},
+    {"", FuncType::Undefined},
+    {"entry", FuncType::Entry},
+    {"func", FuncType::Func},
 };
 
 const std::unordered_map<std::string, FuncAttr> kStrToFuncAttr{
-    {"visible", FuncAttr::visible},
+    {"visible", FuncAttr::Visible},
 };
 } // namespace
 
