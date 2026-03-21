@@ -48,7 +48,7 @@ static std::vector<FuncAttr> parseAttributes(const std::string& attrs)
 
     for (auto it = begin; it != end; ++it)
     {
-        std::smatch match = *it;
+        const std::smatch& match = *it;
         if (match.size() == 2)
         {
             res.push_back(FromString<FuncAttr>(match[1]));
@@ -77,7 +77,7 @@ Function::Make(const std::string& attrs, const std::string& type, const std::str
     int pos = 0;
     for (auto it = begin; it != end; ++it)
     {
-        std::smatch match = *it;
+        const std::smatch& match = *it;
         if (match.size() == 2)
         {
             auto bb_content = content.substr(pos, match.position() - pos);

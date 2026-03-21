@@ -15,7 +15,7 @@ using FunctionMap = std::unordered_map<std::string, std::shared_ptr<Function>>;
 class Module
 {
   private:
-    FunctionMap function_map_ = FunctionMap();
+    FunctionMap function_map_;
 
   public:
     void Dump();

@@ -21,7 +21,7 @@ std::shared_ptr<BasicBlock> BasicBlock::Make(const std::string& name, const std:
 
     for (auto it = begin; it != end; ++it)
     {
-        std::smatch match = *it;
+        const std::smatch& match = *it;
         if (match.size() >= 3)
         {
             std::string name = match[2].str();

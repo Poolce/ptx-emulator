@@ -16,8 +16,9 @@ using InstructionList = std::vector<std::shared_ptr<Instruction>>;
 class BasicBlock
 {
   private:
-    std::string name_ = "";
-    InstructionList instr_list_ = InstructionList();
+    std::string name_;
+    InstructionList instr_list_;
+    ;
 
   public:
     static std::shared_ptr<BasicBlock> Make(const std::string& name, const std::string& content);

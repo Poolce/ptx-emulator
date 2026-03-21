@@ -23,7 +23,7 @@ std::shared_ptr<Module> Module::Make(const std::string& ptx)
 
     for (auto it = begin; it != end; ++it)
     {
-        std::smatch match = *it;
+        const std::smatch& match = *it;
         if (match.size() == 6)
         {
             std::string attrs = match[1].str();

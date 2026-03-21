@@ -13,14 +13,14 @@ namespace Ptx
 {
 using BasicBlockList = std::vector<std::shared_ptr<BasicBlock>>;
 
-enum class FuncType
+enum class FuncType : uint8_t
 {
-    kUndefined,
+    Undefined,
     kEntry,
     kFunc
 };
 
-enum class FuncAttr
+enum class FuncAttr : uint8_t
 {
     kVisible
 };
@@ -28,10 +28,10 @@ enum class FuncAttr
 class Function
 {
   private:
-    BasicBlockList basic_blocks_ = BasicBlockList();
-    std::string name_ = "";
-    std::vector<FuncAttr> attrs_ = {};
-    FuncType type_ = FuncType::kUndefined;
+    BasicBlockList basic_blocks_;
+    std::string name_;
+    std::vector<FuncAttr> attrs_;
+    FuncType type_ = FuncType::Undefined;
 
   public:
     static std::shared_ptr<Function>
