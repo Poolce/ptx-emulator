@@ -32,8 +32,7 @@ int main()
 {
     auto ptx_text = readPtx("/home/poolce/workplace/ptx-emulator/test/ptx_sources/vadd.ptx");
     auto ptx_module = Emulator::Ptx::Module::Make(ptx_text);
-    auto entry = ptx_module->GetEntryFunc();
-    entry->Dump();
+    ptx_module->Dump();
     auto exec_ = Emulator::ExecutionModule(ptx_module);
     return 0;
 }

@@ -2,7 +2,6 @@ add_library(encoder STATIC)
 
 target_sources(encoder
   PRIVATE
-    basic_block.cpp
     function.cpp
     module.cpp
 )

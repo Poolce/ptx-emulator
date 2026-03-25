@@ -15,12 +15,13 @@ namespace Ptx
 std::shared_ptr<Module> Module::Make(const std::string& ptx)
 {
     auto module = std::make_shared<Module>();
-    constexpr std::string_view Pattern = R"((.*)\s\.(entry|func)\s([A-Za-z0-9_]+)\(([\s\S]+)\)\n?\{([\s\S]+)})";
+    constexpr std::string_view Pattern = R"((.*)\s\.(entry|func)\s([A-Za-z0-9_]+)\(([^)]+)\)\n?\{([^}]+)})";
     static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize);
 
     auto begin = std::sregex_iterator(ptx.begin(), ptx.end(), Re);
     auto end = std::sregex_iterator();
 
+    uint64_t pc = 0;
     for (auto it = begin; it != end; ++it)
     {
         const std::smatch& match = *it;
@@ -30,24 +31,17 @@ std::shared_ptr<Module> Module::Make(const std::string& ptx)
             std::string type = match[2].str();
             std::string name = match[3].str();
             std::string content = match[4].str() + match[5].str();
-            auto func = Function::Make(attrs, type, name, content);
+
+            const auto& [func, func_instrs] = Function::Make(pc, attrs, type, name, content);
+
+            module->instructions_.insert(module->instructions_.end(), func_instrs.begin(), func_instrs.end());
+            pc += func_instrs.size();
             module->function_map_[name] = func;
-        }
-        else
-        {
+        } else {
             throw std::runtime_error("Function is not matched");
         }
     }
     return module;
-}
-
-void Module::Dump()
-{
-    for (auto& [name, func] : function_map_)
-    {
-        std::cout << "\n\n";
-        func->Dump();
-    }
 }
 
 std::shared_ptr<Function> Module::GetEntryFunc() const
@@ -58,6 +52,19 @@ std::shared_ptr<Function> Module::GetEntryFunc() const
             return func;
     }
     throw std::runtime_error("Entry function did not found");
+}
+
+void Module::Dump() {
+    uint64_t pc = 0;
+    for (const auto& instr : instructions_) {
+        std::cout<<pc<<"\t";
+        instr->Dump();
+        pc++;
+    }
+
+    for (const auto& [f_name, func] : function_map_) {
+        func->Dump();
+    }
 }
 
 } // namespace Ptx

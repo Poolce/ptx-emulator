@@ -2,10 +2,6 @@
 
 #include "function.h"
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-
 namespace Emulator
 {
 namespace Ptx
@@ -16,6 +12,7 @@ class Module
 {
   private:
     FunctionMap function_map_;
+    InstructionList instructions_;
 
   public:
     static std::shared_ptr<Module> Make(const std::string& ptx);

@@ -12,9 +12,6 @@ class ExecutionModule
   private:
     std::shared_ptr<Ptx::Module> module_;
 
-    std::shared_ptr<Ptx::Function> current_function_;
-    std::shared_ptr<Ptx::BasicBlock> current_basic_block_;
-
     std::shared_ptr<Ptx::Instruction> NextInstruction();
     void Reset();
 

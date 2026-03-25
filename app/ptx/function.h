@@ -1,17 +1,20 @@
 #pragma once
 
-#include "basic_block.h"
-
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
+#include <unordered_map>
+
+#include "instructions.h"
 
 namespace Emulator
 {
 namespace Ptx
 {
-using BasicBlockList = std::vector<std::shared_ptr<BasicBlock>>;
+
+using BasicBlockAddrMap = std::unordered_map<std::string, uint64_t>;
+using InstructionList = std::vector<std::shared_ptr<Instruction>>;
 
 enum class FuncType : uint8_t
 {
@@ -28,14 +31,16 @@ enum class FuncAttr : uint8_t
 class Function
 {
   private:
-    BasicBlockList basic_blocks_;
+    uint64_t pc_;
+    BasicBlockAddrMap basic_blocks_;
+
     std::string name_;
     std::vector<FuncAttr> attrs_;
     FuncType type_ = FuncType::Undefined;
 
   public:
-    static std::shared_ptr<Function>
-    Make(const std::string& attrs, const std::string& type, const std::string& name, const std::string& content);
+    static std::pair<std::shared_ptr<Function>, InstructionList>
+    Make(uint64_t pc, const std::string& attrs, const std::string& type, const std::string& name, const std::string& content);
 
     void Dump();
     bool isEntry() const;

@@ -5,7 +5,6 @@
 #include <regex>
 #include <stdexcept>
 #include <string_view>
-#include <unordered_map>
 
 namespace Emulator
 {
@@ -61,28 +60,55 @@ static std::vector<FuncAttr> parseAttributes(const std::string& attrs)
     return res;
 }
 
-std::shared_ptr<Function>
-Function::Make(const std::string& attrs, const std::string& type, const std::string& name, const std::string& content)
+static InstructionList parseInstructions(const std::string& content)
+{
+    InstructionList instrs{};
+
+    constexpr std::string_view Pattern = "^\\.?(@%p[0-9]+\\s)?([a-z]+).*$";
+    static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
+    auto begin = std::sregex_iterator(content.begin(), content.end(), Re);
+    auto end = std::sregex_iterator();
+    for (auto it = begin; it != end; ++it)
+    {
+        const std::smatch& match = *it;
+        if (match.size() >= 3)
+        {
+            std::string name = match[2].str();
+            auto instr = makeInstruction(name, match[0].str());
+            instrs.push_back(instr);
+        }
+    }
+    return instrs;
+}
+
+std::pair<std::shared_ptr<Function>, InstructionList>
+Function::Make(uint64_t pc, const std::string& attrs, const std::string& type, const std::string& name, const std::string& content)
 {
     auto func = std::make_shared<Function>();
     func->name_ = name;
     func->attrs_ = parseAttributes(attrs);
     func->type_ = FromString<FuncType>(type);
+    func->pc_ = pc;
+
+    InstructionList instrs{};
     constexpr std::string_view Pattern = "^\\$([A-Za-z0-9_]+):$";
     static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
-
     auto begin = std::sregex_iterator(content.begin(), content.end(), Re);
     auto end = std::sregex_iterator();
     std::string bb_name = "entry";
     int pos = 0;
+    uint64_t local_pc = pc;
+
     for (auto it = begin; it != end; ++it)
     {
         const std::smatch& match = *it;
         if (match.size() == 2)
         {
             auto bb_content = content.substr(pos, match.position() - pos);
-            auto bb = BasicBlock::Make(bb_name, bb_content);
-            func->basic_blocks_.push_back(bb);
+            auto loc_instrs = parseInstructions(bb_content);
+            func->basic_blocks_[bb_name] = local_pc;
+            instrs.insert(instrs.end(), loc_instrs.begin(), loc_instrs.end());
+            local_pc += loc_instrs.size();
             pos = match.position();
             bb_name = match[1].str();
         }
@@ -92,18 +118,10 @@ Function::Make(const std::string& attrs, const std::string& type, const std::str
         }
     }
     auto bb_content = content.substr(pos, content.size() - pos - 1);
-    auto bb = BasicBlock::Make(bb_name, bb_content);
-    func->basic_blocks_.push_back(bb);
-    return func;
-}
-
-void Function::Dump()
-{
-    std::cout << name_ << ":\n";
-    for (auto& bb : basic_blocks_)
-    {
-        bb->Dump();
-    }
+    auto loc_instrs = parseInstructions(bb_content);
+    func->basic_blocks_[bb_name] = local_pc;
+    instrs.insert(instrs.end(), loc_instrs.begin(), loc_instrs.end());
+    return {func, instrs};
 }
 
 bool Function::isEntry() const
@@ -118,6 +136,14 @@ bool Function::isEntry() const
     }
     return fl & (type_ == FuncType::Entry);
 }
+
+void Function::Dump() {
+    std::cout<<pc_<<"\t"<<name_<<":\n";
+    for(auto& [bb_name, bb_pc] : basic_blocks_) {
+        std::cout<<"\t"<<bb_pc<<"\t"<<bb_name<<":\n";
+    }
+}
+
 
 } // namespace Ptx
 } // namespace Emulator
