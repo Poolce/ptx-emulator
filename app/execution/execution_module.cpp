@@ -3,7 +3,11 @@
 namespace Emulator
 {
 
-void ExecutionModule::Reset() {}
+void ExecutionModule::Reset()
+{
+    
+}
+
 std::shared_ptr<Ptx::Instruction> ExecutionModule::NextInstruction()
 {
     return {};
