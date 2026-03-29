@@ -85,6 +85,7 @@ std::pair<std::shared_ptr<Function>, InstructionList> Function::Make(uint64_t pc
                                                                      const std::string& attrs,
                                                                      const std::string& type,
                                                                      const std::string& name,
+                                                                     [[maybe_unused]] const std::string& params,
                                                                      const std::string& content)
 {
     auto func = std::make_shared<Function>();

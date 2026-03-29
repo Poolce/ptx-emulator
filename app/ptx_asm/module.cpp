@@ -33,7 +33,7 @@ std::shared_ptr<Module> Module::Make(const std::string& ptx)
             std::string params = match[4].str();
             std::string content = match[5].str();
 
-            const auto& [func, func_instrs] = Function::Make(pc, attrs, type, name, content);
+            const auto& [func, func_instrs] = Function::Make(pc, attrs, type, name, params, content);
 
             module->instructions_.insert(module->instructions_.end(), func_instrs.begin(), func_instrs.end());
             pc += func_instrs.size();
