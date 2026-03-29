@@ -18,11 +18,9 @@ void retInstruction::ExecuteWarp([[maybe_unused]] std::shared_ptr<WarpContext>& 
 
 void braInstruction::ExecuteWarp([[maybe_unused]] std::shared_ptr<WarpContext>& wc) {}
 
-void paramInstruction::ExecuteThread([[maybe_unused]] uint32_t lid, [[maybe_unused]] std::shared_ptr<WarpContext>& wc)
-{
-}
+void paramInstruction::ExecuteThread([[maybe_unused]] uint32_t lid, [[maybe_unused]] std::shared_ptr<WarpContext>& wc) {}
 
-void regInstruction::ExecuteThread([[maybe_unused]] uint32_t lid, [[maybe_unused]] std::shared_ptr<WarpContext>& wc)
+void regInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
     wc->thread_regs[lid][reg_] = RegisterContext(count_);
 }
