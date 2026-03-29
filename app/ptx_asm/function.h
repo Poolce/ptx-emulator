@@ -1,12 +1,12 @@
 #pragma once
 
+#include "instructions.h"
+
 #include <memory>
 #include <set>
 #include <string>
-#include <vector>
 #include <unordered_map>
-
-#include "instructions.h"
+#include <vector>
 
 namespace Emulator
 {
@@ -39,11 +39,16 @@ class Function
     FuncType type_ = FuncType::Undefined;
 
   public:
-    static std::pair<std::shared_ptr<Function>, InstructionList>
-    Make(uint64_t pc, const std::string& attrs, const std::string& type, const std::string& name, const std::string& content);
+    static std::pair<std::shared_ptr<Function>, InstructionList> Make(uint64_t pc,
+                                                                      const std::string& attrs,
+                                                                      const std::string& type,
+                                                                      const std::string& name,
+                                                                      const std::string& content);
 
     void Dump();
     bool isEntry() const;
+    uint64_t getOffset() const;
+    uint64_t getBasicBlockOffset(const std::string bb_name) const;
 };
 } // namespace Ptx
 

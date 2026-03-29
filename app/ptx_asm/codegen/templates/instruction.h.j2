@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ptx_types.h"
+#include "warp_context.h"
+
 #include <memory>
 #include <regex>
 #include <iostream>
@@ -13,9 +15,8 @@ namespace Ptx {
 class Instruction {
 public:
     Instruction() = default;
-    virtual void Execute() = 0;
+    virtual void Execute(std::shared_ptr<WarpContext>& wc);
     virtual void Dump() = 0;
-
 };
 
 
@@ -23,17 +24,23 @@ public:
 {% if instr.regexp_template %}
 
 class {{ i_name }}Instruction : public Instruction {
+ private:
+{% if instr.exec_type == "thread" %}
+    void ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc);
+{% endif %}
+{% if instr.exec_type == "warp" %}
+    void ExecuteWarp(std::shared_ptr<WarpContext>& wc);
+{% endif %}
  public:
 {% for name, type in instr.params.items() %}  {{ funcs.get_type_name(i_name, name, type) }} {{ name }}_ = {{ funcs.get_type_name(i_name, name, type) }}();
 {% endfor %}
 
  public:
     {{ i_name }}Instruction() {};
-    void Execute() override;
-    static std::shared_ptr<{{ i_name }}Instruction> Make(const std::string& line);
-    
+    void Execute(std::shared_ptr<WarpContext>& wc) override;
     void Dump() override;
 
+    static std::shared_ptr<{{ i_name }}Instruction> Make(const std::string& line);
     friend std::shared_ptr<Instruction> makeInstruction(const std::string& line);
 };
 

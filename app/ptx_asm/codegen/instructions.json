@@ -33,6 +33,33 @@
                 "u64",
                 "pred"
             ]
+        },
+        "registerType": {
+            "regexp": "[p,r,rd,spr]",
+            "values": [
+                "p",
+                "r",
+                "rd",
+                "spr"
+            ]
+        },
+        "sprType": {
+            "values": [
+                "tid",
+                "ntid",
+                "laneid",
+                "warpid",
+                "nwarpid",
+                "ctaid",
+                "nctaid",
+                "smid",
+                "nsmid",
+                "gridid",
+                "is_explicit_cluster",
+                "clusterid",
+                "nclusterid",
+                "cluster_ctaid"
+            ]
         }
     },
     "instructions": {
@@ -46,7 +73,8 @@
                 "symbol": {
                     "arg_type": "symbolOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "reg": {
             "regexp_template": "\\.reg\\s\\.($data)\\s%($reg)<($count)>;",
@@ -56,18 +84,15 @@
                     "dtype": "dataType"
                 },
                 "reg": {
-                    "values": [
-                        "p",
-                        "r",
-                        "rd"
-                    ],
-                    "arg_type": "qualifier"
+                    "arg_type": "local",
+                    "dtype": "registerType"
                 },
                 "count": {
                     "arg_type": "local",
                     "dtype": "uint32_t"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "pragma": {
             "regexp_template": "\\.pragma\\s.($val).;",
@@ -78,7 +103,8 @@
                     ],
                     "arg_type": "qualifier"
                 }
-            }
+            },
+            "exec_type": "warp"
         },
         "abs": {},
         "cvta": {
@@ -111,7 +137,8 @@
                 "src": {
                     "arg_type": "registerOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "membar": {},
         "setp": {
@@ -164,7 +191,8 @@
                 "imm": {
                     "arg_type": "immediateOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "vabsdiff": {},
         "activemask": {},
@@ -191,7 +219,8 @@
                 "imm": {
                     "arg_type": "immediateOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "div": {},
         "mma": {},
@@ -218,7 +247,8 @@
                 "imm": {
                     "arg_type": "immediateOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "shl": {},
         "vadd": {},
@@ -246,7 +276,8 @@
                 "imm": {
                     "arg_type": "immediateOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "elect": {},
         "mul": {
@@ -276,7 +307,8 @@
                 "imm": {
                     "arg_type": "immediateOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "sin": {},
         "vadd4": {},
@@ -320,7 +352,8 @@
                 "src": {
                     "arg_type": "registerOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "vmad": {},
         "barrier": {},
@@ -341,7 +374,8 @@
                 "imm": {
                     "arg_type": "immediateOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "stackrestore": {},
         "vmax": {},
@@ -377,7 +411,8 @@
                 "imm": {
                     "arg_type": "immediateOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "vmin": {},
         "bmsk": {},
@@ -394,7 +429,8 @@
                 "sym": {
                     "arg_type": "symbolOperand"
                 }
-            }
+            },
+            "exec_type": "warp"
         },
         "label": {
             "regexp_template": "\\$($sym):",
@@ -402,7 +438,8 @@
                 "sym": {
                     "arg_type": "symbolOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "istypep": {},
         "prefetch": {},
@@ -436,7 +473,8 @@
                 "addr": {
                     "arg_type": "addressOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "prefetchu": {},
         "suq": {},
@@ -489,7 +527,8 @@
                 "src3": {
                     "arg_type": "registerOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "rem": {},
         "tcgen05": {},
@@ -498,7 +537,8 @@
         "mad24": {},
         "ret": {
             "regexp_template": "ret;",
-            "params": {}
+            "params": {},
+            "exec_type": "warp"
         },
         "tensormap": {},
         "vsub": {},
@@ -539,7 +579,8 @@
                 "src": {
                     "arg_type": "registerOperand"
                 }
-            }
+            },
+            "exec_type": "thread"
         },
         "mbarrier": {},
         "setmaxnreg": {},

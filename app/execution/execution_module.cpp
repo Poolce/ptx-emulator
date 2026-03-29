@@ -3,26 +3,26 @@
 namespace Emulator
 {
 
-void ExecutionModule::Reset()
-{
-    
-}
-
-std::shared_ptr<Ptx::Instruction> ExecutionModule::NextInstruction()
-{
-    return {};
-}
-
 ExecutionModule::ExecutionModule(const std::shared_ptr<Ptx::Module>& module) : module_(module) {}
 
-ExecutionModule::const_iterator ExecutionModule::begin()
+std::shared_ptr<Ptx::Instruction> ExecutionModule::GetInstruction(std::shared_ptr<WarpContext>& wc) const
 {
-    return const_iterator(this, false);
-}
-
-ExecutionModule::const_iterator ExecutionModule::end()
-{
-    return const_iterator(this, true);
+    if (wc->pc == WarpContext::EOC)
+    {
+        if (wc->execution_stack.empty())
+        {
+            return nullptr;
+        }
+        else
+        {
+            auto [pc, mask] = wc->execution_stack.top();
+            wc->pc = pc;
+            wc->execution_mask = mask;
+            wc->execution_stack.pop();
+            return module_->GetInstruction(wc->pc);
+        }
+    }
+    return module_->GetInstruction(wc->pc);
 }
 
 } // namespace Emulator

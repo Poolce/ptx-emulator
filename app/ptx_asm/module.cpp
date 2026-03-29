@@ -37,11 +37,22 @@ std::shared_ptr<Module> Module::Make(const std::string& ptx)
             module->instructions_.insert(module->instructions_.end(), func_instrs.begin(), func_instrs.end());
             pc += func_instrs.size();
             module->function_map_[name] = func;
-        } else {
+        }
+        else
+        {
             throw std::runtime_error("Function is not matched");
         }
     }
     return module;
+}
+
+std::shared_ptr<Instruction> Module::GetInstruction(uint64_t pc) const
+{
+    if (pc >= instructions_.size())
+    {
+        return nullptr;
+    }
+    return instructions_.at(pc);
 }
 
 std::shared_ptr<Function> Module::GetEntryFunc() const
@@ -54,15 +65,18 @@ std::shared_ptr<Function> Module::GetEntryFunc() const
     throw std::runtime_error("Entry function did not found");
 }
 
-void Module::Dump() {
+void Module::Dump()
+{
     uint64_t pc = 0;
-    for (const auto& instr : instructions_) {
-        std::cout<<pc<<"\t";
+    for (const auto& instr : instructions_)
+    {
+        std::cout << pc << "\t";
         instr->Dump();
         pc++;
     }
 
-    for (const auto& [f_name, func] : function_map_) {
+    for (const auto& [f_name, func] : function_map_)
+    {
         func->Dump();
     }
 }

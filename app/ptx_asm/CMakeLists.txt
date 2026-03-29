@@ -26,6 +26,7 @@ file(GLOB ENCODER_CODEGEN_TEMPLATES CONFIGURE_DEPENDS
 set(ENCODER_AUTOGEN_SOURCES
   "${ENCODER_AUTOGEN_DIR}/instructions.cpp"
   "${ENCODER_AUTOGEN_DIR}/ptx_types.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/execution.cpp"
 )
 set(ENCODER_AUTOGEN_HEADERS
   "${ENCODER_AUTOGEN_DIR}/instructions.h"
@@ -56,3 +57,8 @@ add_custom_target(encoder_codegen DEPENDS ${ENCODER_AUTOGEN_SOURCES} ${ENCODER_A
 add_dependencies(encoder encoder_codegen)
 
 target_sources(encoder PRIVATE ${ENCODER_AUTOGEN_SOURCES})
+
+target_link_libraries(encoder PUBLIC
+  context
+  utils
+)

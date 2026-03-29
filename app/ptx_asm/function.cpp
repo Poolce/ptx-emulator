@@ -81,8 +81,11 @@ static InstructionList parseInstructions(const std::string& content)
     return instrs;
 }
 
-std::pair<std::shared_ptr<Function>, InstructionList>
-Function::Make(uint64_t pc, const std::string& attrs, const std::string& type, const std::string& name, const std::string& content)
+std::pair<std::shared_ptr<Function>, InstructionList> Function::Make(uint64_t pc,
+                                                                     const std::string& attrs,
+                                                                     const std::string& type,
+                                                                     const std::string& name,
+                                                                     const std::string& content)
 {
     auto func = std::make_shared<Function>();
     func->name_ = name;
@@ -137,13 +140,24 @@ bool Function::isEntry() const
     return fl & (type_ == FuncType::Entry);
 }
 
-void Function::Dump() {
-    std::cout<<pc_<<"\t"<<name_<<":\n";
-    for(auto& [bb_name, bb_pc] : basic_blocks_) {
-        std::cout<<"\t"<<bb_pc<<"\t"<<bb_name<<":\n";
+void Function::Dump()
+{
+    std::cout << pc_ << "\t" << name_ << ":\n";
+    for (auto& [bb_name, bb_pc] : basic_blocks_)
+    {
+        std::cout << "\t" << bb_pc << "\t" << bb_name << ":\n";
     }
 }
 
+uint64_t Function::getOffset() const
+{
+    return pc_;
+}
+
+uint64_t Function::getBasicBlockOffset(const std::string bb_name) const
+{
+    return basic_blocks_.at(bb_name);
+}
 
 } // namespace Ptx
 } // namespace Emulator

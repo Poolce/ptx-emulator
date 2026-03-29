@@ -1,4 +1,5 @@
 #include "instructions.h"
+#include "constant.h"
 #include "utils.h"
 
 namespace Emulator {
@@ -7,9 +8,25 @@ namespace Ptx {
 {% for i_name, instr in instructions.items() %}
 {% if instr.regexp_template %}
 
-void {{ i_name }}Instruction::Execute() {
-    std::cout<<"{{ i_name }}\n";
+{% if instr.exec_type == "thread" %}
+void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
+    std::cout<<"Execute instruction {{ i_name }}"<<std::endl;
+    for (uint32_t lid = 0; lid < Emulator::WARP_SIZE; lid++) {
+        bool prd = ((wc->execution_mask >> lid) & 1);
+        if (prd) {
+            ExecuteThread(lid, wc);
+        }
+    }
+    wc->pc++;
 }
+{% endif %}
+{% if instr.exec_type == "warp" %}
+void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
+    std::cout<<"Execute instruction {{ i_name }}"<<std::endl;
+    ExecuteWarp(wc);
+    wc->pc++;
+}
+{% endif %}
 
 void {{ i_name }}Instruction::Dump() {
     std::cout<<"\t\t"<<"{{ i_name }}"<<"\n";
