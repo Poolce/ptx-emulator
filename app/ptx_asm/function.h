@@ -43,6 +43,7 @@ class Function
                                                                       const std::string& attrs,
                                                                       const std::string& type,
                                                                       const std::string& name,
+                                                                      const std::string& params,
                                                                       const std::string& content);
 
     void Dump();

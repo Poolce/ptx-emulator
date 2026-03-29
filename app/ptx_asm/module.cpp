@@ -30,7 +30,8 @@ std::shared_ptr<Module> Module::Make(const std::string& ptx)
             std::string attrs = match[1].str();
             std::string type = match[2].str();
             std::string name = match[3].str();
-            std::string content = match[4].str() + match[5].str();
+            std::string params = match[4].str();
+            std::string content = match[5].str();
 
             const auto& [func, func_instrs] = Function::Make(pc, attrs, type, name, content);
 

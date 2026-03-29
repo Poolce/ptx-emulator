@@ -74,7 +74,7 @@
                     "arg_type": "symbolOperand"
                 }
             },
-            "exec_type": "thread"
+            "exec_type": "warp"
         },
         "reg": {
             "regexp_template": "\\.reg\\s\\.($data)\\s%($reg)<($count)>;",
