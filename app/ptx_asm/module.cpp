@@ -56,11 +56,11 @@ std::shared_ptr<Instruction> Module::GetInstruction(uint64_t pc) const
     return instructions_.at(pc);
 }
 
-std::shared_ptr<Function> Module::GetEntryFunc() const
+std::shared_ptr<Function> Module::GetEntryFunction(const std::string& func_name) const
 {
     for (const auto& [name, func] : function_map_)
     {
-        if (func->isEntry())
+        if (name == func_name && func->isEntry())
             return func;
     }
     throw std::runtime_error("Entry function did not found");

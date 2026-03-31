@@ -10,33 +10,6 @@
 namespace Emulator {
 namespace Ptx {
 
-class registerOperand : public std::string {
-public:
-    registerOperand() = default;
-    registerOperand(const std::string& str) : std::string(str) {}
-};
-
-class sprRegisterOperand : public std::string {
-public:
-    sprRegisterOperand() = default;
-    sprRegisterOperand(const std::string& str) : std::string(str) {}
-};
-
-class addressOperand : public std::string {
-public:
-    addressOperand() = default;
-    addressOperand(const std::string& str) : std::string(str) {}
-};
-
-class symbolOperand : public std::string {
-public:
-    symbolOperand() = default;
-    symbolOperand(const std::string& str) : std::string(str) {}
-};
-
-using immediateOperand = uint64_t;
-
-
 {% for i_name, i_param in isa.instructions.items() %}
 {% if i_param.params %}
 {% for p_name, p_param in i_param.params.items() %}
@@ -64,6 +37,32 @@ enum class {{ name }} {
 {% endfor %}
 };
 {% endfor %}
+
+class symbolOperand : public std::string {
+public:
+    symbolOperand() = default;
+    symbolOperand(const std::string& str) : std::string(str) {}
+};
+
+using immediateOperand = int64_t;
+
+class registerOperand {
+public:
+    registerType type = registerType::UNDEFINED;
+    uint32_t reg_id = 0;
+};
+
+class sprRegisterOperand {
+public:
+    sprType type = sprType::UNDEFINED;
+};
+
+class addressOperand {
+public:
+    registerOperand reg = registerOperand();
+    symbolOperand symbol = symbolOperand();
+    immediateOperand imm = 0;
+};
 
 } // Ptx
 } // Emulator

@@ -14,6 +14,7 @@ class ExecutionModule
   public:
     ExecutionModule(const std::shared_ptr<Ptx::Module>& module);
     std::shared_ptr<Ptx::Instruction> GetInstruction(std::shared_ptr<WarpContext>& wc) const;
+    void SetEntryFunction(std::shared_ptr<WarpContext>& wc, const std::string& func_name) const;
 };
 
 } // namespace Emulator

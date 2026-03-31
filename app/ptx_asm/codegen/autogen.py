@@ -13,12 +13,14 @@ class CustomFunctions:
         tmp = instr["regexp_template"]
         for name, arg in instr["params"].items():
             regexp = ""
-            if arg["arg_type"] == "qualifier":
+            if "regexp" in arg:
+                regexp = arg["regexp"]
+            elif arg["arg_type"] == "qualifier":
                 regexp = '|'.join(arg['values'])
-            elif arg["arg_type"] == "global":
-                regexp = regexp_map["types"][name]["regexp"]
             elif "Operand" in arg["arg_type"]:
                 regexp = regexp_map["operands"][arg["arg_type"]]["regexp"]
+            elif "dtype" in arg:
+                regexp = regexp_map["types"][arg["dtype"]]["regexp"]
             else:
                 regexp = r".*"
             tmp = tmp.replace(f"${name}", regexp)

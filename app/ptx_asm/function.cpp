@@ -36,6 +36,30 @@ FuncAttr FromString(const std::string& str)
     return StrToFuncAttr.at(str);
 }
 
+static std::unordered_map<std::string, uint8_t> parseParameters(const std::string& params)
+{
+    constexpr std::string_view Pattern = "\\.param\\s\\.(.*)\\s([A-z0-9_]+),?";
+    static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
+
+    std::unordered_map<std::string, uint8_t> res{};
+    auto begin = std::sregex_iterator(params.begin(), params.end(), Re);
+    auto end = std::sregex_iterator();
+    uint8_t param_id = 0;
+    for (auto it = begin; it != end; ++it)
+    {
+        const std::smatch& match = *it;
+        if (match.size() == 3)
+        {
+            res[match[2].str()] = param_id;
+        }
+        else
+        {
+            throw std::runtime_error("Function attribute is not matched");
+        }
+    }
+    return res;
+}
+
 static std::vector<FuncAttr> parseAttributes(const std::string& attrs)
 {
     constexpr std::string_view Pattern = "\\.([A-Za-z0-9_]+)";
@@ -85,12 +109,13 @@ std::pair<std::shared_ptr<Function>, InstructionList> Function::Make(uint64_t pc
                                                                      const std::string& attrs,
                                                                      const std::string& type,
                                                                      const std::string& name,
-                                                                     [[maybe_unused]] const std::string& params,
+                                                                     const std::string& params,
                                                                      const std::string& content)
 {
     auto func = std::make_shared<Function>();
     func->name_ = name;
     func->attrs_ = parseAttributes(attrs);
+    func->params_ = parseParameters(params);
     func->type_ = FromString<FuncType>(type);
     func->pc_ = pc;
 
@@ -158,6 +183,11 @@ uint64_t Function::getOffset() const
 uint64_t Function::getBasicBlockOffset(const std::string bb_name) const
 {
     return basic_blocks_.at(bb_name);
+}
+
+std::unordered_map<std::string, uint8_t> Function::getParameters() const
+{
+    return params_;
 }
 
 } // namespace Ptx

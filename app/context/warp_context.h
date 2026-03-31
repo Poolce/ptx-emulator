@@ -23,6 +23,7 @@ struct WarpContext
     uint64_t pc = 0;
     uint32_t execution_mask = 0xffffffff;
     std::stack<std::pair<uint64_t, uint32_t>> execution_stack;
+    std::unordered_map<std::string, uint8_t> global_parameters;
 
     // Register Context
     std::vector<ThreadContext> thread_regs{};

@@ -1,7 +1,7 @@
 {
     "operands": {
         "addressOperand": {
-            "regexp": "[A-z0-9_\\+\\-%]+"
+            "regexp": "[\\[\\]A-Za-z0-9_\\+\\-%]+"
         },
         "registerOperand": {
             "regexp": "%[a-z]+[0-9]*,?"
@@ -35,7 +35,7 @@
             ]
         },
         "registerType": {
-            "regexp": "[p,r,rd,spr]",
+            "regexp": "p|r|rd|spr",
             "values": [
                 "p",
                 "r",
@@ -88,6 +88,7 @@
                     "dtype": "registerType"
                 },
                 "count": {
+                    "regexp": "[0-9]+",
                     "arg_type": "local",
                     "dtype": "uint32_t"
                 }
@@ -112,7 +113,8 @@
             "params": {
                 "to": {
                     "arg_type": "local",
-                    "dtype": "bool"
+                    "dtype": "bool",
+                    "regexp": "to"
                 },
                 "space": {
                     "values": [

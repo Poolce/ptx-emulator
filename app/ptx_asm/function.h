@@ -36,6 +36,7 @@ class Function
 
     std::string name_;
     std::vector<FuncAttr> attrs_;
+    std::unordered_map<std::string, uint8_t> params_;
     FuncType type_ = FuncType::Undefined;
 
   public:
@@ -50,6 +51,7 @@ class Function
     bool isEntry() const;
     uint64_t getOffset() const;
     uint64_t getBasicBlockOffset(const std::string bb_name) const;
+    std::unordered_map<std::string, uint8_t> getParameters() const;
 };
 } // namespace Ptx
 

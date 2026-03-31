@@ -25,4 +25,11 @@ std::shared_ptr<Ptx::Instruction> ExecutionModule::GetInstruction(std::shared_pt
     return module_->GetInstruction(wc->pc);
 }
 
+void ExecutionModule::SetEntryFunction(std::shared_ptr<WarpContext>& wc, const std::string& func_name) const
+{
+    auto func = module_->GetEntryFunction(func_name);
+    wc->pc = func->getOffset();
+    wc->global_parameters = func->getParameters();
+}
+
 } // namespace Emulator

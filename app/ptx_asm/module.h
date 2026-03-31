@@ -18,7 +18,7 @@ class Module
     static std::shared_ptr<Module> Make(const std::string& ptx);
 
     void Dump();
-    std::shared_ptr<Function> GetEntryFunc() const;
+    std::shared_ptr<Function> GetEntryFunction(const std::string& func_name) const;
     std::shared_ptr<Instruction> GetInstruction(uint64_t pc) const;
 };
 } // namespace Ptx
