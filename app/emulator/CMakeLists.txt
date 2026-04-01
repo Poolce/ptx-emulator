@@ -13,4 +13,5 @@ target_include_directories(cuemu
 target_link_libraries(cuemu PUBLIC
     encoder
     execution_module
+    emuruntime
 )

@@ -1,5 +1,3 @@
-// nvcc VectorAdd.cu --ptx
-
 #include <cuda_runtime.h>
 
 #include <cstdint>
