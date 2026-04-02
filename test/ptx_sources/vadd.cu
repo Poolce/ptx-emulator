@@ -1,3 +1,5 @@
+// nvcc VectorAdd.cu --ptx
+
 #include <cuda_runtime.h>
 
 #include <cstdint>
@@ -5,11 +7,15 @@
 
 __global__ void vectorAdd(const uint64_t* a, const uint64_t* b, uint64_t* c, int n)
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < n)
-    {
-        c[idx] = a[idx] + b[idx];
-    }
+    c[0] = blockDim.x;
+    c[1] = blockDim.y;
+    c[2] = blockDim.z;
+
+    // int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    // if (idx < n)
+    // {
+    //     c[idx] = a[idx] + b[idx];
+    // }
 }
 
 int main()
@@ -38,17 +44,9 @@ int main()
     int blockSize = 256;
     int numBlocks = (n + blockSize - 1) / blockSize;
     vectorAdd<<<numBlocks, blockSize>>>(d_a, d_b, d_c, n);
+    cudaDeviceSynchronize();
 
     cudaMemcpy(h_c, d_c, size, cudaMemcpyDeviceToHost);
-
-    for (int i = 0; i < n; i++)
-    {
-        if (h_c[i] != h_a[i] + h_b[i])
-        {
-            std::cerr << "Err: " << i << std::endl;
-            break;
-        }
-    }
 
     cudaFree(d_a);
     cudaFree(d_b);

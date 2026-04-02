@@ -51,4 +51,40 @@ void RtInterface::LoadPtx()
     ptx_module_ = Ptx::Module::Make(result);
 }
 
+uint64_t RtInterface::MakeStream()
+{
+    if (!ptx_module_)
+    {
+        throw std::runtime_error("Module is not defined");
+    }
+    uint64_t stream_id = streams_.size();
+    streams_.push_back(std::make_unique<RtStream>(ptx_module_));
+    return stream_id;
+}
+
+void RtInterface::RemoveAllStreams()
+{
+    functions_.clear();
+}
+
+void RtInterface::RegFunction(uint64_t descr, const std::string& name)
+{
+    functions_[descr] = name;
+}
+
+std::string RtInterface::GetFunctionName(uint64_t descr) const
+{
+    return functions_.at(descr);
+}
+
+void RtInterface::KernelLaunch([[maybe_unused]] uint64_t func,
+                               [[maybe_unused]] dim3 gridDim,
+                               [[maybe_unused]] dim3 blockDim,
+                               [[maybe_unused]] void** args,
+                               [[maybe_unused]] size_t sharedMem,
+                               [[maybe_unused]] uint64_t stream_id)
+{
+    streams_.at(stream_id)->KernelLaunch(func, gridDim, blockDim, args, sharedMem);
+}
+
 } // namespace Emulator

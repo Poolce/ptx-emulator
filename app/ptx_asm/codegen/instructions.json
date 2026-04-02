@@ -45,20 +45,15 @@
         },
         "sprType": {
             "values": [
-                "tid",
-                "ntid",
-                "laneid",
-                "warpid",
-                "nwarpid",
-                "ctaid",
-                "nctaid",
-                "smid",
-                "nsmid",
-                "gridid",
-                "is_explicit_cluster",
-                "clusterid",
-                "nclusterid",
-                "cluster_ctaid"
+                "tid.x",
+                "tid.y",
+                "tid.z",
+                "ctaid.x",
+                "ctaid.y",
+                "ctaid.z",
+                "ntid.x",
+                "ntid.y",
+                "ntid.z"
             ]
         }
     },

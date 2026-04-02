@@ -1,3 +1,5 @@
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library(execution_module STATIC)
 
 target_sources(execution_module

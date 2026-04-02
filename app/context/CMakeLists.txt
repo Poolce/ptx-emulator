@@ -1,8 +1,12 @@
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library(context STATIC)
 
 target_sources(context
   PRIVATE
     warp_context.cpp
+    block_context.cpp
+    global_context.cpp
 )
 
 target_include_directories(context

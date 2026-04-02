@@ -18,7 +18,6 @@ std::unique_ptr<RtInterface> interface;
 
 cudaError_t cudaMalloc(void** devPtr, size_t size)
 {
-    std::cout << "cudaMalloc\n";
     *devPtr = malloc(size);
     if (*devPtr == nullptr)
     {
@@ -27,9 +26,8 @@ cudaError_t cudaMalloc(void** devPtr, size_t size)
     return cudaError_t::cudaSuccess;
 }
 
-cudaError_t cudaFree([[maybe_unused]] void* devPtr)
+cudaError_t cudaFree(void* devPtr)
 {
-    std::cout << "cudaFree\n";
     free(devPtr);
     return cudaError_t::cudaSuccess;
 }
@@ -39,14 +37,12 @@ cudaError_t cudaMemcpy([[maybe_unused]] void* dst,
                        [[maybe_unused]] size_t count,
                        [[maybe_unused]] cudaMemcpyKind kind)
 {
-    std::cout << "cudaMemcpy\n";
     memcpy(dst, src, count);
     return cudaError_t::cudaSuccess;
 }
 
 cudaError_t cudaGetLastError()
 {
-    std::cout << "cudaGetLastError\n";
     return cudaError_t::cudaSuccess;
 }
 
@@ -62,21 +58,22 @@ cudaError_t __cudaLaunchKernel([[maybe_unused]] const void* func,
                                [[maybe_unused]] size_t sharedMem,
                                [[maybe_unused]] cudaStream_t stream)
 {
-    std::cout << "cudaLaunchKernel " << "\n";
-    std::cout << std::hex << (uint64_t)func << "\n";
+    std::cout << "cudaLaunchKernel " << std::hex << (uint64_t)func << "\n";
+
+    uint64_t stream_id = interface->MakeStream();
+    uint64_t func_descr = (uint64_t)(func);
+    interface->KernelLaunch(func_descr, gridDim, blockDim, args, sharedMem, stream_id);
     return cudaError_t::cudaSuccess;
 }
 
 cudaError_t cudaDeviceSynchronize()
 {
-    std::cout << "cudaDeviceSynchronize\n";
+    interface->RemoveAllStreams();
     return cudaError_t::cudaSuccess;
 }
 
 void __cudaRegisterFatBinaryEnd([[maybe_unused]] void* fatCubinHandle)
 {
-    std::cout << "__cudaRegisterFatBinaryEnd\n";
-
     decltype(auto) orig = reinterpret_cast<void (*)(void*)>(dlsym(RTLD_NEXT, "__cudaRegisterFatBinaryEnd"));
     if (!orig)
     {
@@ -96,13 +93,11 @@ void __cudaRegisterFunction([[maybe_unused]] void** fatCubinHandle,
                             [[maybe_unused]] dim3* gDim,
                             [[maybe_unused]] int* wSize)
 {
-
-    std::cout << "__cudaRegisterFunction  " << deviceFun << " " << thread_limit << " " << wSize << "\n";
+    interface->RegFunction((uint64_t)(hostFun), std::string(deviceFun));
 }
 
 void** __cudaRegisterFatBinary(void* fatCubin)
 {
-    std::cout << "__cudaRegisterFatBinary\n";
     interface = std::make_unique<RtInterface>();
     interface->LoadPtx();
     decltype(auto) orig = reinterpret_cast<void** (*)(void*)>(dlsym(RTLD_NEXT, "__cudaRegisterFatBinary"));
@@ -115,7 +110,6 @@ void** __cudaRegisterFatBinary(void* fatCubin)
 
 void __cudaUnregisterFatBinary(void** fatCubinHandle)
 {
-    std::cout << "__cudaUnregisterFatBinary\n";
     interface = nullptr;
     decltype(auto) orig = reinterpret_cast<void* (*)(void**)>(dlsym(RTLD_NEXT, "__cudaUnregisterFatBinary"));
     if (!orig)

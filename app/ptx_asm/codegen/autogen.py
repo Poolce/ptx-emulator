@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -37,8 +38,10 @@ class CustomFunctions:
         return ""
 
     def process_pname(name):
-        sname = name.split("::")
+        delimiters = r"[ \.;:]+" 
+        sname = re.split(delimiters, name)
         return "".join([i.capitalize() for i in sname])
+
 
 
 # Code generation
