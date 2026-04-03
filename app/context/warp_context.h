@@ -24,7 +24,7 @@ class WarpContext
     uint64_t pc = 0;
     uint32_t execution_mask = 0xffffffff;
     std::stack<std::pair<uint64_t, uint32_t>> execution_stack;
-    std::unordered_map<std::string, uint8_t> global_parameters;
+    std::unordered_map<std::string, Ptx::FunctionParameter> global_parameters;
 
     // Global Context
     void** args_;
@@ -35,7 +35,7 @@ class WarpContext
     std::vector<SprContext> spr_regs{};
 
   public:
-    constexpr static uint64_t EOC = 0xffffffff;
+    constexpr static uint64_t EOC = 0xffffffffffffffff;
     WarpContext(const dim3& gridDim,
                 const dim3& gridId,
                 const dim3& blockDim,

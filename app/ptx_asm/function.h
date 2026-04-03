@@ -16,18 +16,6 @@ namespace Ptx
 using BasicBlockAddrMap = std::unordered_map<std::string, uint64_t>;
 using InstructionList = std::vector<std::shared_ptr<Instruction>>;
 
-enum class FuncType : uint8_t
-{
-    Undefined,
-    Entry,
-    Func
-};
-
-enum class FuncAttr : uint8_t
-{
-    Visible
-};
-
 class Function
 {
   private:
@@ -36,7 +24,7 @@ class Function
 
     std::string name_;
     std::vector<FuncAttr> attrs_;
-    std::unordered_map<std::string, uint8_t> params_;
+    std::unordered_map<std::string, FunctionParameter> params_;
     FuncType type_ = FuncType::Undefined;
 
   public:
@@ -51,7 +39,7 @@ class Function
     bool isEntry() const;
     uint64_t getOffset() const;
     uint64_t getBasicBlockOffset(const std::string bb_name) const;
-    std::unordered_map<std::string, uint8_t> getParameters() const;
+    std::unordered_map<std::string, FunctionParameter> getParameters() const;
 };
 } // namespace Ptx
 

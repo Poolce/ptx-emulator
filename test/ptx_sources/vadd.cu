@@ -7,15 +7,12 @@
 
 __global__ void vectorAdd(const uint64_t* a, const uint64_t* b, uint64_t* c, int n)
 {
-    c[0] = blockDim.x;
-    c[1] = blockDim.y;
-    c[2] = blockDim.z;
 
-    // int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    // if (idx < n)
-    // {
-    //     c[idx] = a[idx] + b[idx];
-    // }
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n)
+    {
+        c[idx] = a[idx] + b[idx];
+    }
 }
 
 int main()

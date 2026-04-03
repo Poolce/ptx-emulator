@@ -11,37 +11,12 @@ namespace Emulator
 namespace Ptx
 {
 
-namespace
+static std::unordered_map<std::string, FunctionParameter> parseParameters(const std::string& params)
 {
-const std::unordered_map<std::string, FuncType> StrToFuncType{
-    {"", FuncType::Undefined},
-    {"entry", FuncType::Entry},
-    {"func", FuncType::Func},
-};
-
-const std::unordered_map<std::string, FuncAttr> StrToFuncAttr{
-    {"visible", FuncAttr::Visible},
-};
-} // namespace
-
-template <>
-FuncType FromString(const std::string& str)
-{
-    return StrToFuncType.at(str);
-}
-
-template <>
-FuncAttr FromString(const std::string& str)
-{
-    return StrToFuncAttr.at(str);
-}
-
-static std::unordered_map<std::string, uint8_t> parseParameters(const std::string& params)
-{
-    constexpr std::string_view Pattern = "\\.param\\s\\.(.*)\\s([A-z0-9_]+),?";
+    constexpr std::string_view Pattern = "\\.param\\s\\.([fsub]8|[fsub]16|[fsub]32|[fsub]64|pred)\\s([A-z0-9_]+),?";
     static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
 
-    std::unordered_map<std::string, uint8_t> res{};
+    std::unordered_map<std::string, FunctionParameter> res{};
     auto begin = std::sregex_iterator(params.begin(), params.end(), Re);
     auto end = std::sregex_iterator();
     uint8_t param_id = 0;
@@ -50,7 +25,9 @@ static std::unordered_map<std::string, uint8_t> parseParameters(const std::strin
         const std::smatch& match = *it;
         if (match.size() == 3)
         {
-            res[match[2].str()] = param_id;
+            auto dtype = FromString<dataType>(match[1].str());
+            auto name = match[2].str();
+            res[name] = {name, dtype, param_id};
         }
         else
         {
@@ -185,7 +162,7 @@ uint64_t Function::getBasicBlockOffset(const std::string bb_name) const
     return basic_blocks_.at(bb_name);
 }
 
-std::unordered_map<std::string, uint8_t> Function::getParameters() const
+std::unordered_map<std::string, FunctionParameter> Function::getParameters() const
 {
     return params_;
 }

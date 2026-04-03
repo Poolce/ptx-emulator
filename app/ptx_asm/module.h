@@ -6,6 +6,7 @@ namespace Emulator
 {
 namespace Ptx
 {
+
 using FunctionMap = std::unordered_map<std::string, std::shared_ptr<Function>>;
 
 class Module

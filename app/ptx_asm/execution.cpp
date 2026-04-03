@@ -13,12 +13,15 @@ void paramInstruction::ExecuteWarp([[maybe_unused]] std::shared_ptr<WarpContext>
 
 void pragmaInstruction::ExecuteWarp([[maybe_unused]] std::shared_ptr<WarpContext>& wc) {}
 
-void retInstruction::ExecuteWarp([[maybe_unused]] std::shared_ptr<WarpContext>& wc)
+void retInstruction::ExecuteBranch([[maybe_unused]] std::shared_ptr<WarpContext>& wc)
 {
     wc->pc = WarpContext::EOC;
 }
 
-void braInstruction::ExecuteWarp([[maybe_unused]] std::shared_ptr<WarpContext>& wc) {}
+void braInstruction::ExecuteBranch([[maybe_unused]] std::shared_ptr<WarpContext>& wc)
+{
+    wc->pc++;
+}
 
 void regInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {

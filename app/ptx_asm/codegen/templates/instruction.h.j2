@@ -31,6 +31,9 @@ class {{ i_name }}Instruction : public Instruction {
 {% if instr.exec_type == "warp" %}
     void ExecuteWarp(std::shared_ptr<WarpContext>& wc);
 {% endif %}
+{% if instr.exec_type == "branch" %}
+    void ExecuteBranch(std::shared_ptr<WarpContext>& wc);
+{% endif %}
  public:
 {% for name, type in instr.params.items() %}  {{ funcs.get_type_name(i_name, name, type) }} {{ name }}_ = {{ funcs.get_type_name(i_name, name, type) }}();
 {% endfor %}

@@ -4,6 +4,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <vector>
 #include <cstdint>
 
 
@@ -62,6 +63,24 @@ public:
     registerOperand reg = registerOperand();
     symbolOperand symbol = symbolOperand();
     immediateOperand imm = 0;
+};
+
+enum class FuncType : uint8_t
+{
+    Undefined,
+    Entry,
+    Func
+};
+
+enum class FuncAttr : uint8_t
+{
+    Visible
+};
+
+struct FunctionParameter {
+    std::string name;
+    Ptx::dataType type;
+    uint8_t id;
 };
 
 } // Ptx

@@ -427,7 +427,7 @@
                     "arg_type": "symbolOperand"
                 }
             },
-            "exec_type": "warp"
+            "exec_type": "branch"
         },
         "label": {
             "regexp_template": "\\$($sym):",
@@ -535,7 +535,7 @@
         "ret": {
             "regexp_template": "ret;",
             "params": {},
-            "exec_type": "warp"
+            "exec_type": "branch"
         },
         "tensormap": {},
         "vsub": {},

@@ -17,7 +17,7 @@ class RtStream
   public:
     RtStream(const std::shared_ptr<Ptx::Module>& module);
 
-    void KernelLaunch(uint64_t func, dim3 gridDim, dim3 blockDim, void** args, size_t sharedMem);
+    void KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim, void** args, size_t sharedMem);
 };
 
 } // namespace Emulator

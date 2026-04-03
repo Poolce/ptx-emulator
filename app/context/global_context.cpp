@@ -19,4 +19,9 @@ GlobalContext::GlobalContext(const dim3& gridDim, const dim3& blockDim, void** a
     }
 }
 
+std::vector<std::shared_ptr<BlockContext>> GlobalContext::GetBlocks() const
+{
+    return blocks_;
+}
+
 } // namespace Emulator

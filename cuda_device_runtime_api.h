@@ -183,7 +183,7 @@ __cudaCDP2OccupancyMaxActiveBlocksPerMultiprocessorWithFlags(int* numBlocks,
     #if defined(__CUDA_ARCH__) && !defined(__CDPRT_SUPPRESS_SYNC_DEPRECATION_WARNING)
         #define __CDPRT_DEPRECATED(func_name)                                                                          \
             __DEPRECATED__("Use of " #func_name " from device code is deprecated. Moreover, such use will cause this " \
-                                                "module to fail to load on sm_90+ devices. If calls to " #func_name    \
+                           "module to fail to load on sm_90+ devices. If calls to " #func_name                         \
                            " from device code cannot be removed for older devices at this time, you may guard them "   \
                            "with __CUDA_ARCH__ macros to remove them only for sm_90+ devices, making sure to "         \
                            "generate code for compute_90 for the macros to take effect. Note that this mitigation "    \

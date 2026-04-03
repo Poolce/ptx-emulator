@@ -84,7 +84,8 @@ void RtInterface::KernelLaunch([[maybe_unused]] uint64_t func,
                                [[maybe_unused]] size_t sharedMem,
                                [[maybe_unused]] uint64_t stream_id)
 {
-    streams_.at(stream_id)->KernelLaunch(func, gridDim, blockDim, args, sharedMem);
+    auto func_name = GetFunctionName(func);
+    streams_.at(stream_id)->KernelLaunch(func_name, gridDim, blockDim, args, sharedMem);
 }
 
 } // namespace Emulator

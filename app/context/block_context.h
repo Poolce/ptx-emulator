@@ -11,6 +11,8 @@ class BlockContext
 
   public:
     BlockContext(const dim3& gridDim, const dim3& gridId, const dim3& blockDim, void** args, size_t sharedMem);
+
+    std::vector<std::shared_ptr<WarpContext>> GetWarps() const;
 };
 
 } // namespace Emulator

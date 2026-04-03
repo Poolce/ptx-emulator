@@ -40,4 +40,9 @@ BlockContext::BlockContext(const dim3& gridDim, const dim3& gridId, const dim3& 
     }
 }
 
+std::vector<std::shared_ptr<WarpContext>> BlockContext::GetWarps() const
+{
+    return warps_;
+}
+
 } // namespace Emulator

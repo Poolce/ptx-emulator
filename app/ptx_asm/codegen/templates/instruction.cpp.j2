@@ -27,6 +27,12 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
     wc->pc++;
 }
 {% endif %}
+{% if instr.exec_type == "branch" %}
+void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
+    std::cout<<"Execute instruction {{ i_name }}"<<std::endl;
+    ExecuteBranch(wc);
+}
+{% endif %}
 
 void {{ i_name }}Instruction::Dump() {
     std::cout<<"\t\t"<<"{{ i_name }}"<<"\n";
