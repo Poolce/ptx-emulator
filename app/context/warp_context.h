@@ -22,7 +22,7 @@ class WarpContext
   public:
     // Execution Context
     uint64_t pc = 0;
-    uint32_t execution_mask = 0xffffffff;
+    uint32_t execution_mask = 0x0;
     std::stack<std::pair<uint64_t, uint32_t>> execution_stack;
     std::unordered_map<std::string, Ptx::FunctionParameter> global_parameters;
 
@@ -42,8 +42,6 @@ class WarpContext
                 const std::vector<dim3>& tids,
                 void** args,
                 void* shared_memory);
-
-    WarpContext();
 };
 
 } // namespace Emulator

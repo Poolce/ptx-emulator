@@ -7,7 +7,37 @@
 #include <regex>
 #include <iostream>
 #include <cstdint>
+#include <optional>
+#include <array>
+#include <tuple>
+#include <utility>
 
+
+namespace {
+
+template<typename E>
+constexpr std::size_t enumCount = static_cast<std::size_t>(E::COUNT);
+
+template<typename... Enums>
+struct EnumTable {
+    static constexpr std::size_t total = (enumCount<Enums> * ...);
+
+    template<std::size_t I, std::size_t K>
+    static constexpr auto decode() {
+        constexpr std::array<std::size_t, sizeof...(Enums)> sz{ enumCount<Enums>... };
+        std::size_t stride = 1;
+        for (std::size_t i = K + 1; i < sizeof...(Enums); ++i) stride *= sz[i];
+        return static_cast<std::tuple_element_t<K, std::tuple<Enums...>>>((I / stride) % sz[K]);
+    }
+
+    static std::size_t encode(Enums... vals) {
+        std::size_t result = 0;
+        ((result = result * enumCount<Enums> + static_cast<std::size_t>(vals)), ...);
+        return result;
+    }
+};
+
+}
 
 namespace Emulator {
 namespace Ptx {
@@ -19,13 +49,14 @@ public:
     virtual void Dump() = 0;
 };
 
-
 {% for i_name, instr in instructions.items() %}
 {% if instr.regexp_template %}
 
 class {{ i_name }}Instruction : public Instruction {
  private:
-{% if instr.exec_type == "thread" %}
+{% if "typed_executor" in instr %}
+    template<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}} {{ t_name|upper }}{% if not loop.last%}, {% endif %}{% endfor %}>
+{% endif %}{% if instr.exec_type == "thread" %}
     void ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc);
 {% endif %}
 {% if instr.exec_type == "warp" %}
@@ -34,6 +65,7 @@ class {{ i_name }}Instruction : public Instruction {
 {% if instr.exec_type == "branch" %}
     void ExecuteBranch(std::shared_ptr<WarpContext>& wc);
 {% endif %}
+
  public:
 {% for name, type in instr.params.items() %}  {{ funcs.get_type_name(i_name, name, type) }} {{ name }}_ = {{ funcs.get_type_name(i_name, name, type) }}();
 {% endfor %}

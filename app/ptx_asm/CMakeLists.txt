@@ -28,8 +28,9 @@ file(GLOB ENCODER_CODEGEN_TEMPLATES CONFIGURE_DEPENDS
 set(ENCODER_AUTOGEN_SOURCES
   "${ENCODER_AUTOGEN_DIR}/instructions.cpp"
   "${ENCODER_AUTOGEN_DIR}/ptx_types.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/execution.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/instruction_executors/executors.cpp"
 )
+
 set(ENCODER_AUTOGEN_HEADERS
   "${ENCODER_AUTOGEN_DIR}/instructions.h"
   "${ENCODER_AUTOGEN_DIR}/ptx_types.h"

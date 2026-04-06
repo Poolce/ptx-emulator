@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <variant>
 
 
 namespace Emulator {
@@ -22,7 +23,9 @@ enum class {{ name }} {
     UNDEFINED,
 {% for item in p_param["values"] %}    {{ funcs.process_pname(item) }},
 {% endfor %}
+    COUNT
 };
+
 {% endif %}
 {% endfor %}
 {% endif %}
@@ -36,6 +39,7 @@ enum class {{ name }} {
     UNDEFINED,
 {% for item in p_param["values"] %}    {{ funcs.process_pname(item) }},
 {% endfor %}
+    COUNT
 };
 {% endfor %}
 

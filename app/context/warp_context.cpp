@@ -5,12 +5,6 @@
 namespace Emulator
 {
 
-WarpContext::WarpContext()
-{
-    thread_regs = std::vector<ThreadContext>(WARP_SIZE);
-    spr_regs = std::vector<SprContext>(WARP_SIZE);
-}
-
 WarpContext::WarpContext([[maybe_unused]] const dim3& gridDim,
                          [[maybe_unused]] const dim3& gridId,
                          [[maybe_unused]] const dim3& blockDim,

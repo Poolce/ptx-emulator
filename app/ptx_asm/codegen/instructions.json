@@ -31,6 +31,10 @@
                 "u16",
                 "u32",
                 "u64",
+                "b8",
+                "b16",
+                "b32",
+                "b64",
                 "pred"
             ]
         },
@@ -95,7 +99,8 @@
             "params": {
                 "val": {
                     "values": [
-                        "nounroll"
+                        "nounroll",
+                        "used_bytes_mask"
                     ],
                     "arg_type": "qualifier"
                 }
@@ -577,6 +582,10 @@
                     "arg_type": "registerOperand"
                 }
             },
+            "typed_executor": [
+                "src_data",
+                "dst_data"
+            ],
             "exec_type": "thread"
         },
         "mbarrier": {},
