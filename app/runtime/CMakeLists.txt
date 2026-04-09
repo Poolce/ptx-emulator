@@ -11,7 +11,6 @@ target_include_directories(${RUNTIME_LIB_NAME} PUBLIC
 )
 
 target_link_libraries(${RUNTIME_LIB_NAME} PUBLIC
-    execution_module
     context
     encoder
     utils

@@ -17,18 +17,18 @@ using RegisterContext = std::vector<uint64_t>;
 using ThreadContext = std::unordered_map<Ptx::registerType, RegisterContext>;
 using SprContext = std::unordered_map<Ptx::sprType, uint64_t>;
 
+class BlockContext;
+
 class WarpContext
 {
+  private:
+    std::weak_ptr<BlockContext> block_context_;
+
   public:
     // Execution Context
     uint64_t pc = 0;
     uint32_t execution_mask = 0x0;
     std::stack<std::pair<uint64_t, uint32_t>> execution_stack;
-    std::unordered_map<std::string, Ptx::FunctionParameter> global_parameters;
-
-    // Global Context
-    void** args_;
-    void* shared_memory_;
 
     // Register Context
     std::vector<ThreadContext> thread_regs{};
@@ -36,12 +36,14 @@ class WarpContext
 
   public:
     constexpr static uint64_t EOC = 0xffffffffffffffff;
-    WarpContext(const dim3& gridDim,
-                const dim3& gridId,
-                const dim3& blockDim,
-                const std::vector<dim3>& tids,
-                void** args,
-                void* shared_memory);
+    WarpContext() = default;
+    void Init(std::shared_ptr<BlockContext> block_context,
+              const dim3& gridDim,
+              const dim3& gridId,
+              const dim3& blockDim,
+              const std::vector<dim3>& tids);
+
+    bool isActive() const;
 
     uint32_t GetPredicateMask(uint64_t prd_id) const;
 };

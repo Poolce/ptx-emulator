@@ -13,8 +13,8 @@ namespace Ptx {
     }
 
     void braInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc){
-        // auto mask = wc->GetPredicateMask(prd_.reg_id);
-        auto mask = 0;
+        auto mask = wc->GetPredicateMask(prd_.reg_id);
+        std::cout<<std::hex<<"MASK: "<<mask<<"\n";
         if (mask != 0) {
             wc->pc += 1;
         } else {
@@ -23,7 +23,16 @@ namespace Ptx {
     }
 
     void retInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc){
-        wc->pc = WarpContext::EOC;
+        if (wc->execution_stack.empty()) {
+            wc->pc = WarpContext::EOC;
+
+        } else {
+
+            auto [pc, mask] = wc->execution_stack.top();
+            wc->pc = pc;
+            wc->execution_mask = mask;
+            wc->execution_stack.pop();
+        }
     }
 
     template<dataType DATA>

@@ -5,8 +5,13 @@
 namespace Emulator
 {
 
-BlockContext::BlockContext(const dim3& gridDim, const dim3& gridId, const dim3& blockDim, void** args, size_t sharedMem)
+void BlockContext::Init(std::shared_ptr<GlobalContext> global_context,
+                        const dim3& gridDim,
+                        const dim3& gridId,
+                        const dim3& blockDim,
+                        size_t sharedMem)
 {
+    global_context_ = global_context;
     shared_memory_ = std::vector<uint8_t>(sharedMem);
     std::vector<dim3> warp_thread_ids;
     warp_thread_ids.reserve(WARP_SIZE);
@@ -20,12 +25,8 @@ BlockContext::BlockContext(const dim3& gridDim, const dim3& gridId, const dim3& 
                 warp_thread_ids.push_back({tidx, tidy, tidz});
                 if (warp_thread_ids.size() == WARP_SIZE)
                 {
-                    auto warp = std::make_shared<WarpContext>(gridDim,
-                                                              gridId,
-                                                              blockDim,
-                                                              warp_thread_ids,
-                                                              args,
-                                                              shared_memory_.data());
+                    auto warp = std::make_shared<WarpContext>();
+                    warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);
                     warps_.push_back(warp);
                     warp_thread_ids.clear();
                 }
@@ -34,8 +35,8 @@ BlockContext::BlockContext(const dim3& gridDim, const dim3& gridId, const dim3& 
     }
     if (warp_thread_ids.size() > 0)
     {
-        auto warp =
-            std::make_shared<WarpContext>(gridDim, gridId, blockDim, warp_thread_ids, args, shared_memory_.data());
+        auto warp = std::make_shared<WarpContext>();
+        warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);
         warps_.push_back(warp);
     }
 }

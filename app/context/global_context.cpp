@@ -3,8 +3,14 @@
 namespace Emulator
 {
 
-GlobalContext::GlobalContext(const dim3& gridDim, const dim3& blockDim, void** args, size_t sharedMem)
+void GlobalContext::Init(const std::shared_ptr<Ptx::Module>& ptx,
+                         const dim3& gridDim,
+                         const dim3& blockDim,
+                         void** args,
+                         size_t sharedMem)
 {
+    ptx_module_ = ptx;
+    args_ = args;
     for (uint32_t gidx = 0; gidx < gridDim.x; ++gidx)
     {
         for (uint32_t gidy = 0; gidy < gridDim.y; ++gidy)
@@ -12,7 +18,8 @@ GlobalContext::GlobalContext(const dim3& gridDim, const dim3& blockDim, void** a
             for (uint32_t gidz = 0; gidz < gridDim.z; ++gidz)
             {
                 dim3 gid{gidx, gidy, gidz};
-                auto bc = std::make_shared<BlockContext>(gridDim, gid, blockDim, args, sharedMem);
+                auto bc = std::make_shared<BlockContext>();
+                bc->Init(shared_from_this(), gridDim, gid, blockDim, sharedMem);
                 blocks_.push_back(bc);
             }
         }
@@ -22,6 +29,25 @@ GlobalContext::GlobalContext(const dim3& gridDim, const dim3& blockDim, void** a
 std::vector<std::shared_ptr<BlockContext>> GlobalContext::GetBlocks() const
 {
     return blocks_;
+}
+
+void GlobalContext::SetEntryFunction(const std::string& func_name)
+{
+    auto func = ptx_module_->GetEntryFunction(func_name);
+    auto pc = func->getOffset();
+    global_parameters_ = func->getParameters();
+    for (auto& block : blocks_)
+    {
+        for (auto warp : block->GetWarps())
+        {
+            warp->pc = pc;
+        }
+    }
+}
+
+std::shared_ptr<Ptx::Instruction> GlobalContext::GetInstruction(uint64_t pc) const
+{
+    return ptx_module_->GetInstruction(pc);
 }
 
 } // namespace Emulator

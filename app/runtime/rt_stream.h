@@ -1,6 +1,5 @@
 #pragma once
 
-#include "execution_module.h"
 #include "global_context.h"
 #include "module.h"
 #include "types.h"
@@ -11,8 +10,8 @@ namespace Emulator
 class RtStream
 {
   private:
-    std::shared_ptr<GlobalContext> context_ = nullptr;
-    std::shared_ptr<ExecutionModule> execution_module_ = nullptr;
+    std::shared_ptr<GlobalContext> gpu_context_ = nullptr;
+    std::shared_ptr<Ptx::Module> ptx_module_ = nullptr;
 
   public:
     RtStream(const std::shared_ptr<Ptx::Module>& module);

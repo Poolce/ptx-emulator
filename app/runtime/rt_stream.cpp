@@ -5,23 +5,23 @@ namespace Emulator
 
 RtStream::RtStream(const std::shared_ptr<Ptx::Module>& module)
 {
-    execution_module_ = std::make_shared<ExecutionModule>(module);
+    ptx_module_ = module;
 }
 
 void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim, void** args, size_t sharedMem)
 {
-    context_ = std::make_shared<GlobalContext>(gridDim, blockDim, args, sharedMem);
+    gpu_context_ = std::make_shared<GlobalContext>();
+    gpu_context_->Init(ptx_module_, gridDim, blockDim, args, sharedMem);
+    gpu_context_->SetEntryFunction(func);
 
-    for (auto& block : context_->GetBlocks())
+    for (auto& block : gpu_context_->GetBlocks())
     {
         for (auto& warp : block->GetWarps())
         {
-            execution_module_->SetEntryFunction(warp, func);
-            auto instr = execution_module_->GetInstruction(warp);
-            while (instr)
+            while (warp->isActive())
             {
+                auto instr = gpu_context_->GetInstruction(warp->pc);
                 instr->Execute(warp);
-                instr = execution_module_->GetInstruction(warp);
             }
         }
     }
