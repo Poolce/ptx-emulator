@@ -1,0 +1,33 @@
+#pragma once
+
+#include "instructions.h"
+#include "utils.h"
+#include "warp_context.h"
+
+
+namespace Emulator {
+namespace Ptx {
+namespace __EXECUTORS {
+
+{% for i_name, instr in instructions.items() %}
+{% if instr.regexp_template %}
+{% if "typed_executor" in instr %}
+    template<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}} {{ t_name|upper }}{% if not loop.last%}, {% endif %}{% endfor %}>
+{% endif %}{% if instr.exec_type == "thread" %}
+    void {{i_name}}ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc);
+{% endif %}
+{% if instr.exec_type == "warp" %}
+    void {{i_name}}ExecuteWarp(std::shared_ptr<WarpContext>& wc);
+{% endif %}
+{% if instr.exec_type == "branch" %}
+    void {{i_name}}ExecuteBranch(std::shared_ptr<WarpContext>& wc);
+{% endif %}
+
+{% endif %}
+{% endfor %}
+
+}
+}
+}
+
+#include "executors.tpp"

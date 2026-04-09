@@ -42,6 +42,8 @@ class WarpContext
                 const std::vector<dim3>& tids,
                 void** args,
                 void* shared_memory);
+
+    uint32_t GetPredicateMask(uint64_t prd_id) const;
 };
 
 } // namespace Emulator

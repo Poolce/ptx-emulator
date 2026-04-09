@@ -10,7 +10,7 @@ namespace Ptx {
 {% for i_name, i_param in isa.instructions.items() %}
 {% if i_param.params %}
 {% for p_name, p_param in i_param.params.items() %}
-{% if p_param.arg_type == "qualifier" %}
+{% if p_param.arg_type == "qualifier" or p_param.arg_type == "children" %}
 
 {% set name = funcs.get_type_name(i_name, p_name, p_param) %}
 

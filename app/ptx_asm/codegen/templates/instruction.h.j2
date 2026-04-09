@@ -45,7 +45,7 @@ namespace Ptx {
 class Instruction {
 public:
     Instruction() = default;
-    virtual void Execute(std::shared_ptr<WarpContext>& wc);
+    virtual void Execute(std::shared_ptr<WarpContext>& wc) = 0;
     virtual void Dump() = 0;
 };
 
@@ -53,9 +53,9 @@ public:
 {% if instr.regexp_template %}
 
 class {{ i_name }}Instruction : public Instruction {
- private:
+private:
 {% if "typed_executor" in instr %}
-    template<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}} {{ t_name|upper }}{% if not loop.last%}, {% endif %}{% endfor %}>
+    template<{% for t_name in instr.typed_executor %}{{instr.params[t_name].parent_type}} {{ t_name|upper }}{% if not loop.last%}, {% endif %}{% endfor %}>
 {% endif %}{% if instr.exec_type == "thread" %}
     void ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc);
 {% endif %}

@@ -33,4 +33,18 @@ WarpContext::WarpContext([[maybe_unused]] const dim3& gridDim,
     execution_mask = ((((uint64_t)1 << tid_id) - 1) & 0xffffffff);
 }
 
+uint32_t WarpContext::GetPredicateMask(uint64_t prd_id) const
+{
+    uint32_t mask = 0;
+    for (uint32_t i = 0; i < WARP_SIZE; ++i)
+    {
+        bool prd = thread_regs.at(i).at(Ptx::registerType::P)[prd_id] != 0;
+        if (prd)
+        {
+            mask |= (1 << i);
+        }
+    }
+    return mask;
+}
+
 } // namespace Emulator

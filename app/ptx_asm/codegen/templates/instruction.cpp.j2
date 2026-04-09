@@ -19,7 +19,7 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
             ([]<std::size_t I>() {
                 return +[]({{ i_name }}Instruction* self, uint32_t lid, std::shared_ptr<WarpContext>& wc) {
                     [&]<std::size_t... Ks>(std::index_sequence<Ks...>) {
-                        self->ExecuteThread<ET::decode<I, Ks>()...>(lid, wc);
+                        self->ExecuteThread<GetParent(ET::decode<I, Ks>())...>(lid, wc);
                     }(std::index_sequence_for<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}}{% if not loop.last%}, {% endif %}{% endfor %}>{});
                 };
             }.template operator()<Is>())...
@@ -51,9 +51,9 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
     static constexpr auto table = []<std::size_t... Is>(std::index_sequence<Is...>) {
         return std::array{
             ([]<std::size_t I>() {
-                return +[]({{ i_name }}Instruction* self, uint32_t lid, std::shared_ptr<WarpContext>& wc) {
+                return +[]({{ i_name }}Instruction* self, std::shared_ptr<WarpContext>& wc) {
                     [&]<std::size_t... Ks>(std::index_sequence<Ks...>) {
-                        self->ExecuteWarp<ET::decode<I, Ks>()...>(wc);
+                        self->ExecuteWarp<GetParent(ET::decode<I, Ks>())...>(wc);
                     }(std::index_sequence_for<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}}{% if not loop.last%}, {% endif %}{% endfor %}>{});
                 };
             }.template operator()<Is>())...
@@ -75,9 +75,9 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
     static constexpr auto table = []<std::size_t... Is>(std::index_sequence<Is...>) {
         return std::array{
             ([]<std::size_t I>() {
-                return +[]({{ i_name }}Instruction* self, uint32_t lid, std::shared_ptr<WarpContext>& wc) {
+                return +[]({{ i_name }}Instruction* self, std::shared_ptr<WarpContext>& wc) {
                     [&]<std::size_t... Ks>(std::index_sequence<Ks...>) {
-                        self->ExecuteBranch<ET::decode<I, Ks>()...>(wc);
+                        self->ExecuteBranch<GetParent(ET::decode<I, Ks>())...>(wc);
                     }(std::index_sequence_for<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}}{% if not loop.last%}, {% endif %}{% endfor %}>{});
                 };
             }.template operator()<Is>())...
@@ -127,3 +127,5 @@ std::shared_ptr<Instruction> makeInstruction(const std::string& name, const std:
 
 } // Ptx
 } // Emulator
+
+#include "executors.tpp"

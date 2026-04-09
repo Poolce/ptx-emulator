@@ -11,6 +11,7 @@ target_sources(encoder
 target_include_directories(encoder
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/instruction_executors
     "${CMAKE_CURRENT_BINARY_DIR}/autogen"
 )
 
@@ -28,7 +29,6 @@ file(GLOB ENCODER_CODEGEN_TEMPLATES CONFIGURE_DEPENDS
 set(ENCODER_AUTOGEN_SOURCES
   "${ENCODER_AUTOGEN_DIR}/instructions.cpp"
   "${ENCODER_AUTOGEN_DIR}/ptx_types.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/instruction_executors/executors.cpp"
 )
 
 set(ENCODER_AUTOGEN_HEADERS

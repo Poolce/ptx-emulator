@@ -8,7 +8,7 @@
 __global__ void vectorAdd(const uint64_t* a, const uint64_t* b, uint64_t* c, int n)
 {
 
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    uint64_t idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n)
     {
         c[idx] = a[idx] + b[idx];

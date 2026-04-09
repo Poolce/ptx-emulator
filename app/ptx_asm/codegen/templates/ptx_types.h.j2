@@ -7,23 +7,35 @@
 #include <vector>
 #include <cstdint>
 #include <variant>
+#include <stdfloat>
+#include <stdexcept>
+#include <array>
 
 
 namespace Emulator {
 namespace Ptx {
 
+{% for p_name, p_param in isa.types.items() %}
+{% set name = p_name %}
+enum class {{ name }} : uint32_t {
+    UNDEFINED,
+{% for item in p_param["values"] %}    {{ funcs.process_pname(item) }},
+{% endfor %}
+    COUNT = {{ p_param["values"]|length + 1 }}
+};
+{% endfor %}
+
 {% for i_name, i_param in isa.instructions.items() %}
 {% if i_param.params %}
 {% for p_name, p_param in i_param.params.items() %}
-{% if p_param.arg_type == "qualifier" %}
 {% set name = funcs.get_type_name(i_name, p_name, p_param) %}
+{% if p_param.arg_type == "qualifier" %}
 
-
-enum class {{ name }} {
+enum class {{ name }} : uint32_t {
     UNDEFINED,
 {% for item in p_param["values"] %}    {{ funcs.process_pname(item) }},
 {% endfor %}
-    COUNT
+    COUNT = {{ p_param["values"]|length + 1 }}
 };
 
 {% endif %}
@@ -31,17 +43,53 @@ enum class {{ name }} {
 {% endif %}
 {% endfor %}
 
-{% for p_name, p_param in isa.types.items() %}
-{% set name = p_name %}
+
+template<typename T> struct ParentType;
+
+template <typename ChildType, typename ParentType = typename ParentType<ChildType>::type>
+constexpr ParentType GetParent(ChildType child)
+requires std::is_enum_v<ChildType>
+{
+    throw std::invalid_argument("No parent mapping defined for the given child enum type.");
+}
 
 
-enum class {{ name }} {
+{% for i_name, i_param in isa.instructions.items() %}
+{% if i_param.params %}
+{% for p_name, p_param in i_param.params.items() %}
+{% set name = funcs.get_type_name(i_name, p_name, p_param) %}
+{% if p_param.arg_type == "children" %}
+
+enum class {{ name }} : uint32_t {
     UNDEFINED,
 {% for item in p_param["values"] %}    {{ funcs.process_pname(item) }},
 {% endfor %}
-    COUNT
+    COUNT = {{ p_param["values"]|length + 1 }}
 };
+
+template<>
+struct ParentType<{{ name }}> {
+    using type = {{ p_param["parent_type"] }};
+};
+
+template<>
+constexpr {{ p_param["parent_type"] }} GetParent( {{ name }} child)
+{
+    static constexpr std::array<{{ p_param["parent_type"] }}, {{ p_param["values"]|length + 1 }}> map {
+        {{ p_param["parent_type"] }}::UNDEFINED,
+{% for item in p_param["values"] %}         {{ p_param["parent_type"] }}::{{ funcs.process_pname(item) }}{% if not loop.last %},{% endif %}
+
 {% endfor %}
+    };
+    const auto idx = static_cast<size_t>(child);
+    return map[idx];
+}
+
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
 
 class symbolOperand : public std::string {
 public:
@@ -86,6 +134,29 @@ struct FunctionParameter {
     Ptx::dataType type;
     uint8_t id;
 };
+
+
+template<dataType T> struct PtxNativeType;
+template<> struct PtxNativeType<dataType::Pred>  { using type = bool;  };
+template<> struct PtxNativeType<dataType::U8>  { using type = uint8_t;  };
+template<> struct PtxNativeType<dataType::U16> { using type = uint16_t; };
+template<> struct PtxNativeType<dataType::U32> { using type = uint32_t; };
+template<> struct PtxNativeType<dataType::U64> { using type = uint64_t; };
+template<> struct PtxNativeType<dataType::S8>  { using type = int8_t;   };
+template<> struct PtxNativeType<dataType::S16> { using type = int16_t;  };
+template<> struct PtxNativeType<dataType::S32> { using type = int32_t;  };
+template<> struct PtxNativeType<dataType::S64> { using type = int64_t;  };
+template<> struct PtxNativeType<dataType::F16> { using type = std::float16_t;};
+template<> struct PtxNativeType<dataType::F32> { using type = float;    };
+template<> struct PtxNativeType<dataType::F64> { using type = double;   };
+template<> struct PtxNativeType<dataType::B8>  { using type = uint8_t;  };
+template<> struct PtxNativeType<dataType::B16> { using type = uint16_t; };
+template<> struct PtxNativeType<dataType::B32> { using type = uint32_t; };
+template<> struct PtxNativeType<dataType::B64> { using type = uint64_t; };
+template<> struct PtxNativeType<dataType::UNDEFINED> { using type = int; };
+
+template<dataType T>
+using ptx_native_t = typename PtxNativeType<T>::type;
 
 } // Ptx
 } // Emulator
