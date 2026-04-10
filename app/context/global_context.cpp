@@ -40,6 +40,7 @@ void GlobalContext::SetEntryFunction(const std::string& func_name)
     {
         for (auto warp : block->GetWarps())
         {
+            warp->cur_function = func_name;
             warp->pc = pc;
         }
     }
@@ -48,6 +49,11 @@ void GlobalContext::SetEntryFunction(const std::string& func_name)
 std::shared_ptr<Ptx::Instruction> GlobalContext::GetInstruction(uint64_t pc) const
 {
     return ptx_module_->GetInstruction(pc);
+}
+
+uint64_t GlobalContext::GetBasicBlockOffset(const std::string& func_name, const std::string& sym) const
+{
+    return ptx_module_->GetBasicBlockOffset(func_name, sym);
 }
 
 } // namespace Emulator

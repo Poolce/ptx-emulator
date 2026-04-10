@@ -157,7 +157,7 @@ uint64_t Function::getOffset() const
     return pc_;
 }
 
-uint64_t Function::getBasicBlockOffset(const std::string bb_name) const
+uint64_t Function::GetBasicBlockOffset(const std::string bb_name) const
 {
     return basic_blocks_.at(bb_name);
 }

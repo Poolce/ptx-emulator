@@ -58,12 +58,12 @@ std::shared_ptr<Instruction> Module::GetInstruction(uint64_t pc) const
 
 std::shared_ptr<Function> Module::GetEntryFunction(const std::string& func_name) const
 {
-    for (const auto& [name, func] : function_map_)
+    auto func_it = function_map_.find(func_name);
+    if (func_it != function_map_.end() && func_it->second->isEntry())
     {
-        if (name == func_name && func->isEntry())
-            return func;
+        return func_it->second;
     }
-    throw std::runtime_error("Entry function did not found");
+    throw std::runtime_error("Entry function " + func_name + " not found");
 }
 
 void Module::Dump()
@@ -80,6 +80,16 @@ void Module::Dump()
     {
         func->Dump();
     }
+}
+
+uint64_t Module::GetBasicBlockOffset(const std::string& func_name, const std::string& sym) const
+{
+    auto func_it = function_map_.find(func_name);
+    if (func_it == function_map_.end()) {
+        throw std::runtime_error("Function " + func_name + " not found.");
+    }
+    return func_it->second->GetBasicBlockOffset(sym);
+
 }
 
 } // namespace Ptx

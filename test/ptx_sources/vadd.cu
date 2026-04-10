@@ -17,7 +17,7 @@ __global__ void vectorAdd(const uint64_t* a, const uint64_t* b, uint64_t* c, int
 
 int main()
 {
-    const int n = 1000;
+    const int n = 8;
     size_t size = n * sizeof(uint64_t);
 
     uint64_t* h_a = new uint64_t[n];
@@ -38,7 +38,7 @@ int main()
     cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, size, cudaMemcpyHostToDevice);
 
-    int blockSize = 1000;
+    int blockSize = 16;
     int numBlocks = 1;
     vectorAdd<<<numBlocks, blockSize>>>(d_a, d_b, d_c, n);
     cudaDeviceSynchronize();

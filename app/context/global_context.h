@@ -27,6 +27,8 @@ class GlobalContext : public std::enable_shared_from_this<GlobalContext>
     void SetEntryFunction(const std::string& func_name);
 
     std::shared_ptr<Ptx::Instruction> GetInstruction(uint64_t pc) const;
+    uint64_t GetBasicBlockOffset(const std::string& func_name, const std::string& sym) const;
+  
 };
 
 } // namespace Emulator

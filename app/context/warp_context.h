@@ -26,6 +26,7 @@ class WarpContext
 
   public:
     // Execution Context
+    std::string cur_function;
     uint64_t pc = 0;
     uint32_t execution_mask = 0x0;
     std::stack<std::pair<uint64_t, uint32_t>> execution_stack;
@@ -46,6 +47,7 @@ class WarpContext
     bool isActive() const;
 
     uint32_t GetPredicateMask(uint64_t prd_id) const;
+    void gotoBasicBlock(const std::string& sym);
 };
 
 } // namespace Emulator

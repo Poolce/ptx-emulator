@@ -15,3 +15,7 @@ target_link_libraries(${RUNTIME_LIB_NAME} PUBLIC
     encoder
     utils
 )
+
+find_package(OpenMP REQUIRED)
+
+target_link_libraries(${RUNTIME_LIB_NAME} PRIVATE OpenMP::OpenMP_CXX)

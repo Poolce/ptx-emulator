@@ -14,11 +14,15 @@ namespace Ptx {
 
     void braInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc){
         auto mask = wc->GetPredicateMask(prd_.reg_id);
-        std::cout<<std::hex<<"MASK: "<<mask<<"\n";
-        if (mask != 0) {
+        uint64_t branch_mask = mask & wc->execution_mask;
+        if (branch_mask == wc->execution_mask) {
+            wc->gotoBasicBlock(sym_);
+        } else if (branch_mask == 0) {
             wc->pc += 1;
         } else {
-            wc->pc += 1;
+            wc->execution_mask ^= branch_mask;
+            wc->execution_stack.push({wc->pc + 1, branch_mask});
+            wc->gotoBasicBlock(sym_);
         }
     }
 
@@ -27,7 +31,6 @@ namespace Ptx {
             wc->pc = WarpContext::EOC;
 
         } else {
-
             auto [pc, mask] = wc->execution_stack.top();
             wc->pc = pc;
             wc->execution_mask = mask;
