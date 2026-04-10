@@ -25,6 +25,7 @@ class BlockContext : public std::enable_shared_from_this<BlockContext>
               size_t sharedMem);
     std::vector<std::shared_ptr<WarpContext>> GetWarps() const;
     uint64_t GetBasicBlockOffset(const std::string& func_name, const std::string& sym) const;
+    void* GetParamPtr(const std::string& name) const;
 };
 
 } // namespace Emulator

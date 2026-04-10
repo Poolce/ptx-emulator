@@ -97,7 +97,8 @@ registerOperand FromString(const std::string& str) {
 template <>
 sprRegisterOperand FromString(const std::string& str) {
     auto res = sprRegisterOperand();
-    res.type = FromString<sprType>(str);
+    std::string stripped = (!str.empty() && str[0] == '%') ? str.substr(1) : str;
+    res.type = FromString<sprType>(stripped);
     return res;
 }
 

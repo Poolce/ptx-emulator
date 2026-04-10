@@ -56,4 +56,14 @@ uint64_t GlobalContext::GetBasicBlockOffset(const std::string& func_name, const 
     return ptx_module_->GetBasicBlockOffset(func_name, sym);
 }
 
+void* GlobalContext::GetParamPtr(const std::string& name) const
+{
+    auto it = global_parameters_.find(name);
+    if (it == global_parameters_.end())
+    {
+        throw std::runtime_error("Unknown kernel parameter: " + name);
+    }
+    return args_[it->second.id];
+}
+
 } // namespace Emulator

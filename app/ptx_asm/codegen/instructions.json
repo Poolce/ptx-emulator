@@ -39,8 +39,10 @@
             ]
         },
         "registerType": {
-            "regexp": "p|r|rd|spr",
+            "regexp": "f|fd|p|r|rd|spr",
             "values": [
+                "f",
+                "fd",
                 "p",
                 "r",
                 "rd",
@@ -48,6 +50,7 @@
             ]
         },
         "sprType": {
+            "regexp": "[a-z\\.]+",
             "values": [
                 "tid.x",
                 "tid.y",
@@ -230,7 +233,9 @@
                         "u64",
                         "s16",
                         "s32",
-                        "s64"
+                        "s64",
+                        "f32",
+                        "f64"
                     ]
                 },
                 "dst": {

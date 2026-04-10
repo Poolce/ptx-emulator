@@ -55,4 +55,14 @@ uint64_t BlockContext::GetBasicBlockOffset(const std::string& func_name, const s
     return global_context->GetBasicBlockOffset(func_name, sym);
 }
 
+void* BlockContext::GetParamPtr(const std::string& name) const
+{
+    auto global_context = global_context_.lock();
+    if (!global_context)
+    {
+        throw std::runtime_error("Global context is expired.");
+    }
+    return global_context->GetParamPtr(name);
+}
+
 } // namespace Emulator

@@ -68,5 +68,15 @@ void WarpContext::gotoBasicBlock(const std::string& sym)
     pc = block_context->GetBasicBlockOffset(cur_function, sym);
 }
 
+void* WarpContext::getParamPtr(const std::string& name)
+{
+    auto block_context = block_context_.lock();
+    if (!block_context)
+    {
+        throw std::runtime_error("Block context is expired.");
+    }
+    return block_context->GetParamPtr(name);
+}
+
 
 } // namespace Emulator
