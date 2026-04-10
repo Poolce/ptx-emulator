@@ -78,7 +78,8 @@ def gen_types_source(isa):
 
 def gen_code(isa, out_dir: Path):
     env.filters['capitalize'] = lambda s: s.capitalize()
-    env.filters['to_camel'] = lambda s: ''.join(w.capitalize() for w in s.split('_'))
+    env.filters['to_camel'] = lambda s: ''.join(w.capitalize()
+                                                for w in s.split('_'))
     out_dir.mkdir(parents=True, exist_ok=True)
 
     content = gen_instruction_header(isa)
