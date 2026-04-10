@@ -6,7 +6,7 @@
 namespace Emulator
 {
 
-void BlockContext::Init(std::shared_ptr<GlobalContext> global_context,
+void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
                         const dim3& gridDim,
                         const dim3& gridId,
                         const dim3& blockDim,
@@ -23,7 +23,7 @@ void BlockContext::Init(std::shared_ptr<GlobalContext> global_context,
         {
             for (uint32_t tidx = 0; tidx < blockDim.x; ++tidx)
             {
-                warp_thread_ids.push_back({tidx, tidy, tidz});
+                warp_thread_ids.emplace_back(tidx, tidy, tidz);
                 if (warp_thread_ids.size() == WARP_SIZE)
                 {
                     auto warp = std::make_shared<WarpContext>();
@@ -34,7 +34,7 @@ void BlockContext::Init(std::shared_ptr<GlobalContext> global_context,
             }
         }
     }
-    if (warp_thread_ids.size() > 0)
+    if (!warp_thread_ids.empty())
     {
         auto warp = std::make_shared<WarpContext>();
         warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);

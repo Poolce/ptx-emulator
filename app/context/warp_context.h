@@ -35,10 +35,9 @@ class WarpContext
     std::vector<ThreadContext> thread_regs{};
     std::vector<SprContext> spr_regs{};
 
-  public:
     constexpr static uint64_t EOC = 0xffffffffffffffff;
     WarpContext() = default;
-    void Init(std::shared_ptr<BlockContext> block_context,
+    void Init(const std::shared_ptr<BlockContext>& block_context,
               const dim3& gridDim,
               const dim3& gridId,
               const dim3& blockDim,

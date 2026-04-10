@@ -18,7 +18,7 @@ class BlockContext : public std::enable_shared_from_this<BlockContext>
   public:
     BlockContext() = default;
 
-    void Init(std::shared_ptr<GlobalContext> global_context,
+    void Init(const std::shared_ptr<GlobalContext>& global_context,
               const dim3& gridDim,
               const dim3& gridId,
               const dim3& blockDim,

@@ -38,7 +38,7 @@ void GlobalContext::SetEntryFunction(const std::string& func_name)
     global_parameters_ = func->getParameters();
     for (auto& block : blocks_)
     {
-        for (auto warp : block->GetWarps())
+        for (const auto& warp : block->GetWarps())
         {
             warp->cur_function = func_name;
             warp->pc = pc;

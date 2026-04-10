@@ -38,7 +38,7 @@ class Function
     void Dump();
     bool isEntry() const;
     uint64_t getOffset() const;
-    uint64_t GetBasicBlockOffset(const std::string bb_name) const;
+    uint64_t GetBasicBlockOffset(const std::string& bb_name) const;
     std::unordered_map<std::string, FunctionParameter> getParameters() const;
 };
 } // namespace Ptx

@@ -13,7 +13,7 @@ namespace Ptx
 
 static std::unordered_map<std::string, FunctionParameter> parseParameters(const std::string& params)
 {
-    constexpr std::string_view Pattern = "\\.param\\s\\.([fsub]8|[fsub]16|[fsub]32|[fsub]64|pred)\\s([A-z0-9_]+),?";
+    constexpr std::string_view Pattern = R"(\.param\s\.([fsub]8|[fsub]16|[fsub]32|[fsub]64|pred)\s([A-z0-9_]+),?)";
     static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
 
     std::unordered_map<std::string, FunctionParameter> res{};
@@ -158,7 +158,7 @@ uint64_t Function::getOffset() const
     return pc_;
 }
 
-uint64_t Function::GetBasicBlockOffset(const std::string bb_name) const
+uint64_t Function::GetBasicBlockOffset(const std::string& bb_name) const
 {
     return basic_blocks_.at(bb_name);
 }

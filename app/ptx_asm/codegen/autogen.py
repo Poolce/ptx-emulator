@@ -41,7 +41,7 @@ class CustomFunctions:
         return ""
 
     def process_pname(name):
-        delimiters = r"[ \.;:]+" 
+        delimiters = r"[ \.;:]+"
         sname = re.split(delimiters, name)
         return "".join([i.capitalize() for i in sname])
 

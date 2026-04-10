@@ -6,7 +6,7 @@
 namespace Emulator
 {
 
-void WarpContext::Init(std::shared_ptr<BlockContext> block_context,
+void WarpContext::Init(const std::shared_ptr<BlockContext>& block_context,
                        [[maybe_unused]] const dim3& gridDim,
                        const dim3& gridId,
                        const dim3& blockDim,
@@ -49,7 +49,7 @@ uint32_t WarpContext::GetPredicateMask(uint64_t prd_id) const
         }
         if (prd)
         {
-            mask |= (1u << i);
+            mask |= (1U << i);
         }
     }
     return mask;
@@ -57,7 +57,7 @@ uint32_t WarpContext::GetPredicateMask(uint64_t prd_id) const
 
 bool WarpContext::isActive() const
 {
-    return !(execution_stack.empty() && pc == EOC);
+    return !execution_stack.empty() || pc != EOC;
 }
 
 void WarpContext::gotoBasicBlock(const std::string& sym)
