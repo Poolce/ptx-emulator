@@ -1,37 +1,15 @@
-#include "constant.h"
-#include "module.h"
-
-#include <chrono>
-#include <fstream>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 
-namespace
+int main(int argc, char* argv[])
 {
-
-// std::string readPtx(const std::string& filename)
-// {
-//     std::ifstream file(filename);
-//     if (!file.is_open())
-//     {
-//         throw std::runtime_error("Failed while opening file: " + filename);
-//     }
-
-//     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-
-//     if (file.bad())
-//     {
-//         throw std::runtime_error("Failed while reading file:" + filename);
-//     }
-
-//     return content;
-// }
-
-} // namespace
-
-int main()
-{
-    std::string file = "/home/poolce/workplace/ptx-emulator/test/ptx_sources/test";
+    if (argc < 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <binary>\n";
+        return 1;
+    }
+    std::string file = argv[1];
     auto cmd = std::string("LD_PRELOAD=libemuruntime.so CUEMU_TARGET_EXEC=");
     cmd += file;
     cmd += " ";

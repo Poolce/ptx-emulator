@@ -38,13 +38,17 @@ uint32_t WarpContext::GetPredicateMask(uint64_t prd_id) const
     for (uint32_t i = 0; i < WARP_SIZE; ++i)
     {
         bool prd = false;
-        if (i > thread_regs.size())
+        if (i < thread_regs.size())
         {
-            prd = thread_regs.at(i).at(Ptx::registerType::P)[prd_id] != 0;
+            auto it = thread_regs[i].find(Ptx::registerType::P);
+            if (it != thread_regs[i].end() && prd_id < it->second.size())
+            {
+                prd = it->second[prd_id] != 0;
+            }
         }
         if (prd)
         {
-            mask |= (1 << i);
+            mask |= (1u << i);
         }
     }
     return mask;

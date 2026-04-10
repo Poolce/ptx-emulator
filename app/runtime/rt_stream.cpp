@@ -29,6 +29,10 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
             while (warp->isActive())
             {
                 auto instr = gpu_context_->GetInstruction(warp->pc);
+                if (!instr)
+                {
+                    throw std::runtime_error("No instruction at pc " + std::to_string(warp->pc));
+                }
                 instr->Execute(warp);
             }
         }

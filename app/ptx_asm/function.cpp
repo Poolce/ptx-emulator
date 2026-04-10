@@ -140,7 +140,7 @@ bool Function::isEntry() const
             fl = true;
         }
     }
-    return fl & (type_ == FuncType::Entry);
+    return fl && (type_ == FuncType::Entry);
 }
 
 void Function::Dump()
