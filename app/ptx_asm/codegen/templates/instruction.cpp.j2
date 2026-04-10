@@ -13,7 +13,7 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
 {% if "typed_executor" in instr %}
     using ET = EnumTable<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}}{% if not loop.last%}, {% endif %}{% endfor %}>;
 
-    static constexpr auto table = []<std::size_t... Is>(std::index_sequence<Is...>) {
+    static constexpr auto Table = []<std::size_t... Is>(std::index_sequence<Is...>) {
         return std::array{
             ([]<std::size_t I>() {
                 return +[]({{ i_name }}Instruction* self, uint32_t lid, std::shared_ptr<WarpContext>& wc) {
@@ -27,14 +27,14 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
 
     auto idx = ET::encode({% for t_name in instr.typed_executor %}{{t_name}}_{% if not loop.last%}, {% endif %}{% endfor %});
     for (uint32_t lid = 0; lid < Emulator::WARP_SIZE; lid++) {
-        bool prd = ((wc->execution_mask >> lid) & 1);
+        const bool prd = ((wc->execution_mask >> lid) & 1U) != 0U;
         if (prd) {
-            table[idx](this, lid, wc);
+            Table[idx](this, lid, wc);
         }
     }
 {% else %}
     for (uint32_t lid = 0; lid < Emulator::WARP_SIZE; lid++) {
-        bool prd = ((wc->execution_mask >> lid) & 1);
+        const bool prd = ((wc->execution_mask >> lid) & 1U) != 0U;
         if (prd) {
             ExecuteThread(lid, wc);
         }
@@ -47,7 +47,7 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
 {% if "typed_executor" in instr %}
     using ET = EnumTable<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}}{% if not loop.last%}, {% endif %}{% endfor %}>;
 
-    static constexpr auto table = []<std::size_t... Is>(std::index_sequence<Is...>) {
+    static constexpr auto Table = []<std::size_t... Is>(std::index_sequence<Is...>) {
         return std::array{
             ([]<std::size_t I>() {
                 return +[]({{ i_name }}Instruction* self, std::shared_ptr<WarpContext>& wc) {
@@ -60,7 +60,7 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
     }(std::make_index_sequence<ET::total>{});
 
     auto idx = ET::encode({% for t_name in instr.typed_executor %}{{t_name}}_{% if not loop.last%}, {% endif %}{% endfor %});
-    table[idx](this, wc);
+    Table[idx](this, wc);
 {% else %}
     ExecuteWarp(wc);
 {% endif %}
@@ -70,8 +70,8 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
 {% if instr.exec_type == "branch" %}
 {% if "typed_executor" in instr %}
     using ET = EnumTable<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}}{% if not loop.last%}, {% endif %}{% endfor %}>;
-   
-    static constexpr auto table = []<std::size_t... Is>(std::index_sequence<Is...>) {
+
+    static constexpr auto Table = []<std::size_t... Is>(std::index_sequence<Is...>) {
         return std::array{
             ([]<std::size_t I>() {
                 return +[]({{ i_name }}Instruction* self, std::shared_ptr<WarpContext>& wc) {
@@ -84,7 +84,7 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
     }(std::make_index_sequence<ET::total>{});
 
     auto idx = ET::encode({% for t_name in instr.typed_executor %}{{t_name}}_{% if not loop.last%}, {% endif %}{% endfor %});
-    table[idx](this, wc);
+    Table[idx](this, wc);
 {% else %}
     ExecuteBranch(wc);
 {% endif %}
@@ -96,18 +96,18 @@ void {{ i_name }}Instruction::Dump() {
 }
 
 std::shared_ptr<{{ i_name }}Instruction> {{ i_name }}Instruction::Make(const std::string& line) {
-    constexpr std::string_view pattern = "{{ funcs.make_regexp(instr)|replace('\\', '\\\\') }}";
-    static std::regex re(pattern.data(), std::regex::ECMAScript | std::regex::optimize);
+    constexpr std::string_view Pattern = R"ptx({{ funcs.make_regexp(instr) }})ptx";
+    static std::regex re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize);
     std::smatch match;
-    auto i_ = std::make_shared<{{ i_name }}Instruction>();
+    auto instr = std::make_shared<{{ i_name }}Instruction>();
     if (std::regex_match(line, match, re)) {
         {% for name, type in instr.params.items() %}
-            if (match[{{ loop.index0 + 1 }}].matched) i_->{{ name }}_ = FromString<{{ funcs.get_type_name(i_name, name, type) }}>(match[{{ loop.index0 + 1 }}].str());
+            if (match[{{ loop.index0 + 1 }}].matched) { instr->{{ name }}_ = FromString<{{ funcs.get_type_name(i_name, name, type) }}>(match[{{ loop.index0 + 1 }}].str()); }
         {% endfor %}
     } else {
         throw std::runtime_error("Instruction {{ i_name }} is not mutched. [" + line + "]");
     }
-    return i_;
+    return instr;
 }
 
 {% endif %}
@@ -116,7 +116,7 @@ std::shared_ptr<{{ i_name }}Instruction> {{ i_name }}Instruction::Make(const std
 std::shared_ptr<Instruction> makeInstruction(const std::string& name, const std::string& line) {
     {% for i_name, instr in instructions.items() %}
     {% if instr.regexp_template %}
-    {% if loop.index0 > 0 %}else {% endif %}if (name == "{{ i_name }}") {
+    if (name == "{{ i_name }}") {
         return {{ i_name }}Instruction::Make(line);
     }
     {% endif %}
@@ -124,7 +124,7 @@ std::shared_ptr<Instruction> makeInstruction(const std::string& name, const std:
     throw std::runtime_error("Undefined instruction [" + line + "]" );
 }
 
-} // Ptx
-} // Emulator
+} // namespace Ptx
+} // namespace Emulator
 
 #include "executors.tpp"

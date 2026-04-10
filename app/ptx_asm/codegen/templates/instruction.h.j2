@@ -55,7 +55,7 @@ public:
 class {{ i_name }}Instruction : public Instruction {
 private:
 {% if "typed_executor" in instr %}
-    template<{% for t_name in instr.typed_executor %}{{instr.params[t_name].parent_type}} {{ t_name|upper }}{% if not loop.last%}, {% endif %}{% endfor %}>
+    template<{% for t_name in instr.typed_executor %}{{instr.params[t_name].parent_type}} {{ t_name|to_camel }}{% if not loop.last%}, {% endif %}{% endfor %}>
 {% endif %}{% if instr.exec_type == "thread" %}
     void ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc);
 {% endif %}
@@ -84,5 +84,5 @@ private:
 
 std::shared_ptr<Instruction> makeInstruction(const std::string& name, const std::string& line);
 
-} // Ptx
-} // Emulator
+} // namespace Ptx
+} // namespace Emulator

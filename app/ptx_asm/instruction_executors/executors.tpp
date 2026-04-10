@@ -15,9 +15,13 @@ template<typename T>
 T reg_cast(uint64_t raw)
 {
     if constexpr (std::is_same_v<T, bool>)
+    {
         return raw != 0;
+    }
     else if constexpr (std::is_integral_v<T>)
+    {
         return static_cast<T>(raw);
+    }
     else
     {
         T val;
@@ -35,9 +39,13 @@ template<typename T>
 uint64_t to_u64(T val)
 {
     if constexpr (std::is_same_v<T, bool>)
+    {
         return val ? 1ULL : 0ULL;
+    }
     else if constexpr (std::is_integral_v<T>)
+    {
         return static_cast<uint64_t>(static_cast<std::make_unsigned_t<T>>(val));
+    }
     else
     {
         uint64_t raw = 0;
@@ -59,7 +67,7 @@ void regInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 // ---------------------------------------------------------------------------
 // pragma — compiler hint, no runtime effect
 // ---------------------------------------------------------------------------
-void pragmaInstruction::ExecuteWarp(std::shared_ptr<WarpContext>& wc)
+void pragmaInstruction::ExecuteWarp(std::shared_ptr<WarpContext>& wc) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)wc;
 }
@@ -69,7 +77,7 @@ void pragmaInstruction::ExecuteWarp(std::shared_ptr<WarpContext>& wc)
 // In this flat-memory emulator all address spaces share the host address
 // space, so cvta is an identity copy of the pointer value.
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void cvtaInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
     uint64_t val = wc->thread_regs[lid][src_.type][src_.reg_id];
@@ -79,10 +87,10 @@ void cvtaInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& 
 // ---------------------------------------------------------------------------
 // setp — set predicate from comparison
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void setpInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
@@ -113,16 +121,16 @@ void setpInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& 
         default: result = false; break;
     }
 
-    wc->thread_regs[lid][dst_.type][dst_.reg_id] = result ? 1u : 0u;
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = result ? 1U : 0U;
 }
 
 // ---------------------------------------------------------------------------
 // add — integer addition
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void addInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
@@ -135,18 +143,24 @@ void addInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 // ---------------------------------------------------------------------------
 // mov — move register / special register / immediate
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void movInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     uint64_t val = 0;
     if (src_.type != registerType::UNDEFINED)
+    {
         val = wc->thread_regs[lid][src_.type][src_.reg_id];
+    }
     else if (spr_.type != sprType::UNDEFINED)
+    {
         val = wc->spr_regs[lid][spr_.type];
+    }
     else
+    {
         val = to_u64<T>(static_cast<T>(imm_));
+    }
 
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = val;
 }
@@ -154,10 +168,10 @@ void movInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 // ---------------------------------------------------------------------------
 // shl — logical shift left (shift amount always in imm_)
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void shlInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     T val   = reg_cast<T>(wc->thread_regs[lid][src_.type][src_.reg_id]);
     auto sh = static_cast<uint32_t>(imm_);
@@ -168,10 +182,10 @@ void shlInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 // ---------------------------------------------------------------------------
 // and — bitwise AND  (types: pred, b16, b32, b64)
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void andInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
@@ -184,10 +198,10 @@ void andInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 // ---------------------------------------------------------------------------
 // mul — multiply  (modes: lo / hi / wide)
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void mulInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
@@ -223,14 +237,16 @@ void mulInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 // ---------------------------------------------------------------------------
 // st — store to memory  (addr = reg + imm offset)
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void stInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     uintptr_t addr = 0;
     if (addr_.reg.type != registerType::UNDEFINED)
+    {
         addr = static_cast<uintptr_t>(wc->thread_regs[lid][addr_.reg.type][addr_.reg.reg_id]);
+    }
     addr += static_cast<ptrdiff_t>(addr_.imm);
 
     T val = reg_cast<T>(wc->thread_regs[lid][src_.type][src_.reg_id]);
@@ -240,10 +256,10 @@ void stInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc
 // ---------------------------------------------------------------------------
 // neg — arithmetic negation  (types: s16, s32, s64)
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void negInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     T val = (src_.type != registerType::UNDEFINED)
                 ? reg_cast<T>(wc->thread_regs[lid][src_.type][src_.reg_id])
@@ -255,10 +271,10 @@ void negInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 // ---------------------------------------------------------------------------
 // sub — subtraction  (types: f32, f64)
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void subInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
@@ -295,7 +311,7 @@ void braInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc)
 // ---------------------------------------------------------------------------
 // label — label marker, no runtime effect
 // ---------------------------------------------------------------------------
-void labelInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+void labelInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)lid;
     (void)wc;
@@ -306,10 +322,10 @@ void labelInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>&
 //   Register address:  addr = reg + imm
 //   Symbol address:    addr = getParamPtr(symbol) + imm  (kernel params)
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void ldInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     uintptr_t addr = 0;
     if (addr_.reg.type != registerType::UNDEFINED)
@@ -331,10 +347,10 @@ void ldInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc
 // ---------------------------------------------------------------------------
 // mad — multiply-add  (dst = a*b + c,  modes: lo / hi / wide)
 // ---------------------------------------------------------------------------
-template<dataType DATA>
+template<dataType Data>
 void madInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using T = ptx_native_t<DATA>;
+    using T = ptx_native_t<Data>;
 
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id]);
@@ -367,9 +383,9 @@ void madInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 }
 
 // ---------------------------------------------------------------------------
-// ret — return / pop execution stack (already implemented, kept as-is)
+// ret — return / pop execution stack
 // ---------------------------------------------------------------------------
-void retInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc)
+void retInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc) // NOLINT(readability-convert-member-functions-to-static)
 {
     if (wc->execution_stack.empty())
     {
@@ -390,15 +406,15 @@ void retInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc)
 // PTX syntax: cvt.dst_type.src_type  dst, src
 // The generated code captures the FIRST mnemonic token into src_data_ and the
 // SECOND into dst_data_, so:
-//   SRC_DATA (= src_data_ = first token) is the PTX destination type
-//   DST_DATA (= dst_data_ = second token) is the PTX source type
-// Read the source register with DST_DATA, write the destination with SRC_DATA.
+//   SrcData (= src_data_ = first token) is the PTX destination type
+//   DstData (= dst_data_ = second token) is the PTX source type
+// Read the source register with DstData, write the destination with SrcData.
 // ---------------------------------------------------------------------------
-template<dataType SRC_DATA, dataType DST_DATA>
+template<dataType SrcData, dataType DstData>
 void cvtInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    using OutT = ptx_native_t<SRC_DATA>; // PTX output (destination) type
-    using InT  = ptx_native_t<DST_DATA>; // PTX input  (source)      type
+    using OutT = ptx_native_t<SrcData>; // PTX output (destination) type
+    using InT  = ptx_native_t<DstData>; // PTX input  (source)      type
 
     InT  src_val = reg_cast<InT>(wc->thread_regs[lid][src_.type][src_.reg_id]);
     OutT dst_val = static_cast<OutT>(src_val);
