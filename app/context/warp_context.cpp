@@ -1,5 +1,6 @@
-#include "block_context.h"
 #include "warp_context.h"
+
+#include "block_context.h"
 #include "constant.h"
 
 namespace Emulator
@@ -62,7 +63,8 @@ bool WarpContext::isActive() const
 void WarpContext::gotoBasicBlock(const std::string& sym)
 {
     auto block_context = block_context_.lock();
-    if (!block_context) {
+    if (!block_context)
+    {
         throw std::runtime_error("Block context is expired.");
     }
     pc = block_context->GetBasicBlockOffset(cur_function, sym);
@@ -77,6 +79,5 @@ void* WarpContext::getParamPtr(const std::string& name)
     }
     return block_context->GetParamPtr(name);
 }
-
 
 } // namespace Emulator

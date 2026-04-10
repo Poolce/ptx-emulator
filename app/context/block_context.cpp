@@ -1,6 +1,7 @@
-#include "global_context.h"
 #include "block_context.h"
+
 #include "constant.h"
+#include "global_context.h"
 
 namespace Emulator
 {
@@ -49,7 +50,8 @@ std::vector<std::shared_ptr<WarpContext>> BlockContext::GetWarps() const
 uint64_t BlockContext::GetBasicBlockOffset(const std::string& func_name, const std::string& sym) const
 {
     auto global_context = global_context_.lock();
-    if (!global_context) {
+    if (!global_context)
+    {
         throw std::runtime_error("Global context is expired.");
     }
     return global_context->GetBasicBlockOffset(func_name, sym);

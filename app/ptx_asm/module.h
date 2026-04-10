@@ -22,7 +22,6 @@ class Module
     std::shared_ptr<Function> GetEntryFunction(const std::string& func_name) const;
     std::shared_ptr<Instruction> GetInstruction(uint64_t pc) const;
     uint64_t GetBasicBlockOffset(const std::string& func_name, const std::string& sym) const;
-
 };
 } // namespace Ptx
 } // namespace Emulator

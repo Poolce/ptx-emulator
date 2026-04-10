@@ -1,8 +1,8 @@
-#include <gtest/gtest.h>
-
+#include "constant.h"
 #include "instructions.h"
 #include "warp_context.h"
-#include "constant.h"
+
+#include <gtest/gtest.h>
 
 #include <bit>
 #include <cstring>
@@ -23,25 +23,25 @@ static std::shared_ptr<WarpContext> makeWarp(uint32_t mask = 0x1)
 
     for (uint32_t i = 0; i < WARP_SIZE; ++i)
     {
-        wc->thread_regs[i][registerType::R]   = RegisterContext(8, 0);
-        wc->thread_regs[i][registerType::Rd]  = RegisterContext(8, 0);
-        wc->thread_regs[i][registerType::P]   = RegisterContext(4, 0);
+        wc->thread_regs[i][registerType::R] = RegisterContext(8, 0);
+        wc->thread_regs[i][registerType::Rd] = RegisterContext(8, 0);
+        wc->thread_regs[i][registerType::P] = RegisterContext(4, 0);
 
-        wc->spr_regs[i][sprType::TidX]   = i;
-        wc->spr_regs[i][sprType::TidY]   = 0;
-        wc->spr_regs[i][sprType::TidZ]   = 0;
+        wc->spr_regs[i][sprType::TidX] = i;
+        wc->spr_regs[i][sprType::TidY] = 0;
+        wc->spr_regs[i][sprType::TidZ] = 0;
         wc->spr_regs[i][sprType::CtaidX] = 0;
         wc->spr_regs[i][sprType::CtaidY] = 0;
         wc->spr_regs[i][sprType::CtaidZ] = 0;
-        wc->spr_regs[i][sprType::NtidX]  = 32;
-        wc->spr_regs[i][sprType::NtidY]  = 1;
-        wc->spr_regs[i][sprType::NtidZ]  = 1;
+        wc->spr_regs[i][sprType::NtidX] = 32;
+        wc->spr_regs[i][sprType::NtidY] = 1;
+        wc->spr_regs[i][sprType::NtidZ] = 1;
     }
     return wc;
 }
 
 // Convenience: read a 32-bit register value as a typed T for thread 0.
-template<typename T>
+template <typename T>
 static T r32(const std::shared_ptr<WarpContext>& wc, uint32_t id)
 {
     uint64_t raw = wc->thread_regs[0][registerType::R][id];
@@ -49,10 +49,13 @@ static T r32(const std::shared_ptr<WarpContext>& wc, uint32_t id)
     if constexpr (std::is_integral_v<T>)
         return static_cast<T>(raw);
     else
-    { std::memcpy(&val, &raw, sizeof(T)); return val; }
+    {
+        std::memcpy(&val, &raw, sizeof(T));
+        return val;
+    }
 }
 
-template<typename T>
+template <typename T>
 static T rd64(const std::shared_ptr<WarpContext>& wc, uint32_t id)
 {
     uint64_t raw = wc->thread_regs[0][registerType::Rd][id];
@@ -60,7 +63,10 @@ static T rd64(const std::shared_ptr<WarpContext>& wc, uint32_t id)
     if constexpr (std::is_integral_v<T>)
         return static_cast<T>(raw);
     else
-    { std::memcpy(&val, &raw, sizeof(T)); return val; }
+    {
+        std::memcpy(&val, &raw, sizeof(T));
+        return val;
+    }
 }
 
 static uint64_t pred(const std::shared_ptr<WarpContext>& wc, uint32_t id)
@@ -69,7 +75,7 @@ static uint64_t pred(const std::shared_ptr<WarpContext>& wc, uint32_t id)
 }
 
 // Write a 32-bit value into thread 0's %rN
-template<typename T>
+template <typename T>
 static void setR(const std::shared_ptr<WarpContext>& wc, uint32_t id, T val)
 {
     uint64_t raw = 0;
@@ -80,7 +86,7 @@ static void setR(const std::shared_ptr<WarpContext>& wc, uint32_t id, T val)
     wc->thread_regs[0][registerType::R][id] = raw;
 }
 
-template<typename T>
+template <typename T>
 static void setRd(const std::shared_ptr<WarpContext>& wc, uint32_t id, T val)
 {
     uint64_t raw = 0;
@@ -632,7 +638,7 @@ TEST(BraExecutor, DivergentBranchPushesStack)
     // The stack push happens before gotoBasicBlock, so state should reflect it
     EXPECT_FALSE(wc->execution_stack.empty());
     auto [saved_pc, saved_mask] = wc->execution_stack.top();
-    EXPECT_EQ(saved_pc, 11u);   // fall-through pc = 10+1
-    EXPECT_EQ(saved_mask, 0x2u); // bit 1 = fall-through thread
+    EXPECT_EQ(saved_pc, 11u);            // fall-through pc = 10+1
+    EXPECT_EQ(saved_mask, 0x2u);         // bit 1 = fall-through thread
     EXPECT_EQ(wc->execution_mask, 0x1u); // only branching thread remains
 }

@@ -1,8 +1,8 @@
-#include <gtest/gtest.h>
-
-#include "module.h"
 #include "function.h"
 #include "instructions.h"
+#include "module.h"
+
+#include <gtest/gtest.h>
 
 using namespace Emulator;
 using namespace Emulator::Ptx;
@@ -137,8 +137,8 @@ TEST(ModuleParsing, TwoFunctions_PCsContinueAcrossFunctions)
 TEST(ModuleParsing, TwoBlocks_SecondBlockOffsetGreaterThanZero)
 {
     auto module = Module::Make(PTX_TWO_BLOCKS);
-    uint64_t entry_off  = module->GetBasicBlockOffset("multiblock", "entry");
-    uint64_t bb1_off    = module->GetBasicBlockOffset("multiblock", "BB0_1");
+    uint64_t entry_off = module->GetBasicBlockOffset("multiblock", "entry");
+    uint64_t bb1_off = module->GetBasicBlockOffset("multiblock", "BB0_1");
 
     EXPECT_EQ(entry_off, 0u);
     EXPECT_GT(bb1_off, entry_off);
@@ -200,7 +200,7 @@ TEST(FunctionBasicBlocks, NamedBlockAfterEntry)
     auto func = module->GetEntryFunction("multiblock");
 
     uint64_t entry_off = func->GetBasicBlockOffset("entry");
-    uint64_t bb1_off   = func->GetBasicBlockOffset("BB0_1");
+    uint64_t bb1_off = func->GetBasicBlockOffset("BB0_1");
 
     // BB0_1 must come strictly after the entry instructions
     EXPECT_LT(entry_off, bb1_off);
@@ -226,7 +226,7 @@ TEST(FunctionParameters, SingleParam_NameTypeId)
     ASSERT_EQ(params.size(), 1u);
     ASSERT_TRUE(params.count("p0"));
     EXPECT_EQ(params.at("p0").type, dataType::U64);
-    EXPECT_EQ(params.at("p0").id,   0u);
+    EXPECT_EQ(params.at("p0").id, 0u);
     EXPECT_EQ(params.at("p0").name, "p0");
 }
 
@@ -261,7 +261,7 @@ TEST(InstructionIdentity, RegInstruction_ParsesDataAndCount)
     auto instr = regInstruction::Make(".reg .u32 %r<8>;");
     ASSERT_NE(instr, nullptr);
     EXPECT_EQ(instr->data_, dataType::U32);
-    EXPECT_EQ(instr->reg_,  registerType::R);
+    EXPECT_EQ(instr->reg_, registerType::R);
     EXPECT_EQ(instr->count_, 8u);
 }
 
@@ -278,7 +278,7 @@ TEST(InstructionIdentity, AddInstruction_ParsesBothSources)
 {
     auto instr = addInstruction::Make("add.u32 %r2, %r0, %r1;");
     ASSERT_NE(instr, nullptr);
-    EXPECT_EQ(instr->dst_.reg_id,  2u);
+    EXPECT_EQ(instr->dst_.reg_id, 2u);
     EXPECT_EQ(instr->src1_.reg_id, 0u);
     EXPECT_EQ(instr->src2_.reg_id, 1u);
 }
@@ -287,7 +287,7 @@ TEST(InstructionIdentity, BraInstruction_ParsesPredAndSymbol)
 {
     auto instr = braInstruction::Make("@%p0 bra $LOOP;");
     ASSERT_NE(instr, nullptr);
-    EXPECT_EQ(instr->prd_.type,   registerType::P);
+    EXPECT_EQ(instr->prd_.type, registerType::P);
     EXPECT_EQ(instr->prd_.reg_id, 0u);
     EXPECT_EQ(std::string(instr->sym_), "LOOP");
 }
@@ -296,9 +296,9 @@ TEST(InstructionIdentity, SetpInstruction_ParsesCmpAndData)
 {
     auto instr = setpInstruction::Make("setp.lt.s32 %p0 %r0 %r1;");
     ASSERT_NE(instr, nullptr);
-    EXPECT_EQ(instr->cmp_,  setpcmpQl::Lt);
-    EXPECT_EQ(instr->dst_.type,   registerType::P);
-    EXPECT_EQ(instr->src1_.type,  registerType::R);
+    EXPECT_EQ(instr->cmp_, setpcmpQl::Lt);
+    EXPECT_EQ(instr->dst_.type, registerType::P);
+    EXPECT_EQ(instr->src1_.type, registerType::R);
 }
 
 TEST(InstructionIdentity, MulInstruction_ParsesModeAndData)
@@ -306,7 +306,7 @@ TEST(InstructionIdentity, MulInstruction_ParsesModeAndData)
     auto instr = mulInstruction::Make("mul.wide.s32 %rd0, %r0, %r1;");
     ASSERT_NE(instr, nullptr);
     EXPECT_EQ(instr->mode_, mulmodeQl::Wide);
-    EXPECT_EQ(instr->dst_.type,  registerType::Rd);
+    EXPECT_EQ(instr->dst_.type, registerType::Rd);
     EXPECT_EQ(instr->src1_.type, registerType::R);
 }
 
@@ -314,10 +314,10 @@ TEST(InstructionIdentity, LdInstruction_ParsesSpaceAndAddress)
 {
     auto instr = ldInstruction::Make("ld.global.u32 %r0, [%rd0];");
     ASSERT_NE(instr, nullptr);
-    EXPECT_EQ(instr->space_,         ldspaceQl::Global);
-    EXPECT_EQ(instr->dst_.type,      registerType::R);
+    EXPECT_EQ(instr->space_, ldspaceQl::Global);
+    EXPECT_EQ(instr->dst_.type, registerType::R);
     EXPECT_EQ(instr->addr_.reg.type, registerType::Rd);
-    EXPECT_EQ(instr->addr_.imm,      0);
+    EXPECT_EQ(instr->addr_.imm, 0);
 }
 
 TEST(InstructionIdentity, LdInstruction_ParsesImmediateOffset)
@@ -331,10 +331,10 @@ TEST(InstructionIdentity, StInstruction_ParsesAddressAndSrc)
 {
     auto instr = stInstruction::Make("st.global.f32 [%rd0+4], %r0;");
     ASSERT_NE(instr, nullptr);
-    EXPECT_EQ(instr->space_,         stspaceQl::Global);
+    EXPECT_EQ(instr->space_, stspaceQl::Global);
     EXPECT_EQ(instr->addr_.reg.type, registerType::Rd);
-    EXPECT_EQ(instr->addr_.imm,      4);
-    EXPECT_EQ(instr->src_.type,      registerType::R);
+    EXPECT_EQ(instr->addr_.imm, 4);
+    EXPECT_EQ(instr->src_.type, registerType::R);
 }
 
 TEST(InstructionIdentity, UnknownInstruction_Throws)

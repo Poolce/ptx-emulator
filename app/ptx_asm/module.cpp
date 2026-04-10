@@ -85,11 +85,11 @@ void Module::Dump()
 uint64_t Module::GetBasicBlockOffset(const std::string& func_name, const std::string& sym) const
 {
     auto func_it = function_map_.find(func_name);
-    if (func_it == function_map_.end()) {
+    if (func_it == function_map_.end())
+    {
         throw std::runtime_error("Function " + func_name + " not found.");
     }
     return func_it->second->GetBasicBlockOffset(sym);
-
 }
 
 } // namespace Ptx

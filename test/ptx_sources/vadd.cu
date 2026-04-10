@@ -51,7 +51,7 @@ int main()
 
     for (int i = 0; i < n; i++)
     {
-        std::cout <<std::dec<< "c[" << i << "] = " << h_c[i] << std::endl;
+        std::cout << std::dec << "c[" << i << "] = " << h_c[i] << std::endl;
     }
 
     delete[] h_a;
