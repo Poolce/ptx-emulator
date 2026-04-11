@@ -51,6 +51,9 @@ Checks: >
 
 WarningsAsErrors: "*"
 
+ExtraArgs:
+  - "-std=c++2b"
+
 CheckOptions:
   - { key: readability-identifier-naming.NamespaceCase,          value: CamelCase  }
   - { key: readability-identifier-naming.ClassCase,              value: CamelCase  }

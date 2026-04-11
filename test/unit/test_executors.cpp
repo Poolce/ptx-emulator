@@ -449,7 +449,7 @@ TEST(MulExecutor, HiU32OverflowPreservesHighBits)
     auto instr = mulInstruction::Make("mul.hi.b32 %r2, %r0, %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 2), 0xFFFFFFFEu);
+    EXPECT_EQ(r32<uint32_t>(wc, 2), 0xFFFFFFFEU);
 }
 
 // ============================================================================
