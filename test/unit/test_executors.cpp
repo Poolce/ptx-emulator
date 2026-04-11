@@ -120,7 +120,7 @@ TEST(GetPredicateMask, OnlyActiveBitsSet)
     wc->thread_regs[2][registerType::P][0] = 1;
 
     uint32_t mask = wc->GetPredicateMask(0);
-    EXPECT_EQ(mask, 0x5u); // bits 0 and 2
+    EXPECT_EQ(mask, 0x5U); // bits 0 and 2
 }
 
 TEST(GetPredicateMask, NoActiveThreads)
@@ -133,7 +133,7 @@ TEST(GetPredicateMask, NoActiveThreads)
     // won't call this path, but the method itself iterates unconditionally.
     // All 32 register slots exist, so the result is the raw predicate state.
     uint32_t mask = wc->GetPredicateMask(0);
-    EXPECT_EQ(mask, 0x1u); // bit 0 set because %p0[0]=1
+    EXPECT_EQ(mask, 0x1U); // bit 0 set because %p0[0]=1
 }
 
 TEST(GetPredicateMask, OutOfBoundsPredicateIdReturnsFalse)
@@ -141,7 +141,7 @@ TEST(GetPredicateMask, OutOfBoundsPredicateIdReturnsFalse)
     auto wc = makeWarp(0x1);
     // prd_id = 99 is way beyond the 4-element P RegisterContext
     uint32_t mask = wc->GetPredicateMask(99);
-    EXPECT_EQ(mask, 0u);
+    EXPECT_EQ(mask, 0U);
 }
 
 // ============================================================================
@@ -156,9 +156,9 @@ TEST(RegExecutor, AllocatesRequestedCount)
     auto instr = regInstruction::Make(".reg .u32 %r<5>;");
     instr->Execute(wc);
 
-    EXPECT_EQ(wc->thread_regs[0][registerType::R].size(), 5u);
-    EXPECT_EQ(wc->thread_regs[0][registerType::R][3], 0u);
-    EXPECT_EQ(wc->pc, 1u);
+    EXPECT_EQ(wc->thread_regs[0][registerType::R].size(), 5U);
+    EXPECT_EQ(wc->thread_regs[0][registerType::R][3], 0U);
+    EXPECT_EQ(wc->pc, 1U);
 }
 
 // ============================================================================
@@ -167,13 +167,13 @@ TEST(RegExecutor, AllocatesRequestedCount)
 TEST(AddExecutor, U32RegisterPlusRegister)
 {
     auto wc = makeWarp();
-    setR(wc, 0, 10u);
-    setR(wc, 1, 32u);
+    setR(wc, 0, 10U);
+    setR(wc, 1, 32U);
 
     auto instr = addInstruction::Make("add.u32 %r2, %r0, %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 2), 42u);
+    EXPECT_EQ(r32<uint32_t>(wc, 2), 42U);
 }
 
 TEST(AddExecutor, S32NegativeResult)
@@ -197,7 +197,7 @@ TEST(AddExecutor, U32Overflow)
     auto instr = addInstruction::Make("add.u32 %r2, %r0, %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 2), 0u); // wraps
+    EXPECT_EQ(r32<uint32_t>(wc, 2), 0U); // wraps
 }
 
 TEST(AddExecutor, OnlyActiveLanesWritten)
@@ -215,9 +215,9 @@ TEST(AddExecutor, OnlyActiveLanesWritten)
     auto instr = addInstruction::Make("add.u32 %r2, %r0, %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(wc->thread_regs[0][registerType::R][2], 3u);
-    EXPECT_EQ(wc->thread_regs[1][registerType::R][2], 300u);
-    EXPECT_EQ(wc->thread_regs[2][registerType::R][2], 0u); // unchanged
+    EXPECT_EQ(wc->thread_regs[0][registerType::R][2], 3U);
+    EXPECT_EQ(wc->thread_regs[1][registerType::R][2], 300U);
+    EXPECT_EQ(wc->thread_regs[2][registerType::R][2], 0U); // unchanged
 }
 
 // ============================================================================
@@ -226,12 +226,12 @@ TEST(AddExecutor, OnlyActiveLanesWritten)
 TEST(MovExecutor, RegisterToRegister)
 {
     auto wc = makeWarp();
-    setR(wc, 0, 77u);
+    setR(wc, 0, 77U);
 
     auto instr = movInstruction::Make("mov.u32 %r1, %r0;");
     instr->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 1), 77u);
+    EXPECT_EQ(r32<uint32_t>(wc, 1), 77U);
 }
 
 TEST(MovExecutor, ImmediateToRegister)
@@ -240,7 +240,7 @@ TEST(MovExecutor, ImmediateToRegister)
     auto instr = movInstruction::Make("mov.u32 %r0, 42;");
     instr->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 0), 42u);
+    EXPECT_EQ(r32<uint32_t>(wc, 0), 42U);
 }
 
 TEST(MovExecutor, NegativeImmediateS32)
@@ -259,9 +259,9 @@ TEST(MovExecutor, FromTidX)
     auto instr = movInstruction::Make("mov.u32 %r0, %tid.x;");
     instr->Execute(wc);
 
-    EXPECT_EQ(wc->thread_regs[0][registerType::R][0], 0u);
-    EXPECT_EQ(wc->thread_regs[1][registerType::R][0], 1u);
-    EXPECT_EQ(wc->thread_regs[2][registerType::R][0], 2u);
+    EXPECT_EQ(wc->thread_regs[0][registerType::R][0], 0U);
+    EXPECT_EQ(wc->thread_regs[1][registerType::R][0], 1U);
+    EXPECT_EQ(wc->thread_regs[2][registerType::R][0], 2U);
 }
 
 // ============================================================================
@@ -276,7 +276,7 @@ TEST(SetpExecutor, LtS32True)
     auto instr = setpInstruction::Make("setp.lt.s32 %p0 %r0 %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(pred(wc, 0), 1u);
+    EXPECT_EQ(pred(wc, 0), 1U);
 }
 
 TEST(SetpExecutor, LtS32False)
@@ -288,19 +288,19 @@ TEST(SetpExecutor, LtS32False)
     auto instr = setpInstruction::Make("setp.lt.s32 %p0 %r0 %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(pred(wc, 0), 0u);
+    EXPECT_EQ(pred(wc, 0), 0U);
 }
 
 TEST(SetpExecutor, EqU32)
 {
     auto wc = makeWarp();
-    setR(wc, 0, 7u);
-    setR(wc, 1, 7u);
+    setR(wc, 0, 7U);
+    setR(wc, 1, 7U);
 
     auto instr = setpInstruction::Make("setp.eq.u32 %p0 %r0 %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(pred(wc, 0), 1u);
+    EXPECT_EQ(pred(wc, 0), 1U);
 }
 
 TEST(SetpExecutor, GeS32)
@@ -312,19 +312,19 @@ TEST(SetpExecutor, GeS32)
     auto instr = setpInstruction::Make("setp.ge.s32 %p1 %r0 %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(pred(wc, 1), 1u);
+    EXPECT_EQ(pred(wc, 1), 1U);
 }
 
 TEST(SetpExecutor, NeU32)
 {
     auto wc = makeWarp();
-    setR(wc, 0, 1u);
-    setR(wc, 1, 2u);
+    setR(wc, 0, 1U);
+    setR(wc, 1, 2U);
 
     auto instr = setpInstruction::Make("setp.ne.u32 %p0 %r0 %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(pred(wc, 0), 1u);
+    EXPECT_EQ(pred(wc, 0), 1U);
 }
 
 // ============================================================================
@@ -338,7 +338,7 @@ TEST(ShlExecutor, ShiftBy2)
     auto instr = shlInstruction::Make("shl.b32 %r1, %r0, 2;");
     instr->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 1), 4u);
+    EXPECT_EQ(r32<uint32_t>(wc, 1), 4U);
 }
 
 TEST(ShlExecutor, ShiftBy31)
@@ -349,7 +349,7 @@ TEST(ShlExecutor, ShiftBy31)
     auto instr = shlInstruction::Make("shl.b32 %r1, %r0, 31;");
     instr->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 1), 0x80000000u);
+    EXPECT_EQ(r32<uint32_t>(wc, 1), 0x80000000U);
 }
 
 // ============================================================================
@@ -364,7 +364,7 @@ TEST(AndExecutor, B32Mask)
     auto instr = andInstruction::Make("and.b32 %r2, %r0, %r1;");
     instr->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 2), 0x0F000F00u);
+    EXPECT_EQ(r32<uint32_t>(wc, 2), 0x0F000F00U);
 }
 
 // ============================================================================
@@ -398,13 +398,13 @@ TEST(NegExecutor, S32NegateNegative)
 TEST(SubExecutor, F32)
 {
     auto wc = makeWarp();
-    setR(wc, 0, 5.0f);
-    setR(wc, 1, 3.0f);
+    setR(wc, 0, 5.0F);
+    setR(wc, 1, 3.0F);
 
     auto instr = subInstruction::Make("sub.f32 %r2, %r0, %r1;");
     instr->Execute(wc);
 
-    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 2.0f);
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 2.0F);
 }
 
 // ============================================================================
@@ -458,14 +458,14 @@ TEST(MulExecutor, HiU32OverflowPreservesHighBits)
 TEST(MadExecutor, LoU32)
 {
     auto wc = makeWarp();
-    setR(wc, 0, 3u); // a
-    setR(wc, 1, 4u); // b
-    setR(wc, 2, 5u); // c
+    setR(wc, 0, 3U); // a
+    setR(wc, 1, 4U); // b
+    setR(wc, 2, 5U); // c
 
     auto instr = madInstruction::Make("mad.lo.u32 %r3, %r0, %r1, %r2;");
     instr->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 3), 17u); // 3*4+5
+    EXPECT_EQ(r32<uint32_t>(wc, 3), 17U); // 3*4+5
 }
 
 TEST(MadExecutor, WideS32)
@@ -499,28 +499,28 @@ TEST(LdStExecutor, RoundtripU32)
     auto st = stInstruction::Make("st.global.u32 [%rd0], %r0;");
     st->Execute(wc);
 
-    EXPECT_EQ(mem, 42u);
+    EXPECT_EQ(mem, 42U);
 
     // ld.global.u32 %r1, [%rd0]  — load back
     auto ld = ldInstruction::Make("ld.global.u32 %r1, [%rd0];");
     ld->Execute(wc);
 
-    EXPECT_EQ(r32<uint32_t>(wc, 1), 42u);
+    EXPECT_EQ(r32<uint32_t>(wc, 1), 42U);
 }
 
 TEST(LdStExecutor, RoundtripF32)
 {
     auto wc = makeWarp();
-    float mem = 0.0f;
+    float mem = 0.0F;
 
-    setR(wc, 0, 3.14f);
+    setR(wc, 0, 3.14F);
     setRd(wc, 0, reinterpret_cast<uintptr_t>(&mem));
 
     stInstruction::Make("st.global.f32 [%rd0], %r0;")->Execute(wc);
-    EXPECT_FLOAT_EQ(mem, 3.14f);
+    EXPECT_FLOAT_EQ(mem, 3.14F);
 
     ldInstruction::Make("ld.global.f32 %r1, [%rd0];")->Execute(wc);
-    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 3.14f);
+    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 3.14F);
 }
 
 TEST(LdStExecutor, StoreWithImmediateOffset)
@@ -533,8 +533,8 @@ TEST(LdStExecutor, StoreWithImmediateOffset)
 
     // Store to buf[2] (offset = 8 bytes)
     stInstruction::Make("st.global.u32 [%rd0+8], %r0;")->Execute(wc);
-    EXPECT_EQ(buf[0], 0u);
-    EXPECT_EQ(buf[2], 99u);
+    EXPECT_EQ(buf[0], 0U);
+    EXPECT_EQ(buf[2], 99U);
 }
 
 // ============================================================================
@@ -568,7 +568,7 @@ TEST(CvtExecutor, F32ToS32Truncation)
 {
     // cvt.s32.f32: first token = s32 (output), second token = f32 (input)
     auto wc = makeWarp();
-    setR(wc, 0, 3.9f);
+    setR(wc, 0, 3.9F);
 
     auto instr = cvtInstruction::Make("cvt.s32.f32 %r1, %r0;");
     instr->Execute(wc);
@@ -585,7 +585,7 @@ TEST(CvtExecutor, S32ToF32Positive)
     auto instr = cvtInstruction::Make("cvt.f32.s32 %r1, %r0;");
     instr->Execute(wc);
 
-    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 7.0f);
+    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 7.0F);
 }
 
 // ============================================================================
@@ -607,13 +607,13 @@ TEST(RetExecutor, NonEmptyStackRestoresState)
     auto wc = makeWarp();
     wc->pc = 10;
     wc->execution_mask = 0xF;
-    wc->execution_stack.push({42u, 0x3u});
+    wc->execution_stack.push({42U, 0x3U});
 
     auto instr = retInstruction::Make("ret;");
     instr->Execute(wc);
 
-    EXPECT_EQ(wc->pc, 42u);
-    EXPECT_EQ(wc->execution_mask, 0x3u);
+    EXPECT_EQ(wc->pc, 42U);
+    EXPECT_EQ(wc->execution_mask, 0x3U);
     EXPECT_TRUE(wc->execution_stack.empty());
 }
 
@@ -630,7 +630,7 @@ TEST(BraExecutor, NoBranchTakenIncrementsPC)
     auto instr = braInstruction::Make("@%p0 bra $TARGET;");
     instr->Execute(wc); // calls ExecuteBranch (no pc++ in branch path)
 
-    EXPECT_EQ(wc->pc, 6u);
+    EXPECT_EQ(wc->pc, 6U);
 }
 
 TEST(BraExecutor, DivergentBranchPushesStack)
@@ -650,7 +650,7 @@ TEST(BraExecutor, DivergentBranchPushesStack)
     // The stack push happens before gotoBasicBlock, so state should reflect it
     EXPECT_FALSE(wc->execution_stack.empty());
     auto [saved_pc, saved_mask] = wc->execution_stack.top();
-    EXPECT_EQ(saved_pc, 11u);            // fall-through pc = 10+1
-    EXPECT_EQ(saved_mask, 0x2u);         // bit 1 = fall-through thread
-    EXPECT_EQ(wc->execution_mask, 0x1u); // only branching thread remains
+    EXPECT_EQ(saved_pc, 11U);            // fall-through pc = 10+1
+    EXPECT_EQ(saved_mask, 0x2U);         // bit 1 = fall-through thread
+    EXPECT_EQ(wc->execution_mask, 0x1U); // only branching thread remains
 }
