@@ -3,6 +3,7 @@ Checks: >
   performance-*,
   portability-*,
   readability-*,
+  -modernize-use-emplace,
   -modernize-avoid-c-arrays,
   -modernize-concat-nested-namespaces,
   -modernize-pass-by-value,
