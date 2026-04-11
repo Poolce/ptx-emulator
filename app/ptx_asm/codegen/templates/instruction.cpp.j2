@@ -26,14 +26,14 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
     }(std::make_index_sequence<ET::total>{});
 
     auto idx = ET::encode({% for t_name in instr.typed_executor %}{{t_name}}_{% if not loop.last%}, {% endif %}{% endfor %});
-    for (uint32_t lid = 0; lid < Emulator::WARP_SIZE; lid++) {
+    for (uint32_t lid = 0; lid < Emulator::WarpSize; lid++) {
         const bool prd = ((wc->execution_mask >> lid) & 1U) != 0U;
         if (prd) {
             Table[idx](this, lid, wc);
         }
     }
 {% else %}
-    for (uint32_t lid = 0; lid < Emulator::WARP_SIZE; lid++) {
+    for (uint32_t lid = 0; lid < Emulator::WarpSize; lid++) {
         const bool prd = ((wc->execution_mask >> lid) & 1U) != 0U;
         if (prd) {
             ExecuteThread(lid, wc);

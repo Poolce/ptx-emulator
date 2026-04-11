@@ -18,10 +18,10 @@ static std::shared_ptr<WarpContext> makeWarp(uint32_t mask = 0x1)
 {
     auto wc = std::make_shared<WarpContext>();
     wc->execution_mask = mask;
-    wc->thread_regs.resize(WARP_SIZE);
-    wc->spr_regs.resize(WARP_SIZE);
+    wc->thread_regs.resize(WarpSize);
+    wc->spr_regs.resize(WarpSize);
 
-    for (uint32_t i = 0; i < WARP_SIZE; ++i)
+    for (uint32_t i = 0; i < WarpSize; ++i)
     {
         wc->thread_regs[i][registerType::R] = RegisterContext(8, 0);
         wc->thread_regs[i][registerType::Rd] = RegisterContext(8, 0);
@@ -47,7 +47,9 @@ static T r32(const std::shared_ptr<WarpContext>& wc, uint32_t id)
     uint64_t raw = wc->thread_regs[0][registerType::R][id];
     T val;
     if constexpr (std::is_integral_v<T>)
+    {
         return static_cast<T>(raw);
+    }
     else
     {
         std::memcpy(&val, &raw, sizeof(T));
@@ -61,7 +63,9 @@ static T rd64(const std::shared_ptr<WarpContext>& wc, uint32_t id)
     uint64_t raw = wc->thread_regs[0][registerType::Rd][id];
     T val;
     if constexpr (std::is_integral_v<T>)
+    {
         return static_cast<T>(raw);
+    }
     else
     {
         std::memcpy(&val, &raw, sizeof(T));
@@ -80,9 +84,13 @@ static void setR(const std::shared_ptr<WarpContext>& wc, uint32_t id, T val)
 {
     uint64_t raw = 0;
     if constexpr (std::is_integral_v<T>)
+    {
         raw = static_cast<uint64_t>(static_cast<std::make_unsigned_t<T>>(val));
+    }
     else
+    {
         std::memcpy(&raw, &val, sizeof(T));
+    }
     wc->thread_regs[0][registerType::R][id] = raw;
 }
 
@@ -91,9 +99,13 @@ static void setRd(const std::shared_ptr<WarpContext>& wc, uint32_t id, T val)
 {
     uint64_t raw = 0;
     if constexpr (std::is_integral_v<T>)
+    {
         raw = static_cast<uint64_t>(static_cast<std::make_unsigned_t<T>>(val));
+    }
     else
+    {
         std::memcpy(&raw, &val, sizeof(T));
+    }
     wc->thread_regs[0][registerType::Rd][id] = raw;
 }
 
@@ -117,7 +129,7 @@ TEST(GetPredicateMask, NoActiveThreads)
     wc->thread_regs[0][registerType::P][0] = 1; // set but thread 0 not in execution_mask
 
     // execution_mask is 0, so nothing is active.
-    // GetPredicateMask reads all WARP_SIZE slots; since mask=0 the Execute loop
+    // GetPredicateMask reads all WarpSize slots; since mask=0 the Execute loop
     // won't call this path, but the method itself iterates unconditionally.
     // All 32 register slots exist, so the result is the raw predicate state.
     uint32_t mask = wc->GetPredicateMask(0);

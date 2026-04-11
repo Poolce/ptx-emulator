@@ -2,17 +2,17 @@
 
 #include <cstdint>
 
-struct dim3
+struct dim3 // NOLINT(readability-identifier-naming)
 {
     using type = uint32_t;
     uint32_t x, y, z;
     dim3(uint32_t _x = 1, uint32_t _y = 1, uint32_t _z = 1) : x(_x), y(_y), z(_z) {}
 };
 
-typedef dim3 uint3;
+using uint3 = dim3; // NOLINT(readability-identifier-naming)
 
 template <class T>
-struct _v3
+struct V3
 {
     using type = T;
 
@@ -22,11 +22,11 @@ struct _v3
 };
 
 template <class T>
-struct _v4
+struct V4
 {
     using type = T;
 
-    _v4(const _v3<T>& vec) : x{vec.x}, y{vec.y}, z{vec.z} {}
+    V4(const V3<T>& vec) : x{vec.x}, y{vec.y}, z{vec.z} {}
 
     type x = 0;
     type y = 0;
@@ -34,6 +34,6 @@ struct _v4
     type w = 0;
 };
 
-using int4 = _v4<int64_t>;
-using uint4 = _v4<uint64_t>;
-using uint4_32 = _v4<uint32_t>;
+using int4 = V4<int64_t>;   // NOLINT(readability-identifier-naming)
+using uint4 = V4<uint64_t>; // NOLINT(readability-identifier-naming)
+using uint4_32 = V4<uint32_t>;

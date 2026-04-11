@@ -27,7 +27,7 @@ static std::unordered_map<std::string, FunctionParameter> parseParameters(const 
         {
             auto dtype = FromString<dataType>(match[1].str());
             auto name = match[2].str();
-            res[name] = {name, dtype, param_id};
+            res[name] = {.name = name, .type = dtype, .id = param_id};
             param_id++;
         }
         else

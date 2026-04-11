@@ -27,7 +27,7 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
 #ifdef EMULATOR_OPENMP_ENABLED
     #pragma omp parallel for
 #endif
-        for (size_t i = 0; i < warps.size(); ++i)
+        for (size_t i = 0; i < warps.size(); ++i) // NOLINT(modernize-loop-convert)
         {
             auto warp = warps[i];
             while (warp->isActive())

@@ -3,8 +3,8 @@
 #include "rt_interface.h"
 
 #include <dlfcn.h>
-#include <string.h>
 
+#include <cstring>
 #include <memory>
 
 using namespace Emulator;
@@ -66,7 +66,7 @@ cudaError_t __cudaLaunchKernel([[maybe_unused]] const void* func,
     std::cout << "cudaLaunchKernel " << std::hex << (uint64_t)func << "\n";
 
     uint64_t stream_id = interface->MakeStream();
-    uint64_t func_descr = (uint64_t)(func);
+    auto func_descr = (uint64_t)(func);
     interface->KernelLaunch(func_descr, gridDim, blockDim, args, sharedMem, stream_id);
     return cudaError_t::cudaSuccess;
 }

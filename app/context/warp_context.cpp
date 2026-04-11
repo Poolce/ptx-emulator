@@ -13,8 +13,8 @@ void WarpContext::Init(const std::shared_ptr<BlockContext>& block_context,
                        const std::vector<dim3>& tids)
 {
     block_context_ = block_context;
-    thread_regs = std::vector<ThreadContext>(WARP_SIZE);
-    spr_regs = std::vector<SprContext>(WARP_SIZE);
+    thread_regs = std::vector<ThreadContext>(WarpSize);
+    spr_regs = std::vector<SprContext>(WarpSize);
 
     uint32_t tid_id = 0;
     for (const auto& tid : tids)
@@ -36,7 +36,7 @@ void WarpContext::Init(const std::shared_ptr<BlockContext>& block_context,
 uint32_t WarpContext::GetPredicateMask(uint64_t prd_id) const
 {
     uint32_t mask = 0;
-    for (uint32_t i = 0; i < WARP_SIZE; ++i)
+    for (uint32_t i = 0; i < WarpSize; ++i)
     {
         bool prd = false;
         if (i < thread_regs.size())

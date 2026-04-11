@@ -15,7 +15,7 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
     global_context_ = global_context;
     shared_memory_ = std::vector<uint8_t>(sharedMem);
     std::vector<dim3> warp_thread_ids;
-    warp_thread_ids.reserve(WARP_SIZE);
+    warp_thread_ids.reserve(WarpSize);
 
     for (uint32_t tidz = 0; tidz < blockDim.z; ++tidz)
     {
@@ -24,7 +24,7 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
             for (uint32_t tidx = 0; tidx < blockDim.x; ++tidx)
             {
                 warp_thread_ids.emplace_back(tidx, tidy, tidz);
-                if (warp_thread_ids.size() == WARP_SIZE)
+                if (warp_thread_ids.size() == WarpSize)
                 {
                     auto warp = std::make_shared<WarpContext>();
                     warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);

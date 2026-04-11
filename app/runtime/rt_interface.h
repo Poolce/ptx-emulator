@@ -12,7 +12,7 @@ class RtInterface
     std::shared_ptr<Ptx::Module> ptx_module_ = nullptr;
     std::unordered_map<uint64_t, std::string> functions_;
 
-    std::vector<std::unique_ptr<RtStream>> streams_{};
+    std::vector<std::unique_ptr<RtStream>> streams_;
 
   public:
     RtInterface() = default;
@@ -22,7 +22,6 @@ class RtInterface
     RtInterface& operator=(RtInterface&&) = default;
     ~RtInterface() = default;
 
-  public:
     void LoadPtx();
     uint64_t MakeStream();
     void RemoveAllStreams();

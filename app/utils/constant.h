@@ -3,6 +3,6 @@
 namespace Emulator
 {
 
-constexpr int WARP_SIZE = 32;
+constexpr int WarpSize = 32;
 
 } // namespace Emulator
