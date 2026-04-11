@@ -24,7 +24,7 @@ jobs:
           build_dir: build
           install_commands: |
             apt-get update
-            apt-get install -y --no-install-recommends ninja-build clang-16 ccache python3 python3-pip
+            apt-get install -y --no-install-recommends ninja-build clang-17 ccache python3 python3-pip
             apt-get install -y --no-install-recommends python3-jinja2
           cmake_command: >
             cmake -S . -B build

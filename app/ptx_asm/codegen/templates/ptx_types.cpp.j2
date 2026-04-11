@@ -1,0 +1,148 @@
+#include "ptx_types.h"
+#include "utils.h"
+
+#include <regex>
+#include <iostream>
+
+// NOLINTBEGIN
+
+namespace Emulator {
+namespace Ptx {
+
+{% for i_name, i_param in isa.instructions.items() %}
+{% if i_param.params %}
+{% for p_name, p_param in i_param.params.items() %}
+{% if p_param.arg_type == "qualifier" or p_param.arg_type == "children" %}
+
+{% set name = funcs.get_type_name(i_name, p_name, p_param) %}
+
+
+static std::unordered_map<std::string, {{ name }}> StrTo{{ name }} {
+    { "", {{ name }}::UNDEFINED },
+{% for item in p_param["values"] %}    { "{{ item }}", {{ name }}::{{ funcs.process_pname(item) }} },
+{% endfor %}
+};
+
+template<>
+{{ name }} FromString<{{ name }}>(const std::string& str) {
+    return StrTo{{ name }}[str];
+}
+
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+
+{% for p_name, p_param in isa.types.items() %}
+
+{% set name = p_name %}
+
+static std::unordered_map<std::string, {{ name }}> StrTo{{ name }} {
+    { "", {{ name }}::UNDEFINED },
+{% for item in p_param["values"] %}    { "{{ item }}", {{ name }}::{{ funcs.process_pname(item) }} },
+{% endfor %}
+};
+
+template<>
+{{ name }} FromString<{{ name }}>(const std::string& str) {
+    return StrTo{{ name }}[str];
+}
+
+{% endfor %}
+
+template <>
+symbolOperand FromString(const std::string& str) {
+    return symbolOperand(str);
+}
+
+template<>
+int32_t FromString(const std::string& str) {
+    return static_cast<int32_t>(std::strtol(str.c_str(), nullptr, 10));
+}
+
+template<>
+int64_t FromString(const std::string& str) {
+    return std::strtoll(str.c_str(), nullptr, 10);
+}
+
+template<>
+uint32_t FromString(const std::string& str) {
+    return std::stoul(str.c_str());
+}
+
+template<>
+uint64_t FromString(const std::string& str) {
+    return std::stoull(str.c_str());
+}
+
+template<>
+bool FromString(const std::string& str) {
+    return static_cast<bool>(str.size());
+}
+
+template <>
+registerOperand FromString(const std::string& str) {
+    constexpr std::string_view pattern = "%([a-z]+)([0-9]*),?";
+    static std::regex re(pattern.data(), std::regex::ECMAScript | std::regex::optimize);
+    std::smatch match;
+    auto res = registerOperand();
+    if (std::regex_match(str, match, re)) {
+            if (match[1].matched) res.type = FromString<registerType>(match[1].str());
+            if (match[2].matched) res.reg_id = FromString<uint32_t>(match[2].str());
+    } else {
+        throw std::runtime_error("Register operand is not mutched.");
+    }
+    return res;
+}
+
+template <>
+sprRegisterOperand FromString(const std::string& str) {
+    auto res = sprRegisterOperand();
+    std::string stripped = (!str.empty() && str[0] == '%') ? str.substr(1) : str;
+    res.type = FromString<sprType>(stripped);
+    return res;
+}
+
+template <>
+addressOperand FromString(const std::string& str) {
+    constexpr std::string_view pattern = "^\\[(%[a-z]+[0-9]*)?([A-z0-9_]+)?\\+?(0?x?[\\-A-Fa-f0-9]+)?\\]$";
+    static std::regex re(pattern.data(), std::regex::ECMAScript | std::regex::optimize);
+    std::smatch match;
+    auto res = addressOperand();
+    if (std::regex_match(str, match, re)) {
+            if (match[1].matched) res.reg = FromString<registerOperand>(match[1].str());
+            if (match[2].matched) res.symbol = FromString<symbolOperand>(match[2].str());
+            if (match[3].matched) res.imm = FromString<immediateOperand>(match[3].str());
+    } else {
+        throw std::runtime_error("Address operand is not mutched.");
+    }
+    return res;
+}
+
+const std::unordered_map<std::string, FuncType> StrToFuncType{
+    {"", FuncType::Undefined},
+    {"entry", FuncType::Entry},
+    {"func", FuncType::Func},
+};
+
+const std::unordered_map<std::string, FuncAttr> StrToFuncAttr{
+    {"visible", FuncAttr::Visible},
+};
+
+template <>
+FuncType FromString(const std::string& str)
+{
+    return StrToFuncType.at(str);
+}
+
+template <>
+FuncAttr FromString(const std::string& str)
+{
+    return StrToFuncAttr.at(str);
+}
+
+} // Ptx
+} // Emulator
+
+// NOLINTEND

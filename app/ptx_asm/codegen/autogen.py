@@ -1,10 +1,10 @@
 import argparse
 import json
+import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-# Custom methods
 regexp_map = {}
 
 
@@ -13,33 +13,39 @@ class CustomFunctions:
         tmp = instr["regexp_template"]
         for name, arg in instr["params"].items():
             regexp = ""
-            if arg["arg_type"] == "qualifier":
+            if "regexp" in arg:
+                regexp = arg["regexp"]
+            elif arg["arg_type"] == "qualifier":
                 regexp = '|'.join(arg['values'])
-            elif arg["arg_type"] == "global":
-                regexp = regexp_map["types"][name]["regexp"]
-            elif "Operand" in arg["arg_type"]:
-                regexp = regexp_map["operands"][arg["arg_type"]]["regexp"]
+            elif arg["arg_type"] == "children":
+                regexp = '|'.join(arg['values'])
+            elif arg["arg_type"] == "operand":
+                regexp = regexp_map["operands"][arg["dtype"]]["regexp"]
+            elif "dtype" in arg:
+                regexp = regexp_map["types"][arg["dtype"]]["regexp"]
             else:
                 regexp = r".*"
             tmp = tmp.replace(f"${name}", regexp)
         return tmp
 
     def get_type_name(instr_name, op_name, op):
-        arg_type = op["arg_type"]
         if "dtype" in op:
             return op["dtype"]
-        if arg_type == "qualifier":
+        if op["arg_type"] == "qualifier":
             return f"{instr_name}{op_name}Ql"
-        elif "Operand" in arg_type:
-            return arg_type
+        if op["arg_type"] == "children":
+            iname = instr_name.capitalize()
+            parts = op_name.lower().split('_')
+            oname = ''.join(word.capitalize() for word in parts)
+            return f"local{iname}{oname}Type"
         return ""
 
     def process_pname(name):
-        sname = name.split("::")
+        delimiters = r"[ \.;:]+"
+        sname = re.split(delimiters, name)
         return "".join([i.capitalize() for i in sname])
 
 
-# Code generation
 _SCRIPT_DIR = Path(__file__).resolve().parent
 env = Environment(loader=FileSystemLoader(str(_SCRIPT_DIR / "templates")),
                   trim_blocks=True,
@@ -72,6 +78,8 @@ def gen_types_source(isa):
 
 def gen_code(isa, out_dir: Path):
     env.filters['capitalize'] = lambda s: s.capitalize()
+    env.filters['to_camel'] = lambda s: ''.join(w.capitalize()
+                                                for w in s.split('_'))
     out_dir.mkdir(parents=True, exist_ok=True)
 
     content = gen_instruction_header(isa)

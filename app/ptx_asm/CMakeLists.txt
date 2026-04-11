@@ -1,8 +1,9 @@
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library(encoder STATIC)
 
 target_sources(encoder
   PRIVATE
-    basic_block.cpp
     function.cpp
     module.cpp
 )
@@ -10,6 +11,7 @@ target_sources(encoder
 target_include_directories(encoder
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/instruction_executors
     "${CMAKE_CURRENT_BINARY_DIR}/autogen"
 )
 
@@ -28,6 +30,7 @@ set(ENCODER_AUTOGEN_SOURCES
   "${ENCODER_AUTOGEN_DIR}/instructions.cpp"
   "${ENCODER_AUTOGEN_DIR}/ptx_types.cpp"
 )
+
 set(ENCODER_AUTOGEN_HEADERS
   "${ENCODER_AUTOGEN_DIR}/instructions.h"
   "${ENCODER_AUTOGEN_DIR}/ptx_types.h"
@@ -57,3 +60,8 @@ add_custom_target(encoder_codegen DEPENDS ${ENCODER_AUTOGEN_SOURCES} ${ENCODER_A
 add_dependencies(encoder encoder_codegen)
 
 target_sources(encoder PRIVATE ${ENCODER_AUTOGEN_SOURCES})
+
+target_link_libraries(encoder PUBLIC
+  context
+  utils
+)
