@@ -1,6 +1,8 @@
 #include "rt_stream.h"
 
+#ifdef EMULATOR_OPENMP_ENABLED
 #include <omp.h>
+#endif
 
 #include <chrono>
 
@@ -22,7 +24,9 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
     for (auto& block : gpu_context_->GetBlocks())
     {
         const auto& warps = block->GetWarps();
+#ifdef EMULATOR_OPENMP_ENABLED
 #pragma omp parallel for
+#endif
         for (size_t i = 0; i < warps.size(); ++i)
         {
             auto warp = warps[i];

@@ -16,6 +16,9 @@ target_link_libraries(${RUNTIME_LIB_NAME} PUBLIC
     utils
 )
 
-find_package(OpenMP REQUIRED)
+find_package(OpenMP)
 
-target_link_libraries(${RUNTIME_LIB_NAME} PRIVATE OpenMP::OpenMP_CXX)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(${RUNTIME_LIB_NAME} PRIVATE OpenMP::OpenMP_CXX)
+    target_compile_definitions(${RUNTIME_LIB_NAME} PRIVATE EMULATOR_OPENMP_ENABLED)
+endif()
