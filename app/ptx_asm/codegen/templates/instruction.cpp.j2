@@ -2,6 +2,8 @@
 #include "constant.h"
 #include "utils.h"
 
+// NOLINTBEGIN
+
 namespace Emulator {
 namespace Ptx {
 
@@ -126,5 +128,7 @@ std::shared_ptr<Instruction> makeInstruction(const std::string& name, const std:
 
 } // namespace Ptx
 } // namespace Emulator
+
+// NOLINTEND
 
 #include "executors.tpp"
