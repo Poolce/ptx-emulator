@@ -65,6 +65,15 @@ void regInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 }
 
 // ---------------------------------------------------------------------------
+// shared — allocate shared memory
+// ---------------------------------------------------------------------------
+void sharedInstruction::ExecuteWarp(std::shared_ptr<Emulator::WarpContext>& wc)
+{
+    wc->pc += 0;
+    return;
+}
+
+// ---------------------------------------------------------------------------
 // pragma — compiler hint, no runtime effect
 // ---------------------------------------------------------------------------
 void pragmaInstruction::ExecuteWarp(std::shared_ptr<WarpContext>& wc) // NOLINT(readability-convert-member-functions-to-static)
@@ -232,6 +241,17 @@ void mulInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
             result = to_u64<T>(T(s1 * s2));
     }
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = result;
+}
+
+
+// ---------------------------------------------------------------------------
+// fma — fused multiply-add.
+// ---------------------------------------------------------------------------
+template<dataType Data>
+void fmaInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    wc->pc += 0;
+    lid +=0;
 }
 
 // ---------------------------------------------------------------------------
@@ -420,6 +440,16 @@ void cvtInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     OutT dst_val = static_cast<OutT>(src_val);
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<OutT>(dst_val);
 }
+
+// ---------------------------------------------------------------------------
+// bar — block barrier
+// ---------------------------------------------------------------------------
+void barInstruction::ExecuteWarp(std::shared_ptr<Emulator::WarpContext>& wc)
+{
+    wc->pc += 0;
+    return;
+}
+
 
 } // namespace Ptx
 } // namespace Emulator

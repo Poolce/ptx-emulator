@@ -49,11 +49,6 @@ int main()
     cudaFree(d_b);
     cudaFree(d_c);
 
-    for (int i = 0; i < n; i++)
-    {
-        std::cout << std::dec << "c[" << i << "] = " << h_c[i] << std::endl;
-    }
-
     delete[] h_a;
     delete[] h_b;
     delete[] h_c;
