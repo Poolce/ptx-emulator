@@ -1,3 +1,4 @@
+#include "block_context.h"
 #include "constant.h"
 #include "instructions.h"
 #include "warp_context.h"
@@ -5,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <bit>
+#include <cmath>
 #include <cstring>
 
 using namespace Emulator;
@@ -446,7 +448,7 @@ TEST(MulExecutor, HiU32OverflowPreservesHighBits)
     setR(wc, 0, uint32_t(0xFFFFFFFF));
     setR(wc, 1, uint32_t(0xFFFFFFFF));
 
-    auto instr = mulInstruction::Make("mul.hi.b32 %r2, %r0, %r1;");
+    auto instr = mulInstruction::Make("mul.hi.u32 %r2, %r0, %r1;");
     instr->Execute(wc);
 
     EXPECT_EQ(r32<uint32_t>(wc, 2), 0xFFFFFFFEU);
@@ -653,4 +655,174 @@ TEST(BraExecutor, DivergentBranchPushesStack)
     EXPECT_EQ(saved_pc, 11U);            // fall-through pc = 10+1
     EXPECT_EQ(saved_mask, 0x2U);         // bit 1 = fall-through thread
     EXPECT_EQ(wc->execution_mask, 0x1U); // only branching thread remains
+}
+
+TEST(BraExecutor, UnconditionalBranchNoPredicateThrowsWithoutContext)
+{
+    // "bra $TARGET" — no @predicate → unconditional branch
+    auto wc = makeWarp(0x1);
+    wc->pc = 10;
+    auto instr = braInstruction::Make("bra $TARGET;");
+    // gotoBasicBlock throws because there is no block context
+    EXPECT_THROW(instr->Execute(wc), std::runtime_error);
+    // pc must not have been changed (throw happens before pc assignment)
+    EXPECT_EQ(wc->pc, 10U);
+}
+
+// ============================================================================
+// bar
+// ============================================================================
+TEST(BarExecutor, BarSyncIsNoOp)
+{
+    auto wc = makeWarp();
+    wc->pc = 5;
+    auto instr = barInstruction::Make("bar.sync 0;");
+    EXPECT_NO_THROW(instr->Execute(wc));
+    EXPECT_EQ(wc->pc, 6U); // warp instruction: Execute() does pc++ after ExecuteWarp
+}
+
+// ============================================================================
+// fma
+// ============================================================================
+TEST(FmaExecutor, F32MultiplyAddRegisters)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 2.0F); // src1
+    setR(wc, 1, 3.0F); // src2
+    setR(wc, 2, 1.0F); // src3
+
+    fmaInstruction::Make("fma.rn.f32 %r3, %r0, %r1, %r2;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 3), 7.0F); // 2*3+1=7
+}
+
+TEST(FmaExecutor, F32NegativeAccumulator)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 4.0F);
+    setR(wc, 1, 5.0F);
+    setR(wc, 2, -30.0F);
+
+    fmaInstruction::Make("fma.rn.f32 %r3, %r0, %r1, %r2;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 3), -10.0F); // 4*5-30=-10
+}
+
+TEST(FmaExecutor, F64MultiplyAddRegisters)
+{
+    auto wc = makeWarp();
+    setRd(wc, 0, 2.0);
+    setRd(wc, 1, 3.0);
+    setRd(wc, 2, 0.5);
+
+    fmaInstruction::Make("fma.rn.f64 %rd3, %rd0, %rd1, %rd2;")->Execute(wc);
+
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 3), 6.5); // 2*3+0.5=6.5
+}
+
+TEST(FmaExecutor, F32MatchesStdFma)
+{
+    // Verify that the executor delegates to std::fma and not naive a*b+c.
+    auto wc = makeWarp();
+    const float a = 1.0F / 3.0F;
+    const float b = 3.0F;
+    const float c = 1e-7F;
+    setR(wc, 0, a);
+    setR(wc, 1, b);
+    setR(wc, 2, c);
+
+    fmaInstruction::Make("fma.rn.f32 %r3, %r0, %r1, %r2;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 3), std::fma(a, b, c));
+}
+
+// ============================================================================
+// shared + mov with symbol
+// Helper creates a BlockContext-backed WarpContext with pre-allocated shared
+// memory. Both the BlockContext and WarpContext are returned so the caller
+// keeps the BlockContext alive (needed because warp holds a weak_ptr to it).
+// ============================================================================
+static std::pair<std::shared_ptr<BlockContext>, std::shared_ptr<WarpContext>>
+makeWarpWithSharedMem(size_t shared_bytes = 4096)
+{
+    auto bc = std::make_shared<BlockContext>();
+    // nullptr global_context is fine — RegisterSharedSymbol/GetSharedPtr
+    // never access it, and Init only stores it as a weak_ptr.
+    bc->Init(nullptr, {1, 1, 1}, {0, 0, 0}, {32, 1, 1}, shared_bytes);
+    auto wc = bc->GetWarps()[0];
+    for (uint32_t i = 0; i < WarpSize; ++i)
+    {
+        wc->thread_regs[i][registerType::R] = RegisterContext(8, 0);
+        wc->thread_regs[i][registerType::Rd] = RegisterContext(8, 0);
+        wc->thread_regs[i][registerType::P] = RegisterContext(4, 0);
+    }
+    return {bc, wc};
+}
+
+TEST(SharedMemExecutor, RegistersSymbolNonNullAddress)
+{
+    auto [bc, wc] = makeWarpWithSharedMem(1024);
+
+    // .shared .align 4 .f32 smTile[64] → 64 * 4 = 256 bytes
+    // Note: symbol names must not start with hex digits (a-f) to avoid
+    // ambiguity in the mov regex that also matches hex immediates.
+    sharedInstruction::Make(".shared .align 4 .f32 smTile[64];")->Execute(wc);
+
+    // mov.u32 %r0, smTile — loads symbol address into R slot (stored as uint64_t)
+    movInstruction::Make("mov.u32 %r0, smTile;")->Execute(wc);
+
+    EXPECT_NE(wc->thread_regs[0][registerType::R][0], 0ULL);
+}
+
+TEST(SharedMemExecutor, TwoSymbolsHaveDistinctAddresses)
+{
+    auto [bc, wc] = makeWarpWithSharedMem(4096);
+
+    sharedInstruction::Make(".shared .align 4 .f32 smX[64];")->Execute(wc);
+    sharedInstruction::Make(".shared .align 4 .f32 smY[64];")->Execute(wc);
+
+    movInstruction::Make("mov.u32 %r0, smX;")->Execute(wc);
+    movInstruction::Make("mov.u32 %r1, smY;")->Execute(wc);
+
+    EXPECT_NE(wc->thread_regs[0][registerType::R][0], wc->thread_regs[0][registerType::R][1]);
+}
+
+TEST(SharedMemExecutor, SymbolRegisteredOnceEvenIfCalledTwice)
+{
+    auto [bc, wc] = makeWarpWithSharedMem(4096);
+
+    // Simulate two warps executing the same .shared directive
+    sharedInstruction::Make(".shared .align 4 .f32 smWork[32];")->Execute(wc);
+    sharedInstruction::Make(".shared .align 4 .f32 smWork[32];")->Execute(wc);
+
+    movInstruction::Make("mov.u32 %r0, smWork;")->Execute(wc);
+    movInstruction::Make("mov.u32 %r1, smWork;")->Execute(wc);
+
+    // Both reads must return the same address
+    EXPECT_EQ(wc->thread_regs[0][registerType::R][0], wc->thread_regs[0][registerType::R][1]);
+}
+
+TEST(SharedMemExecutor, StoreAndLoadRoundtrip)
+{
+    auto [bc, wc] = makeWarpWithSharedMem(4096);
+
+    // Only thread 0 active: prevents other threads from writing to their
+    // uninitialized %rd0 (= 0) during st, which would cause a SegFault.
+    wc->execution_mask = 0x1;
+
+    // Register 128-float shared buffer
+    sharedInstruction::Make(".shared .align 4 .f32 smOut[128];")->Execute(wc);
+
+    // Load the symbol address (stored as full 64-bit in R slot) → propagate to Rd
+    movInstruction::Make("mov.u32 %r0, smOut;")->Execute(wc);
+    wc->thread_regs[0][registerType::Rd][0] = wc->thread_regs[0][registerType::R][0];
+
+    // st.shared.f32 [%rd0], %r1  (write 3.14 to smOut[0])
+    setR(wc, 1, 3.14F);
+    stInstruction::Make("st.shared.f32 [%rd0], %r1;")->Execute(wc);
+
+    // ld.shared.f32 %r2, [%rd0]  (read back)
+    ldInstruction::Make("ld.shared.f32 %r2, [%rd0];")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 3.14F);
 }

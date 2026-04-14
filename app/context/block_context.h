@@ -2,6 +2,9 @@
 
 #include "warp_context.h"
 
+#include <string>
+#include <unordered_map>
+
 namespace Emulator
 {
 
@@ -15,6 +18,9 @@ class BlockContext : public std::enable_shared_from_this<BlockContext>
     std::vector<std::shared_ptr<WarpContext>> warps_;
     std::vector<uint8_t> shared_memory_;
 
+    std::unordered_map<std::string, void*> shared_symbols_;
+    size_t shared_offset_ = 0;
+
   public:
     BlockContext() = default;
 
@@ -26,6 +32,8 @@ class BlockContext : public std::enable_shared_from_this<BlockContext>
     std::vector<std::shared_ptr<WarpContext>> GetWarps() const;
     uint64_t GetBasicBlockOffset(const std::string& func_name, const std::string& sym) const;
     void* GetParamPtr(const std::string& name) const;
+    void RegisterSharedSymbol(const std::string& name, size_t size, size_t align);
+    void* GetSharedPtr(const std::string& name) const;
 };
 
 } // namespace Emulator

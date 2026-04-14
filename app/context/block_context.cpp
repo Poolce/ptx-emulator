@@ -14,6 +14,11 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
 {
     global_context_ = global_context;
     shared_memory_ = std::vector<uint8_t>(sharedMem);
+
+    uint32_t total_threads = blockDim.x * blockDim.y * blockDim.z;
+    uint32_t num_warps = (total_threads + WarpSize - 1) / WarpSize;
+    warps_.reserve(num_warps);
+
     std::vector<dim3> warp_thread_ids;
     warp_thread_ids.reserve(WarpSize);
 
@@ -65,6 +70,22 @@ void* BlockContext::GetParamPtr(const std::string& name) const
         throw std::runtime_error("Global context is expired.");
     }
     return global_context->GetParamPtr(name);
+}
+
+void BlockContext::RegisterSharedSymbol(const std::string& name, size_t size, size_t align)
+{
+    if (shared_symbols_.count(name))
+        return; // already registered by another warp
+    if (align > 0)
+        shared_offset_ = (shared_offset_ + align - 1) & ~(align - 1);
+    shared_symbols_[name] = &shared_memory_[shared_offset_];
+    shared_offset_ += size;
+}
+
+void* BlockContext::GetSharedPtr(const std::string& name) const
+{
+    auto it = shared_symbols_.find(name);
+    return it != shared_symbols_.end() ? it->second : nullptr;
 }
 
 } // namespace Emulator

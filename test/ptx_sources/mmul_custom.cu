@@ -57,11 +57,30 @@ void launch_cuda_mmul(const double* A,
 
 int main()
 {
-    std::vector<double> A(4000000, 1);
-    std::vector<double> B(4000000, 2);
-    std::vector<double> C(4000000);
+    constexpr std::size_t N = 128;
+    std::vector<double> A(N * N, 1.0);
+    std::vector<double> B(N * N, 2.0);
+    std::vector<double> C(N * N, 0.0);
 
-    launch_cuda_mmul(A.data(), 2000, 2000, B.data(), 2000, 2000, C.data());
+    launch_cuda_mmul(A.data(), N, N, B.data(), N, N, C.data());
 
-    return 0;
+    // Each C[i][j] = sum_{k=0}^{N-1} A[i][k] * B[k][j]
+    //             = sum_{k=0}^{N-1} 1.0 * 2.0 = N * 2.0 = 40.0
+    constexpr double expected = static_cast<double>(N) * 2.0;
+    bool ok = true;
+    for (std::size_t i = 0; i < N * N; ++i)
+    {
+        if (C[i] != expected)
+        {
+            std::cerr << "FAIL: C[" << i / N << "][" << i % N << "] = " << C[i] << ", expected " << expected << "\n";
+            ok = false;
+        }
+    }
+
+    if (ok)
+    {
+        std::cout << "OK: all " << N * N << " elements equal " << expected << "\n";
+    }
+
+    return ok ? 0 : 1;
 }

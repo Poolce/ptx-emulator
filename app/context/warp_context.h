@@ -48,6 +48,8 @@ class WarpContext
     uint32_t GetPredicateMask(uint64_t prd_id) const;
     void gotoBasicBlock(const std::string& sym);
     void* getParamPtr(const std::string& name);
+    void registerSharedSymbol(const std::string& name, size_t size, size_t align);
+    void* getSharedPtr(const std::string& name);
 };
 
 } // namespace Emulator

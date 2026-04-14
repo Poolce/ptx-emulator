@@ -643,6 +643,7 @@
                     "parent_type": "dataType",
                     "values": [
                         "f32",
+                        "s64",
                         "f64"
                     ]
                 },

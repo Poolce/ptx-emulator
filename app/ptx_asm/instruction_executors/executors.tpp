@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstring>
 #include <type_traits>
 
@@ -54,6 +55,19 @@ uint64_t to_u64(T val)
     }
 }
 
+// Runtime byte size of a single PTX data type element.
+static size_t ptx_sizeof(dataType dt)
+{
+    switch (dt)
+    {
+        case dataType::B8:  case dataType::U8:  case dataType::S8:  return 1;
+        case dataType::B16: case dataType::U16: case dataType::S16: case dataType::F16: return 2;
+        case dataType::B32: case dataType::U32: case dataType::S32: case dataType::F32: return 4;
+        case dataType::B64: case dataType::U64: case dataType::S64: case dataType::F64: return 8;
+        default: return 1;
+    }
+}
+
 } // anonymous namespace
 
 // ---------------------------------------------------------------------------
@@ -65,12 +79,12 @@ void regInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 }
 
 // ---------------------------------------------------------------------------
-// shared — allocate shared memory
+// shared — register a named symbol in the block's shared memory
 // ---------------------------------------------------------------------------
 void sharedInstruction::ExecuteWarp(std::shared_ptr<Emulator::WarpContext>& wc)
 {
-    wc->pc += 0;
-    return;
+    size_t byte_size = ptx_sizeof(data_) * count_;
+    wc->registerSharedSymbol(symbol_, byte_size, align_);
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +180,10 @@ void movInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     {
         val = wc->spr_regs[lid][spr_.type];
     }
+    else if (!symbol_.empty())
+    {
+        val = reinterpret_cast<uint64_t>(wc->getSharedPtr(symbol_));
+    }
     else
     {
         val = to_u64<T>(static_cast<T>(imm_));
@@ -245,13 +263,20 @@ void mulInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 
 
 // ---------------------------------------------------------------------------
-// fma — fused multiply-add.
+// fma — fused multiply-add  (dst = src1 * src2 + src3,  types: f32 / f64)
 // ---------------------------------------------------------------------------
 template<dataType Data>
 void fmaInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
 {
-    wc->pc += 0;
-    lid +=0;
+    using T = ptx_native_t<Data>;
+
+    T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
+    T s2 = reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id]);
+    T s3 = (src3_.type != registerType::UNDEFINED)
+               ? reg_cast<T>(wc->thread_regs[lid][src3_.type][src3_.reg_id])
+               : static_cast<T>(imm_);
+
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(std::fma(s1, s2, s3));
 }
 
 // ---------------------------------------------------------------------------
@@ -305,10 +330,19 @@ void subInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 }
 
 // ---------------------------------------------------------------------------
-// bra — conditional branch (already implemented, kept as-is)
+// bra — conditional / unconditional branch
+// When no predicate register is specified the branch is unconditional.
+// The .uni flag (uni_) only affects divergence semantics; the sequential
+// emulator ignores it.
 // ---------------------------------------------------------------------------
 void braInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc)
 {
+    if (prd_.type == registerType::UNDEFINED)
+    {
+        wc->gotoBasicBlock(sym_);
+        return;
+    }
+
     auto mask        = wc->GetPredicateMask(prd_.reg_id);
     uint64_t branch_mask = mask & wc->execution_mask;
     if (branch_mask == wc->execution_mask)
@@ -443,11 +477,11 @@ void cvtInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 
 // ---------------------------------------------------------------------------
 // bar — block barrier
+// Warps within a block are executed sequentially, so bar.sync is a no-op.
 // ---------------------------------------------------------------------------
 void barInstruction::ExecuteWarp(std::shared_ptr<Emulator::WarpContext>& wc)
 {
-    wc->pc += 0;
-    return;
+    (void)wc;
 }
 
 
