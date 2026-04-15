@@ -29,7 +29,7 @@ void GlobalContext::Init(const std::shared_ptr<Ptx::Module>& ptx,
         {
             for (uint32_t gidx = 0; gidx < gridDim.x; ++gidx)
             {
-                size_t idx = (size_t)gidz * gridDim.y * gridDim.x + gidy * gridDim.x + gidx;
+                size_t idx = ((size_t)gidz * gridDim.y * gridDim.x) + (gidy * gridDim.x) + gidx;
                 dim3 gid{gidx, gidy, gidz};
                 auto bc = std::make_shared<BlockContext>();
                 bc->Init(self, gridDim, gid, blockDim, sharedMem);
@@ -53,9 +53,9 @@ void GlobalContext::SetEntryFunction(const std::string& func_name)
 #ifdef EMULATOR_OPENMP_ENABLED
     #pragma omp parallel for schedule(static)
 #endif
-    for (size_t i = 0; i < blocks_.size(); ++i)
+    for (auto& block : blocks_)
     {
-        for (const auto& warp : blocks_[i]->GetWarps())
+        for (const auto& warp : block->GetWarps())
         {
             warp->cur_function = func_name;
             warp->pc = pc;

@@ -74,10 +74,14 @@ void* BlockContext::GetParamPtr(const std::string& name) const
 
 void BlockContext::RegisterSharedSymbol(const std::string& name, size_t size, size_t align)
 {
-    if (shared_symbols_.count(name))
+    if (shared_symbols_.contains(name))
+    {
         return; // already registered by another warp
+    }
     if (align > 0)
+    {
         shared_offset_ = (shared_offset_ + align - 1) & ~(align - 1);
+    }
     shared_symbols_[name] = &shared_memory_[shared_offset_];
     shared_offset_ += size;
 }
