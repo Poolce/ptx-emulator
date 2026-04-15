@@ -10,7 +10,7 @@ namespace Ptx {
 {% for i_name, instr in instructions.items() %}
 {% if instr.regexp_template %}
 void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
-
+    std::cout<<"Execute {{i_name}}\n";
 {% if instr.exec_type == "thread" %}
 {% if "typed_executor" in instr %}
     using ET = EnumTable<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}}{% if not loop.last%}, {% endif %}{% endfor %}>;

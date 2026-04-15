@@ -66,7 +66,7 @@ static InstructionList parseInstructions(const std::string& content)
 {
     InstructionList instrs{};
 
-    constexpr std::string_view Pattern = "^\\.?(@%p[0-9]+\\s)?([a-z]+).*$";
+    constexpr std::string_view Pattern = "^\\.?(@%p[0-9]+\\s)?([a-z]+2?).*$";
     static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize | std::regex::multiline);
     auto begin = std::sregex_iterator(content.begin(), content.end(), Re);
     auto end = std::sregex_iterator();
@@ -76,8 +76,15 @@ static InstructionList parseInstructions(const std::string& content)
         if (match.size() >= 3)
         {
             std::string name = match[2].str();
-            auto instr = makeInstruction(name, match[0].str());
-            instrs.push_back(instr);
+            try
+            {
+                auto instr = makeInstruction(name, match[0].str());
+                instrs.push_back(instr);
+            }
+            catch (const std::runtime_error& e)
+            {
+                throw std::runtime_error("Failed to parse instruction: " + match[0].str());
+            }
         }
     }
     return instrs;

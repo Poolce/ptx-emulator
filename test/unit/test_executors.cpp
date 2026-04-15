@@ -1,3 +1,4 @@
+#include "block_context.h"
 #include "constant.h"
 #include "instructions.h"
 #include "warp_context.h"
@@ -5,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <bit>
+#include <cmath>
 #include <cstring>
 
 using namespace Emulator;
@@ -446,7 +448,7 @@ TEST(MulExecutor, HiU32OverflowPreservesHighBits)
     setR(wc, 0, uint32_t(0xFFFFFFFF));
     setR(wc, 1, uint32_t(0xFFFFFFFF));
 
-    auto instr = mulInstruction::Make("mul.hi.b32 %r2, %r0, %r1;");
+    auto instr = mulInstruction::Make("mul.hi.u32 %r2, %r0, %r1;");
     instr->Execute(wc);
 
     EXPECT_EQ(r32<uint32_t>(wc, 2), 0xFFFFFFFEU);
@@ -653,4 +655,476 @@ TEST(BraExecutor, DivergentBranchPushesStack)
     EXPECT_EQ(saved_pc, 11U);            // fall-through pc = 10+1
     EXPECT_EQ(saved_mask, 0x2U);         // bit 1 = fall-through thread
     EXPECT_EQ(wc->execution_mask, 0x1U); // only branching thread remains
+}
+
+TEST(BraExecutor, UnconditionalBranchNoPredicateThrowsWithoutContext)
+{
+    // "bra $TARGET" — no @predicate → unconditional branch
+    auto wc = makeWarp(0x1);
+    wc->pc = 10;
+    auto instr = braInstruction::Make("bra $TARGET;");
+    // gotoBasicBlock throws because there is no block context
+    EXPECT_THROW(instr->Execute(wc), std::runtime_error);
+    // pc must not have been changed (throw happens before pc assignment)
+    EXPECT_EQ(wc->pc, 10U);
+}
+
+// ============================================================================
+// bar
+// ============================================================================
+TEST(BarExecutor, BarSyncIsNoOp)
+{
+    auto wc = makeWarp();
+    wc->pc = 5;
+    auto instr = barInstruction::Make("bar.sync 0;");
+    EXPECT_NO_THROW(instr->Execute(wc));
+    EXPECT_EQ(wc->pc, 6U); // warp instruction: Execute() does pc++ after ExecuteWarp
+}
+
+// ============================================================================
+// tanh
+// ============================================================================
+TEST(TanhExecutor, F32Zero)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 0.0F); // tanh(0) = 0
+
+    tanhInstruction::Make("tanh.approx.ftz.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 0.0F);
+}
+
+TEST(TanhExecutor, F32PositiveSaturation)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 10.0F); // tanh(10) ≈ 1.0
+
+    tanhInstruction::Make("tanh.approx.ftz.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_NEAR(r32<float>(wc, 1), 1.0F, 1e-5F);
+}
+
+TEST(TanhExecutor, F32MatchesStdTanh)
+{
+    auto wc = makeWarp();
+    const float x = 0.5F;
+    setR(wc, 0, x);
+
+    tanhInstruction::Make("tanh.approx.ftz.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_NEAR(r32<float>(wc, 1), std::tanh(x), 1e-6F);
+}
+
+TEST(TanhExecutor, F64MatchesStdTanh)
+{
+    auto wc = makeWarp();
+    const double x = -1.5;
+    setRd(wc, 0, x);
+
+    tanhInstruction::Make("tanh.approx.ftz.f64 %rd1, %rd0;")->Execute(wc);
+
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 1), std::tanh(x));
+}
+
+// ============================================================================
+// fma
+// ============================================================================
+TEST(FmaExecutor, F32MultiplyAddRegisters)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 2.0F); // src1
+    setR(wc, 1, 3.0F); // src2
+    setR(wc, 2, 1.0F); // src3
+
+    fmaInstruction::Make("fma.rn.f32 %r3, %r0, %r1, %r2;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 3), 7.0F); // 2*3+1=7
+}
+
+TEST(FmaExecutor, F32NegativeAccumulator)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 4.0F);
+    setR(wc, 1, 5.0F);
+    setR(wc, 2, -30.0F);
+
+    fmaInstruction::Make("fma.rn.f32 %r3, %r0, %r1, %r2;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 3), -10.0F); // 4*5-30=-10
+}
+
+TEST(FmaExecutor, F64MultiplyAddRegisters)
+{
+    auto wc = makeWarp();
+    setRd(wc, 0, 2.0);
+    setRd(wc, 1, 3.0);
+    setRd(wc, 2, 0.5);
+
+    fmaInstruction::Make("fma.rn.f64 %rd3, %rd0, %rd1, %rd2;")->Execute(wc);
+
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 3), 6.5); // 2*3+0.5=6.5
+}
+
+TEST(FmaExecutor, F32MatchesStdFma)
+{
+    // Verify that the executor delegates to std::fma and not naive a*b+c.
+    auto wc = makeWarp();
+    const float a = 1.0F / 3.0F;
+    const float b = 3.0F;
+    const float c = 1e-7F;
+    setR(wc, 0, a);
+    setR(wc, 1, b);
+    setR(wc, 2, c);
+
+    fmaInstruction::Make("fma.rn.f32 %r3, %r0, %r1, %r2;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 3), std::fma(a, b, c));
+}
+
+// ============================================================================
+// shared + mov with symbol
+// Helper creates a BlockContext-backed WarpContext with pre-allocated shared
+// memory. Both the BlockContext and WarpContext are returned so the caller
+// keeps the BlockContext alive (needed because warp holds a weak_ptr to it).
+// ============================================================================
+static std::pair<std::shared_ptr<BlockContext>, std::shared_ptr<WarpContext>>
+makeWarpWithSharedMem(size_t shared_bytes = 4096)
+{
+    auto bc = std::make_shared<BlockContext>();
+    // nullptr global_context is fine — RegisterSharedSymbol/GetSharedPtr
+    // never access it, and Init only stores it as a weak_ptr.
+    bc->Init(nullptr, {1, 1, 1}, {0, 0, 0}, {32, 1, 1}, shared_bytes);
+    auto wc = bc->GetWarps()[0];
+    for (uint32_t i = 0; i < WarpSize; ++i)
+    {
+        wc->thread_regs[i][registerType::R] = RegisterContext(8, 0);
+        wc->thread_regs[i][registerType::Rd] = RegisterContext(8, 0);
+        wc->thread_regs[i][registerType::P] = RegisterContext(4, 0);
+    }
+    return {bc, wc};
+}
+
+TEST(SharedMemExecutor, RegistersSymbolNonNullAddress)
+{
+    auto [bc, wc] = makeWarpWithSharedMem(1024);
+
+    // .shared .align 4 .f32 smTile[64] → 64 * 4 = 256 bytes
+    // Note: symbol names must not start with hex digits (a-f) to avoid
+    // ambiguity in the mov regex that also matches hex immediates.
+    sharedInstruction::Make(".shared .align 4 .f32 smTile[64];")->Execute(wc);
+
+    // mov.u32 %r0, smTile — loads symbol address into R slot (stored as uint64_t)
+    movInstruction::Make("mov.u32 %r0, smTile;")->Execute(wc);
+
+    EXPECT_NE(wc->thread_regs[0][registerType::R][0], 0ULL);
+}
+
+TEST(SharedMemExecutor, TwoSymbolsHaveDistinctAddresses)
+{
+    auto [bc, wc] = makeWarpWithSharedMem(4096);
+
+    sharedInstruction::Make(".shared .align 4 .f32 smX[64];")->Execute(wc);
+    sharedInstruction::Make(".shared .align 4 .f32 smY[64];")->Execute(wc);
+
+    movInstruction::Make("mov.u32 %r0, smX;")->Execute(wc);
+    movInstruction::Make("mov.u32 %r1, smY;")->Execute(wc);
+
+    EXPECT_NE(wc->thread_regs[0][registerType::R][0], wc->thread_regs[0][registerType::R][1]);
+}
+
+TEST(SharedMemExecutor, SymbolRegisteredOnceEvenIfCalledTwice)
+{
+    auto [bc, wc] = makeWarpWithSharedMem(4096);
+
+    // Simulate two warps executing the same .shared directive
+    sharedInstruction::Make(".shared .align 4 .f32 smWork[32];")->Execute(wc);
+    sharedInstruction::Make(".shared .align 4 .f32 smWork[32];")->Execute(wc);
+
+    movInstruction::Make("mov.u32 %r0, smWork;")->Execute(wc);
+    movInstruction::Make("mov.u32 %r1, smWork;")->Execute(wc);
+
+    // Both reads must return the same address
+    EXPECT_EQ(wc->thread_regs[0][registerType::R][0], wc->thread_regs[0][registerType::R][1]);
+}
+
+TEST(SharedMemExecutor, StoreAndLoadRoundtrip)
+{
+    auto [bc, wc] = makeWarpWithSharedMem(4096);
+
+    // Only thread 0 active: prevents other threads from writing to their
+    // uninitialized %rd0 (= 0) during st, which would cause a SegFault.
+    wc->execution_mask = 0x1;
+
+    // Register 128-float shared buffer
+    sharedInstruction::Make(".shared .align 4 .f32 smOut[128];")->Execute(wc);
+
+    // Load the symbol address (stored as full 64-bit in R slot) → propagate to Rd
+    movInstruction::Make("mov.u32 %r0, smOut;")->Execute(wc);
+    wc->thread_regs[0][registerType::Rd][0] = wc->thread_regs[0][registerType::R][0];
+
+    // st.shared.f32 [%rd0], %r1  (write 3.14 to smOut[0])
+    setR(wc, 1, 3.14F);
+    stInstruction::Make("st.shared.f32 [%rd0], %r1;")->Execute(wc);
+
+    // ld.shared.f32 %r2, [%rd0]  (read back)
+    ldInstruction::Make("ld.shared.f32 %r2, [%rd0];")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 3.14F);
+}
+
+// ============================================================================
+// cvta — address-space conversion (identity in flat-memory emulator)
+// ============================================================================
+TEST(CvtaExecutor, GlobalU64PreservesPointerValue)
+{
+    auto wc = makeWarp();
+    uint64_t addr = 0xDEADBEEFCAFEBABEULL;
+    setRd(wc, 0, addr);
+
+    cvtaInstruction::Make("cvta.to.global.u64 %rd1, %rd0;")->Execute(wc);
+
+    EXPECT_EQ(rd64<uint64_t>(wc, 1), addr);
+}
+
+TEST(CvtaExecutor, SharedU64PreservesPointerValue)
+{
+    auto wc = makeWarp();
+    uint64_t addr = 0x0000FFFF0000FFFFULL;
+    setRd(wc, 0, addr);
+
+    cvtaInstruction::Make("cvta.shared.u64 %rd1, %rd0;")->Execute(wc);
+
+    EXPECT_EQ(rd64<uint64_t>(wc, 1), addr);
+}
+
+// ============================================================================
+// abs — absolute value
+// ============================================================================
+TEST(AbsExecutor, S32Positive)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, int32_t(-42));
+
+    absInstruction::Make("abs.s32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_EQ(r32<int32_t>(wc, 1), 42);
+}
+
+TEST(AbsExecutor, S32AlreadyPositive)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, int32_t(7));
+
+    absInstruction::Make("abs.s32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_EQ(r32<int32_t>(wc, 1), 7);
+}
+
+TEST(AbsExecutor, S64Negative)
+{
+    auto wc = makeWarp();
+    setRd(wc, 0, int64_t(-1000000000LL));
+
+    absInstruction::Make("abs.s64 %rd1, %rd0;")->Execute(wc);
+
+    EXPECT_EQ(rd64<int64_t>(wc, 1), int64_t(1000000000LL));
+}
+
+TEST(AbsExecutor, F32Negative)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, -3.14F);
+
+    absInstruction::Make("abs.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 3.14F);
+}
+
+TEST(AbsExecutor, F64Negative)
+{
+    auto wc = makeWarp();
+    setRd(wc, 0, std::numbers::e);
+
+    absInstruction::Make("abs.f64 %rd1, %rd0;")->Execute(wc);
+
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 1), std::numbers::e);
+}
+
+// ============================================================================
+// ex2 — base-2 exponential  (ex2.approx.ftz.type)
+// Note: .ftz is required by the generated regex (not optional).
+// ============================================================================
+TEST(Ex2Executor, F32PowerOfTwo)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 3.0F); // 2^3 = 8
+
+    ex2Instruction::Make("ex2.approx.ftz.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 8.0F);
+}
+
+TEST(Ex2Executor, F32ZeroExponent)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 0.0F); // 2^0 = 1
+
+    ex2Instruction::Make("ex2.approx.ftz.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 1.0F);
+}
+
+TEST(Ex2Executor, F64NegativeExponent)
+{
+    auto wc = makeWarp();
+    setRd(wc, 0, -1.0); // 2^(-1) = 0.5
+
+    ex2Instruction::Make("ex2.approx.ftz.f64 %rd1, %rd0;")->Execute(wc);
+
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 1), 0.5);
+}
+
+// ============================================================================
+// rcp — reciprocal  (rcp.approx.ftz.type)
+// ============================================================================
+TEST(RcpExecutor, F32BasicReciprocal)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 4.0F); // 1/4 = 0.25
+
+    rcpInstruction::Make("rcp.approx.ftz.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 0.25F);
+}
+
+TEST(RcpExecutor, F32One)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 1.0F); // 1/1 = 1
+
+    rcpInstruction::Make("rcp.approx.ftz.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 1), 1.0F);
+}
+
+TEST(RcpExecutor, F64Reciprocal)
+{
+    auto wc = makeWarp();
+    setRd(wc, 0, 2.0); // 1/2 = 0.5
+
+    rcpInstruction::Make("rcp.approx.ftz.f64 %rd1, %rd0;")->Execute(wc);
+
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 1), 0.5);
+}
+
+// ============================================================================
+// copysign — PTX: copysign d, a, b → magnitude from b (src2), sign from a (src1)
+// ============================================================================
+TEST(CopysignExecutor, F32PositiveSignNegativeMagnitude)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 3.0F);  // src1: provides sign (+)
+    setR(wc, 1, -5.0F); // src2: provides magnitude (5.0)
+
+    copysignInstruction::Make("copysign.f32 %r2, %r0, %r1;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 5.0F); // |src2| * sign(src1) = 5.0 * (+1) = 5.0
+}
+
+TEST(CopysignExecutor, F32NegativeSignPositiveMagnitude)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, -3.0F); // src1: provides sign (-)
+    setR(wc, 1, 1.0F);  // src2: provides magnitude (1.0)
+
+    copysignInstruction::Make("copysign.f32 %r2, %r0, %r1;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), -1.0F); // |src2| * sign(src1) = 1.0 * (-1) = -1.0
+}
+
+TEST(CopysignExecutor, F64BothNegative)
+{
+    auto wc = makeWarp();
+    setRd(wc, 0, -3.0); // src1: provides sign (-)
+    setRd(wc, 1, -7.0); // src2: provides magnitude (7.0)
+
+    copysignInstruction::Make("copysign.f64 %rd2, %rd0, %rd1;")->Execute(wc);
+
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 2), -7.0); // |src2| * sign(src1) = 7.0 * (-1) = -7.0
+}
+
+// ============================================================================
+// selp — predicate-based select
+//   selp.type d, a, b, c  →  d = (c != 0) ? a : b
+// ============================================================================
+TEST(SelpExecutor, U32TruePredicate)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 10U);                           // a — taken when predicate true
+    setR(wc, 1, 20U);                           // b — taken when predicate false
+    wc->thread_regs[0][registerType::P][0] = 1; // %p0 = true
+
+    selpInstruction::Make("selp.u32 %r2, %r0, %r1, %p0;")->Execute(wc);
+
+    EXPECT_EQ(r32<uint32_t>(wc, 2), 10U);
+}
+
+TEST(SelpExecutor, U32FalsePredicate)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 10U);
+    setR(wc, 1, 20U);
+    wc->thread_regs[0][registerType::P][0] = 0; // %p0 = false
+
+    selpInstruction::Make("selp.u32 %r2, %r0, %r1, %p0;")->Execute(wc);
+
+    EXPECT_EQ(r32<uint32_t>(wc, 2), 20U);
+}
+
+TEST(SelpExecutor, F32SelectPositiveBranch)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 1.0F);                          // a
+    setR(wc, 1, -1.0F);                         // b
+    wc->thread_regs[0][registerType::P][1] = 1; // %p1 = true
+
+    selpInstruction::Make("selp.f32 %r2, %r0, %r1, %p1;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 1.0F);
+}
+
+TEST(SelpExecutor, S32ImmediateOperands)
+{
+    // selp.s32 %r0, 7, -3, %p0  — both operands are immediates
+    auto wc = makeWarp();
+    wc->thread_regs[0][registerType::P][0] = 0; // %p0 = false → pick imm2 = -3
+
+    selpInstruction::Make("selp.s32 %r0, 7, -3, %p0;")->Execute(wc);
+
+    EXPECT_EQ(r32<int32_t>(wc, 0), -3);
+}
+
+// ============================================================================
+// mul — float types (mode optional, added in this branch)
+// ============================================================================
+TEST(MulExecutor, F32NoMode)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 2.5F);
+    setR(wc, 1, 4.0F);
+
+    mulInstruction::Make("mul.f32 %r2, %r0, %r1;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 10.0F);
+}
+
+TEST(MulExecutor, F64NoMode)
+{
+    auto wc = makeWarp();
+    setRd(wc, 0, 1.5);
+    setRd(wc, 1, 3.0);
+
+    mulInstruction::Make("mul.f64 %rd2, %rd0, %rd1;")->Execute(wc);
+
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 2), 4.5);
 }

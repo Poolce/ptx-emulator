@@ -1,5 +1,9 @@
 #include "global_context.h"
 
+#ifdef EMULATOR_OPENMP_ENABLED
+    #include <omp.h>
+#endif
+
 namespace Emulator
 {
 
@@ -11,16 +15,25 @@ void GlobalContext::Init(const std::shared_ptr<Ptx::Module>& ptx,
 {
     ptx_module_ = ptx;
     args_ = args;
-    for (uint32_t gidx = 0; gidx < gridDim.x; ++gidx)
+
+    size_t total_blocks = (size_t)gridDim.x * gridDim.y * gridDim.z;
+    blocks_.resize(total_blocks);
+    auto self = shared_from_this();
+
+#ifdef EMULATOR_OPENMP_ENABLED
+    #pragma omp parallel for collapse(3) schedule(dynamic)
+#endif
+    for (uint32_t gidz = 0; gidz < gridDim.z; ++gidz)
     {
         for (uint32_t gidy = 0; gidy < gridDim.y; ++gidy)
         {
-            for (uint32_t gidz = 0; gidz < gridDim.z; ++gidz)
+            for (uint32_t gidx = 0; gidx < gridDim.x; ++gidx)
             {
+                size_t idx = ((size_t)gidz * gridDim.y * gridDim.x) + (gidy * gridDim.x) + gidx;
                 dim3 gid{gidx, gidy, gidz};
                 auto bc = std::make_shared<BlockContext>();
-                bc->Init(shared_from_this(), gridDim, gid, blockDim, sharedMem);
-                blocks_.push_back(bc);
+                bc->Init(self, gridDim, gid, blockDim, sharedMem);
+                blocks_[idx] = std::move(bc);
             }
         }
     }
@@ -36,6 +49,10 @@ void GlobalContext::SetEntryFunction(const std::string& func_name)
     auto func = ptx_module_->GetEntryFunction(func_name);
     auto pc = func->getOffset();
     global_parameters_ = func->getParameters();
+
+#ifdef EMULATOR_OPENMP_ENABLED
+    #pragma omp parallel for schedule(static)
+#endif
     for (auto& block : blocks_)
     {
         for (const auto& warp : block->GetWarps())

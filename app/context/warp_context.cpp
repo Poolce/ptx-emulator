@@ -80,4 +80,24 @@ void* WarpContext::getParamPtr(const std::string& name)
     return block_context->GetParamPtr(name);
 }
 
+void WarpContext::registerSharedSymbol(const std::string& name, size_t size, size_t align)
+{
+    auto block_context = block_context_.lock();
+    if (!block_context)
+    {
+        throw std::runtime_error("Block context is expired.");
+    }
+    block_context->RegisterSharedSymbol(name, size, align);
+}
+
+void* WarpContext::getSharedPtr(const std::string& name)
+{
+    auto block_context = block_context_.lock();
+    if (!block_context)
+    {
+        throw std::runtime_error("Block context is expired.");
+    }
+    return block_context->GetSharedPtr(name);
+}
+
 } // namespace Emulator
