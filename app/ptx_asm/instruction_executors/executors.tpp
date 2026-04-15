@@ -1,7 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <limits>
 #include <type_traits>
 
 namespace Emulator {
@@ -203,6 +205,43 @@ void addInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 }
 
 // ---------------------------------------------------------------------------
+// shfl — Register data shuffle within threads of a warp.
+//   shfl{.sync}.mode.b32  dst|pred, src, offset_reg, clamp_reg, mask{_imm};
+//   dst.reg1  = value from srcLane
+//   dst.reg2  = predicate (1 if srcLane was in bounds, else 0)
+//   exec_type is "thread" so ExecuteThread is called per active lane, but
+//   we read from other lanes' *source* registers (not yet overwritten when
+//   dst != src, which is always the case in practice).
+// ---------------------------------------------------------------------------
+template<dataType Data>
+void shflInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    uint32_t offset = static_cast<uint32_t>(wc->thread_regs[lid][src2_.type][src2_.reg_id]);
+
+    uint32_t src_lane = lid;
+    switch (mode_) {
+        case shflmodeQl::Bfly: src_lane = lid ^ offset;              break;
+        case shflmodeQl::Down: src_lane = lid + offset;              break;
+        case shflmodeQl::Up:   src_lane = (lid >= offset) ? lid - offset : lid; break;
+        case shflmodeQl::Idx:  src_lane = offset;                    break;
+        default:               src_lane = lid;
+    }
+
+    const bool valid = (src_lane < static_cast<uint32_t>(Emulator::WarpSize))
+                    && (((wc->execution_mask >> src_lane) & 1U) != 0U);
+    if (!valid) {
+        src_lane = lid;
+    }
+
+    wc->thread_regs[lid][dst_.reg1.type][dst_.reg1.reg_id] =
+        wc->thread_regs[src_lane][src1_.type][src1_.reg_id];
+
+    if (dst_.reg2.type != registerType::UNDEFINED) {
+        wc->thread_regs[lid][dst_.reg2.type][dst_.reg2.reg_id] = valid ? 1ULL : 0ULL;
+    }
+}
+
+// ---------------------------------------------------------------------------
 // mov — move register / special register / immediate
 // ---------------------------------------------------------------------------
 template<dataType Data>
@@ -314,6 +353,22 @@ void mulInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = result;
 }
 
+
+// ---------------------------------------------------------------------------
+// div — division  (types: f16, f32, f64;  modes: rn/rz/rm/rp ignored)
+// ---------------------------------------------------------------------------
+template<dataType Data>
+void divInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    using T = ptx_native_t<Data>;
+
+    T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
+    T s2 = (src2_.type != registerType::UNDEFINED)
+               ? reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id])
+               : reg_cast<T>(static_cast<uint64_t>(imm_));
+
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(s1 / s2);
+}
 
 // ---------------------------------------------------------------------------
 // ex2 — base-2 exponential  (dst = 2^src,  types: f16, f32, f64)
@@ -561,6 +616,7 @@ void retInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc) // NOLINT(r
 //   SrcData (= src_data_ = first token) is the PTX destination type
 //   DstData (= dst_data_ = second token) is the PTX source type
 // Read the source register with DstData, write the destination with SrcData.
+// mode_ == Sat: clamp float→int conversions to the output type's range.
 // ---------------------------------------------------------------------------
 template<dataType SrcData, dataType DstData>
 void cvtInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
@@ -569,7 +625,16 @@ void cvtInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     using InT  = ptx_native_t<DstData>; // PTX input  (source)      type
 
     InT  src_val = reg_cast<InT>(wc->thread_regs[lid][src_.type][src_.reg_id]);
-    OutT dst_val = static_cast<OutT>(src_val);
+    OutT dst_val;
+
+    if (mode_ == cvtmodeQl::Sat && std::is_integral_v<OutT> && std::is_floating_point_v<InT>) {
+        const auto lo = static_cast<InT>(std::numeric_limits<OutT>::lowest());
+        const auto hi = static_cast<InT>(std::numeric_limits<OutT>::max());
+        dst_val = static_cast<OutT>(std::clamp(src_val, lo, hi));
+    } else {
+        dst_val = static_cast<OutT>(src_val);
+    }
+
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<OutT>(dst_val);
 }
 

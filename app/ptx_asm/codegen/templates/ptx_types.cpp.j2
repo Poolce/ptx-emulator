@@ -117,6 +117,23 @@ sprRegisterOperand FromString(const std::string& str) {
 }
 
 template <>
+doubleRegisterOperand FromString(const std::string& str) {
+    constexpr std::string_view pattern = "%([a-z]+)([0-9]*)\\|%([a-z]+)([0-9]*),?";
+    static std::regex re(pattern.data(), std::regex::ECMAScript | std::regex::optimize);
+    std::smatch match;
+    auto res = doubleRegisterOperand();
+    if (std::regex_match(str, match, re)) {
+            if (match[1].matched) res.reg1.type = FromString<registerType>(match[1].str());
+            if (match[2].matched) res.reg1.reg_id = FromString<uint32_t>(match[2].str());
+            if (match[3].matched) res.reg2.type = FromString<registerType>(match[3].str());
+            if (match[4].matched) res.reg2.reg_id = FromString<uint32_t>(match[4].str());
+    } else {
+        throw std::runtime_error("Double register operand is not matched [" + str + "]");
+    }
+    return res;
+}
+
+template <>
 addressOperand FromString(const std::string& str) {
     constexpr std::string_view pattern = "^\\[(%[a-z]+[0-9]*)?([A-z0-9_]+)?\\+?(0?x?[\\-A-Fa-f0-9]+)?\\]$";
     static std::regex re(pattern.data(), std::regex::ECMAScript | std::regex::optimize);
