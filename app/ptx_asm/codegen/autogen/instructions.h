@@ -69,7 +69,7 @@ class regInstruction : public Instruction
     uint32_t count_ = uint32_t();
 
   public:
-    regInstruction(){};
+    regInstruction() {};
     void Execute(std::shared_ptr<WarpContext>& wc) override;
     void Dump() override;
 
