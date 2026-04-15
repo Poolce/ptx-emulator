@@ -62,9 +62,6 @@ cudaError_t __cudaLaunchKernel([[maybe_unused]] const void* func,
     {
         throw std::runtime_error("Runtime interface not initialized. Ensure __cudaRegisterFatBinary was called first.");
     }
-
-    std::cout << "cudaLaunchKernel " << std::hex << (uint64_t)func << "\n";
-
     uint64_t stream_id = interface->MakeStream();
     auto func_descr = (uint64_t)(func);
     interface->KernelLaunch(func_descr, gridDim, blockDim, args, sharedMem, stream_id);

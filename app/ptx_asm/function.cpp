@@ -83,7 +83,8 @@ static InstructionList parseInstructions(const std::string& content)
             }
             catch (const std::runtime_error& e)
             {
-                throw std::runtime_error("Failed to parse instruction: " + match[0].str());
+                throw std::runtime_error("Failed to parse instruction parameter: " + match[0].str() +
+                                         "\nError: " + e.what());
             }
         }
     }
