@@ -1175,7 +1175,9 @@ TEST(DivExecutor, F32NoRoundingMode)
 static void setRAll(const std::shared_ptr<WarpContext>& wc, uint32_t id, uint32_t n, uint32_t val)
 {
     for (uint32_t t = 0; t < n; ++t)
+    {
         wc->thread_regs[t][registerType::R][id] = val;
+    }
 }
 
 TEST(ShflExecutor, BflyOffset1ExchangesPairs)
@@ -1183,7 +1185,9 @@ TEST(ShflExecutor, BflyOffset1ExchangesPairs)
     // Threads 0-3 active; each thread's %r0 = tid + 10 (10, 11, 12, 13)
     auto wc = makeWarp(0xF);
     for (uint32_t t = 0; t < 4; ++t)
+    {
         wc->thread_regs[t][registerType::R][0] = t + 10;
+    }
 
     setRAll(wc, 1, 4, 1);   // %r1 = offset = 1
     setRAll(wc, 2, 4, 31);  // %r2 = clamp  = 31
@@ -1202,7 +1206,9 @@ TEST(ShflExecutor, BflyPredicateIsSetForValidLanes)
 {
     auto wc = makeWarp(0xF);
     for (uint32_t t = 0; t < 4; ++t)
+    {
         wc->thread_regs[t][registerType::R][0] = t;
+    }
 
     setRAll(wc, 1, 4, 1);
     setRAll(wc, 2, 4, 31);
@@ -1212,7 +1218,9 @@ TEST(ShflExecutor, BflyPredicateIsSetForValidLanes)
 
     // All XOR partners (0^1=1, 1^1=0, 2^1=3, 3^1=2) are active → pred = 1
     for (uint32_t t = 0; t < 4; ++t)
+    {
         EXPECT_EQ(wc->thread_regs[t][registerType::P][0], 1ULL) << "thread " << t;
+    }
 }
 
 TEST(ShflExecutor, BflyOutOfBoundsClampsToSelf)
@@ -1235,7 +1243,9 @@ TEST(ShflExecutor, BflyOffset16FullWarpReduction)
     // Full warp butterfly sum reduction (one step: offset=16)
     auto wc = makeWarp(0xFFFFFFFF);
     for (uint32_t t = 0; t < 32; ++t)
+    {
         wc->thread_regs[t][registerType::R][0] = t; // values 0..31
+    }
 
     setRAll(wc, 1, 32, 16); // offset = 16
     setRAll(wc, 2, 32, 31); // clamp  = 31
