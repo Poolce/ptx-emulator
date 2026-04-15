@@ -56,7 +56,8 @@ jobs:
             echo "Compiling $cu → build/ptx_tests/$name"
             nvcc "$cu" -o "build/ptx_tests/$name" \
               -O2 -arch=sm_75 \
-              -Xcompiler -fopenmp -lgomp
+              -Xcompiler -fopenmp -lgomp \
+              --cudart=shared
           done
 
       - name: Run PTX tests via cuemu
