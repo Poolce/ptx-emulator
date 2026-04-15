@@ -13,16 +13,16 @@ jobs:
       image: nvidia/cuda:13.0.0-devel-ubuntu22.04
 
     steps:
-      - uses: actions/checkout@v5
-        with:
-          submodules: recursive
-
-      - name: Install build dependencies
+      - name: Install git and build dependencies
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            cmake ninja-build ccache python3 python3-pip libgomp1
+            git cmake ninja-build ccache python3 python3-pip libgomp1
           python3 -m pip install --break-system-packages jinja2
+
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
