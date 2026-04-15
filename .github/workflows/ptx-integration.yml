@@ -18,7 +18,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             git cmake ninja-build ccache python3 python3-pip libgomp1
-          python3 -m pip install --break-system-packages jinja2
+          python3 -m pip install jinja2
 
       - uses: actions/checkout@v5
         with:
