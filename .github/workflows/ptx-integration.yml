@@ -1,0 +1,66 @@
+name: PTX integration tests
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 8 * * *'
+
+jobs:
+  ptx-integration:
+    runs-on: ubuntu-latest
+    container:
+      image: nvidia/cuda:13.0.0-devel-ubuntu22.04
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            cmake ninja-build ccache python3 python3-pip libgomp1
+          python3 -m pip install --break-system-packages jinja2
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}
+          create-symlink: true
+
+      - name: Configure emulator
+        run: >
+          cmake -S . -B build
+          -GNinja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build cuemu
+        run: cmake --build build --parallel
+
+      - name: Compile PTX test sources with nvcc
+        run: |
+          mkdir -p build/ptx_tests
+          for cu in test/ptx_sources/*.cu; do
+            name=$(basename "$cu" .cu)
+            echo "Compiling $cu → build/ptx_tests/$name"
+            nvcc "$cu" -o "build/ptx_tests/$name" \
+              -O2 -arch=sm_75 \
+              -Xcompiler -fopenmp -lgomp
+          done
+
+      - name: Run PTX tests via cuemu
+        run: |
+          export LD_LIBRARY_PATH="$PWD/build/lib:${LD_LIBRARY_PATH:-}"
+          failed=0
+          for binary in build/ptx_tests/*; do
+            name=$(basename "$binary")
+            echo "::group::$name"
+            "$PWD/build/bin/cuemu" "$PWD/$binary" \
+              && echo "PASSED: $name" \
+              || { echo "FAILED: $name"; failed=1; }
+            echo "::endgroup::"
+          done
+          exit $failed

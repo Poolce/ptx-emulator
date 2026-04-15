@@ -118,7 +118,7 @@ void setpInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& 
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
                ? reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id])
-               : static_cast<T>(imm_);
+               : reg_cast<T>(static_cast<uint64_t>(imm_));
 
     bool result = false;
     switch (cmp_)
@@ -147,6 +147,45 @@ void setpInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& 
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = result ? 1U : 0U;
 }
 
+
+// ---------------------------------------------------------------------------
+// copysign — PTX: copysign d, a, b → magnitude from b (src2), sign from a (src1)
+// std::copysign(magnitude, sign) → std::copysign(s2, s1)
+// ---------------------------------------------------------------------------
+template<dataType Data>
+void copysignInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    using T = ptx_native_t<Data>;
+
+    T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
+    T s2 = (src2_.type != registerType::UNDEFINED)
+               ? reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id])
+               : reg_cast<T>(static_cast<uint64_t>(imm_));
+
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(std::copysign(s2, s1));
+}
+
+// ---------------------------------------------------------------------------
+// selp — ternary select on predicate  (types: b16/b32/b64, u*, s*, f*)
+//   dst = (src3 != 0) ? src1|imm1 : src2|imm2
+// ---------------------------------------------------------------------------
+template<dataType Data>
+void selpInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    using T = ptx_native_t<Data>;
+
+    T a = (src1_.type != registerType::UNDEFINED)
+              ? reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id])
+              : reg_cast<T>(static_cast<uint64_t>(imm1_));
+    T b = (src2_.type != registerType::UNDEFINED)
+              ? reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id])
+              : reg_cast<T>(static_cast<uint64_t>(imm2_));
+    bool cond = wc->thread_regs[lid][src3_.type][src3_.reg_id] != 0;
+
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(cond ? a : b);
+}
+
+
 // ---------------------------------------------------------------------------
 // add — integer addition
 // ---------------------------------------------------------------------------
@@ -158,7 +197,7 @@ void addInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
                ? reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id])
-               : static_cast<T>(imm_);
+               : reg_cast<T>(static_cast<uint64_t>(imm_));
 
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(T(s1 + s2));
 }
@@ -186,7 +225,7 @@ void movInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     }
     else
     {
-        val = to_u64<T>(static_cast<T>(imm_));
+        val = to_u64<T>(reg_cast<T>(static_cast<uint64_t>(imm_)));
     }
 
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = val;
@@ -207,6 +246,20 @@ void shlInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 }
 
 // ---------------------------------------------------------------------------
+// abs — absolute value
+// ---------------------------------------------------------------------------
+template<dataType Data>
+void absInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    using T = ptx_native_t<Data>;
+
+    T val   = reg_cast<T>(wc->thread_regs[lid][src_.type][src_.reg_id]);
+    auto res = std::abs(val);
+
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(res);
+}
+
+// ---------------------------------------------------------------------------
 // and — bitwise AND  (types: pred, b16, b32, b64)
 // ---------------------------------------------------------------------------
 template<dataType Data>
@@ -217,7 +270,7 @@ void andInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
                ? reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id])
-               : static_cast<T>(imm_);
+               : reg_cast<T>(static_cast<uint64_t>(imm_));
 
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(T(s1 & s2));
 }
@@ -233,7 +286,7 @@ void mulInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
                ? reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id])
-               : static_cast<T>(imm_);
+               : reg_cast<T>(static_cast<uint64_t>(imm_));
 
     uint64_t result = 0;
     switch (mode_)
@@ -263,7 +316,50 @@ void mulInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 
 
 // ---------------------------------------------------------------------------
+// ex2 — base-2 exponential  (dst = 2^src,  types: f16, f32, f64)
+// ftz_ (flush-to-zero) is a hardware hint; ignored in the emulator.
+// ---------------------------------------------------------------------------
+template<dataType Data>
+void ex2Instruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    using T = ptx_native_t<Data>;
+
+    T src = reg_cast<T>(wc->thread_regs[lid][src_.type][src_.reg_id]);
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(static_cast<T>(std::exp2(static_cast<double>(src))));
+}
+
+// ---------------------------------------------------------------------------
+// rcp — reciprocal  (dst = 1/src,  types: f16, f32, f64)
+// ftz_ is ignored in the emulator.
+// ---------------------------------------------------------------------------
+template<dataType Data>
+void rcpInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    using T = ptx_native_t<Data>;
+
+    T src = reg_cast<T>(wc->thread_regs[lid][src_.type][src_.reg_id]);
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(T(1) / src);
+}
+
+// ---------------------------------------------------------------------------
+// tanh — hyperbolic tangent  (dst = tanh(src),  types: f32, f64)
+// PTX: tanh.approx[.ftz].f32 dst, src
+// ftz_ is ignored in the emulator.
+// ---------------------------------------------------------------------------
+template<dataType Data>
+void tanhInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    using T = ptx_native_t<Data>;
+
+    T src = reg_cast<T>(wc->thread_regs[lid][src_.type][src_.reg_id]);
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(static_cast<T>(std::tanh(static_cast<double>(src))));
+}
+
+
+// ---------------------------------------------------------------------------
 // fma — fused multiply-add  (dst = src1 * src2 + src3,  types: f32 / f64)
+// src2 may be a register (src2_) or immediate (imm1_).
+// src3 may be a register (src3_) or immediate (imm2_).
 // ---------------------------------------------------------------------------
 template<dataType Data>
 void fmaInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& wc)
@@ -271,10 +367,12 @@ void fmaInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     using T = ptx_native_t<Data>;
 
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
-    T s2 = reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id]);
+    T s2 = (src2_.type != registerType::UNDEFINED)
+               ? reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id])
+               : reg_cast<T>(static_cast<uint64_t>(imm1_));
     T s3 = (src3_.type != registerType::UNDEFINED)
                ? reg_cast<T>(wc->thread_regs[lid][src3_.type][src3_.reg_id])
-               : static_cast<T>(imm_);
+               : reg_cast<T>(static_cast<uint64_t>(imm2_));
 
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(std::fma(s1, s2, s3));
 }
@@ -308,7 +406,7 @@ void negInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 
     T val = (src_.type != registerType::UNDEFINED)
                 ? reg_cast<T>(wc->thread_regs[lid][src_.type][src_.reg_id])
-                : static_cast<T>(imm_);
+                : reg_cast<T>(static_cast<uint64_t>(imm_));
 
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(T(-val));
 }
@@ -324,7 +422,7 @@ void subInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     T s1 = reg_cast<T>(wc->thread_regs[lid][src1_.type][src1_.reg_id]);
     T s2 = (src2_.type != registerType::UNDEFINED)
                ? reg_cast<T>(wc->thread_regs[lid][src2_.type][src2_.reg_id])
-               : static_cast<T>(imm_);
+               : reg_cast<T>(static_cast<uint64_t>(imm_));
 
     wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(T(s1 - s2));
 }

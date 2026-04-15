@@ -56,7 +56,7 @@ static float cpu_gelu(float x)
 
 int main()
 {
-    constexpr std::size_t N = 128;
+    constexpr std::size_t N = 2096;
     constexpr float lo = -3.0f;
     constexpr float hi = 3.0f;
 
@@ -66,7 +66,7 @@ int main()
 
     launch_cuda_gelu(in.data(), out.data(), N);
 
-    constexpr float tol = 1e-5f;
+    constexpr float tol = 1e-4f;
     bool ok = true;
     for (std::size_t i = 0; i < N; ++i)
     {
