@@ -943,11 +943,11 @@ TEST(AbsExecutor, F32Negative)
 TEST(AbsExecutor, F64Negative)
 {
     auto wc = makeWarp();
-    setRd(wc, 0, -2.71828);
+    setRd(wc, 0, std::numbers::e);
 
     absInstruction::Make("abs.f64 %rd1, %rd0;")->Execute(wc);
 
-    EXPECT_DOUBLE_EQ(rd64<double>(wc, 1), 2.71828);
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 1), std::numbers::e);
 }
 
 // ============================================================================
