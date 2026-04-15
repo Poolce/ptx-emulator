@@ -605,7 +605,8 @@
         "vmad": {},
         "barrier": {},
         "fma": {
-            "regexp_template": "fma\\.($mode)\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm1)?,\\s*($src3)?($imm2)?;",
+            "regexp_template":
+                "fma\\.($mode)\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm1)?,\\s*($src3)?($imm2)?;",
             "params": {
                 "mode": {
                     "arg_type": "qualifier",
@@ -1016,13 +1017,13 @@
                     "parent_type": "dataType",
                     "values": [
                         "b16",
-                        "b32", 
+                        "b32",
                         "b64",
                         "u16",
-                        "u32", 
+                        "u32",
                         "u64",
                         "s16",
-                        "s32", 
+                        "s32",
                         "s64",
                         "f32",
                         "f64"

@@ -1023,23 +1023,23 @@ TEST(RcpExecutor, F64Reciprocal)
 TEST(CopysignExecutor, F32PositiveSignNegativeMagnitude)
 {
     auto wc = makeWarp();
-    setR(wc, 0,  3.0F); // src1: provides sign (+)
+    setR(wc, 0, 3.0F);  // src1: provides sign (+)
     setR(wc, 1, -5.0F); // src2: provides magnitude (5.0)
 
     copysignInstruction::Make("copysign.f32 %r2, %r0, %r1;")->Execute(wc);
 
-    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 5.0F);  // |src2| * sign(src1) = 5.0 * (+1) = 5.0
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 5.0F); // |src2| * sign(src1) = 5.0 * (+1) = 5.0
 }
 
 TEST(CopysignExecutor, F32NegativeSignPositiveMagnitude)
 {
     auto wc = makeWarp();
     setR(wc, 0, -3.0F); // src1: provides sign (-)
-    setR(wc, 1,  1.0F); // src2: provides magnitude (1.0)
+    setR(wc, 1, 1.0F);  // src2: provides magnitude (1.0)
 
     copysignInstruction::Make("copysign.f32 %r2, %r0, %r1;")->Execute(wc);
 
-    EXPECT_FLOAT_EQ(r32<float>(wc, 2), -1.0F);  // |src2| * sign(src1) = 1.0 * (-1) = -1.0
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), -1.0F); // |src2| * sign(src1) = 1.0 * (-1) = -1.0
 }
 
 TEST(CopysignExecutor, F64BothNegative)
@@ -1050,7 +1050,7 @@ TEST(CopysignExecutor, F64BothNegative)
 
     copysignInstruction::Make("copysign.f64 %rd2, %rd0, %rd1;")->Execute(wc);
 
-    EXPECT_DOUBLE_EQ(rd64<double>(wc, 2), -7.0);  // |src2| * sign(src1) = 7.0 * (-1) = -7.0
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 2), -7.0); // |src2| * sign(src1) = 7.0 * (-1) = -7.0
 }
 
 // ============================================================================
@@ -1060,8 +1060,8 @@ TEST(CopysignExecutor, F64BothNegative)
 TEST(SelpExecutor, U32TruePredicate)
 {
     auto wc = makeWarp();
-    setR(wc, 0, 10U); // a — taken when predicate true
-    setR(wc, 1, 20U); // b — taken when predicate false
+    setR(wc, 0, 10U);                           // a — taken when predicate true
+    setR(wc, 1, 20U);                           // b — taken when predicate false
     wc->thread_regs[0][registerType::P][0] = 1; // %p0 = true
 
     selpInstruction::Make("selp.u32 %r2, %r0, %r1, %p0;")->Execute(wc);
@@ -1084,8 +1084,8 @@ TEST(SelpExecutor, U32FalsePredicate)
 TEST(SelpExecutor, F32SelectPositiveBranch)
 {
     auto wc = makeWarp();
-    setR(wc, 0, 1.0F); // a
-    setR(wc, 1, -1.0F); // b
+    setR(wc, 0, 1.0F);                          // a
+    setR(wc, 1, -1.0F);                         // b
     wc->thread_regs[0][registerType::P][1] = 1; // %p1 = true
 
     selpInstruction::Make("selp.f32 %r2, %r0, %r1, %p1;")->Execute(wc);
