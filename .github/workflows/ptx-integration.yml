@@ -61,12 +61,13 @@ jobs:
 
       - name: Run PTX tests via cuemu
         run: |
+          EMULIB="$PWD/build/lib/libemuruntime.so"
           export LD_LIBRARY_PATH="$PWD/build/lib:${LD_LIBRARY_PATH:-}"
           failed=0
           for binary in build/ptx_tests/*; do
             name=$(basename "$binary")
             echo "::group::$name"
-            "$PWD/build/bin/cuemu" "$PWD/$binary" \
+            CUEMU_TARGET_EXEC="$PWD/$binary" LD_PRELOAD="$EMULIB" "$PWD/$binary" \
               && echo "PASSED: $name" \
               || { echo "FAILED: $name"; failed=1; }
             echo "::endgroup::"

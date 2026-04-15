@@ -1128,3 +1128,157 @@ TEST(MulExecutor, F64NoMode)
 
     EXPECT_DOUBLE_EQ(rd64<double>(wc, 2), 4.5);
 }
+
+// ============================================================================
+// div — floating-point division (rounding mode is a hint, ignored in emulator)
+// ============================================================================
+TEST(DivExecutor, F32BasicDivision)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 10.0F);
+    setR(wc, 1, 4.0F);
+
+    divInstruction::Make("div.rn.f32 %r2, %r0, %r1;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 2.5F);
+}
+
+TEST(DivExecutor, F64BasicDivision)
+{
+    auto wc = makeWarp();
+    setRd(wc, 0, 1.0);
+    setRd(wc, 1, 3.0);
+
+    divInstruction::Make("div.rn.f64 %rd2, %rd0, %rd1;")->Execute(wc);
+
+    EXPECT_DOUBLE_EQ(rd64<double>(wc, 2), 1.0 / 3.0);
+}
+
+TEST(DivExecutor, F32NoRoundingMode)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 7.0F);
+    setR(wc, 1, 2.0F);
+
+    divInstruction::Make("div.f32 %r2, %r0, %r1;")->Execute(wc);
+
+    EXPECT_FLOAT_EQ(r32<float>(wc, 2), 3.5F);
+}
+
+// ============================================================================
+// shfl — warp-level register shuffle
+//   shfl.sync.bfly.b32  dst|pred, src, offset_reg, clamp_reg, mask_reg;
+//   Registers: %r0=values, %r1=offset, %r2=clamp(31), %r3=mask, %r4=result, %p0=valid
+// ============================================================================
+
+// Helper: write val into register id for every thread in [0, n)
+static void setRAll(const std::shared_ptr<WarpContext>& wc, uint32_t id, uint32_t n, uint32_t val)
+{
+    for (uint32_t t = 0; t < n; ++t)
+        wc->thread_regs[t][registerType::R][id] = val;
+}
+
+TEST(ShflExecutor, BflyOffset1ExchangesPairs)
+{
+    // Threads 0-3 active; each thread's %r0 = tid + 10 (10, 11, 12, 13)
+    auto wc = makeWarp(0xF);
+    for (uint32_t t = 0; t < 4; ++t)
+        wc->thread_regs[t][registerType::R][0] = t + 10;
+
+    setRAll(wc, 1, 4, 1);   // %r1 = offset = 1
+    setRAll(wc, 2, 4, 31);  // %r2 = clamp  = 31
+    setRAll(wc, 3, 4, 0xF); // %r3 = mask   = 0xF
+
+    shflInstruction::Make("shfl.sync.bfly.b32 %r4|%p0, %r0, %r1, %r2, %r3;")->Execute(wc);
+
+    // lid ^ 1: 0↔1, 2↔3
+    EXPECT_EQ(wc->thread_regs[0][registerType::R][4], 11ULL); // 0^1=1 → value of thread 1
+    EXPECT_EQ(wc->thread_regs[1][registerType::R][4], 10ULL); // 1^1=0 → value of thread 0
+    EXPECT_EQ(wc->thread_regs[2][registerType::R][4], 13ULL); // 2^1=3 → value of thread 3
+    EXPECT_EQ(wc->thread_regs[3][registerType::R][4], 12ULL); // 3^1=2 → value of thread 2
+}
+
+TEST(ShflExecutor, BflyPredicateIsSetForValidLanes)
+{
+    auto wc = makeWarp(0xF);
+    for (uint32_t t = 0; t < 4; ++t)
+        wc->thread_regs[t][registerType::R][0] = t;
+
+    setRAll(wc, 1, 4, 1);
+    setRAll(wc, 2, 4, 31);
+    setRAll(wc, 3, 4, 0xF);
+
+    shflInstruction::Make("shfl.sync.bfly.b32 %r4|%p0, %r0, %r1, %r2, %r3;")->Execute(wc);
+
+    // All XOR partners (0^1=1, 1^1=0, 2^1=3, 3^1=2) are active → pred = 1
+    for (uint32_t t = 0; t < 4; ++t)
+        EXPECT_EQ(wc->thread_regs[t][registerType::P][0], 1ULL) << "thread " << t;
+}
+
+TEST(ShflExecutor, BflyOutOfBoundsClampsToSelf)
+{
+    // Only thread 0 active; bfly offset=1 → partner=1 which is inactive → clamp to self
+    auto wc = makeWarp(0x1);
+    wc->thread_regs[0][registerType::R][0] = 42;
+    setRAll(wc, 1, 1, 1);
+    setRAll(wc, 2, 1, 31);
+    setRAll(wc, 3, 1, 0x1);
+
+    shflInstruction::Make("shfl.sync.bfly.b32 %r4|%p0, %r0, %r1, %r2, %r3;")->Execute(wc);
+
+    EXPECT_EQ(wc->thread_regs[0][registerType::R][4], 42ULL); // clamped to self
+    EXPECT_EQ(wc->thread_regs[0][registerType::P][0], 0ULL);  // pred = 0 (invalid)
+}
+
+TEST(ShflExecutor, BflyOffset16FullWarpReduction)
+{
+    // Full warp butterfly sum reduction (one step: offset=16)
+    auto wc = makeWarp(0xFFFFFFFF);
+    for (uint32_t t = 0; t < 32; ++t)
+        wc->thread_regs[t][registerType::R][0] = t; // values 0..31
+
+    setRAll(wc, 1, 32, 16); // offset = 16
+    setRAll(wc, 2, 32, 31); // clamp  = 31
+    setRAll(wc, 3, 32, 0xFFFFFFFF);
+
+    shflInstruction::Make("shfl.sync.bfly.b32 %r4|%p0, %r0, %r1, %r2, %r3;")->Execute(wc);
+
+    // lid ^ 16: thread 0 gets thread 16's value (16), thread 16 gets thread 0's value (0)
+    EXPECT_EQ(wc->thread_regs[0][registerType::R][4], 16ULL);
+    EXPECT_EQ(wc->thread_regs[16][registerType::R][4], 0ULL);
+    EXPECT_EQ(wc->thread_regs[1][registerType::R][4], 17ULL);
+    EXPECT_EQ(wc->thread_regs[31][registerType::R][4], 15ULL);
+}
+
+// ============================================================================
+// cvt — saturation mode (sat clamps float-to-int conversions)
+// ============================================================================
+TEST(CvtExecutor, F32ToS32SaturateAboveMax)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 1e15F); // far above int32 max
+
+    cvtInstruction::Make("cvt.sat.s32.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_EQ(r32<int32_t>(wc, 1), std::numeric_limits<int32_t>::max());
+}
+
+TEST(CvtExecutor, F32ToS32SaturateBelowMin)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, -1e15F); // far below int32 min
+
+    cvtInstruction::Make("cvt.sat.s32.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_EQ(r32<int32_t>(wc, 1), std::numeric_limits<int32_t>::min());
+}
+
+TEST(CvtExecutor, F32ToS32SaturateInRange)
+{
+    auto wc = makeWarp();
+    setR(wc, 0, 100.7F); // within range
+
+    cvtInstruction::Make("cvt.sat.s32.f32 %r1, %r0;")->Execute(wc);
+
+    EXPECT_EQ(r32<int32_t>(wc, 1), 100); // truncation within range
+}

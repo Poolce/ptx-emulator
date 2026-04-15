@@ -628,9 +628,15 @@ void cvtInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
     OutT dst_val;
 
     if (mode_ == cvtmodeQl::Sat && std::is_integral_v<OutT> && std::is_floating_point_v<InT>) {
-        const auto lo = static_cast<InT>(std::numeric_limits<OutT>::lowest());
-        const auto hi = static_cast<InT>(std::numeric_limits<OutT>::max());
-        dst_val = static_cast<OutT>(std::clamp(src_val, lo, hi));
+        // Cast int limits to float for comparison, but assign the integer constant directly
+        // to avoid UB from static_cast<OutT>(float_that_exceeds_int_max).
+        if (src_val >= static_cast<InT>(std::numeric_limits<OutT>::max())) {
+            dst_val = std::numeric_limits<OutT>::max();
+        } else if (src_val <= static_cast<InT>(std::numeric_limits<OutT>::lowest())) {
+            dst_val = std::numeric_limits<OutT>::lowest();
+        } else {
+            dst_val = static_cast<OutT>(src_val);
+        }
     } else {
         dst_val = static_cast<OutT>(src_val);
     }
