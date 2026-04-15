@@ -14,13 +14,16 @@ jobs:
 
     steps:
       - name: Install git and build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
             git cmake ninja-build ccache python3 python3-pip libgomp1 \
-            gcc-13 g++-13
-          update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 13
-          update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 13
+            software-properties-common gpg-agent
+          add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          apt-get update
+          apt-get install -y --no-install-recommends gcc-13 g++-13
           python3 -m pip install jinja2
 
       - uses: actions/checkout@v5
@@ -37,6 +40,8 @@ jobs:
         run: >
           cmake -S . -B build
           -GNinja
+          -DCMAKE_C_COMPILER=gcc-13
+          -DCMAKE_CXX_COMPILER=g++-13
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
