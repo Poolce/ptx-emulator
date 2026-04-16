@@ -1,11 +1,11 @@
 #include "cuda_runtime.h"
-#include "omp.h"
 
 #include <cassert>
+#include <cmath>
 #include <iostream>
 #include <vector>
 
-#define CHECK_ERROR(x) assert(x == cudaError_t::cudaSuccess);
+#define CHECK_ERROR(x) assert(x == cudaError_t::cudaSuccess)
 
 template <int block_size>
 __global__ void mmul(const double* A, std::size_t A_m, const double* B, std::size_t B_m, double* C)
@@ -21,65 +21,107 @@ __global__ void mmul(const double* A, std::size_t A_m, const double* B, std::siz
     C[id_y * B_m + id_x] = C_XY_Element;
 }
 
-void launch_cuda_mmul(const double* A,
-                      std::size_t A_n,
-                      std::size_t A_m,
-                      const double* B,
-                      std::size_t B_n,
-                      std::size_t B_m,
-                      double* C)
+static void launch_cuda_mmul(const double* A,
+                             std::size_t A_n,
+                             std::size_t A_m,
+                             const double* B,
+                             std::size_t B_n,
+                             std::size_t B_m,
+                             double* C)
 {
-    const std::size_t block_size = 32;
+    constexpr std::size_t block_size = 32;
 
     double *gpuA, *gpuB, *gpuC;
-
-    // MEMORY ALLOC
     CHECK_ERROR(cudaMalloc((void**)&gpuA, A_n * A_m * sizeof(double)));
     CHECK_ERROR(cudaMalloc((void**)&gpuB, B_n * B_m * sizeof(double)));
     CHECK_ERROR(cudaMalloc((void**)&gpuC, A_n * B_m * sizeof(double)));
 
-    // MEMORY COPY H to D
     CHECK_ERROR(cudaMemcpy(gpuA, A, A_n * A_m * sizeof(double), cudaMemcpyHostToDevice));
     CHECK_ERROR(cudaMemcpy(gpuB, B, B_n * B_m * sizeof(double), cudaMemcpyHostToDevice));
 
-    dim3 blocks(block_size, block_size);
+    dim3 threads(block_size, block_size);
     dim3 grid(B_m / block_size, A_n / block_size);
 
-    mmul<block_size><<<grid, blocks>>>(gpuA, A_m, gpuB, B_m, gpuC);
+    mmul<block_size><<<grid, threads>>>(gpuA, A_m, gpuB, B_m, gpuC);
     cudaDeviceSynchronize();
-    // MEMORY COPY D to H
-    CHECK_ERROR(cudaMemcpy(C, gpuC, A_n * B_m * sizeof(double), cudaMemcpyDeviceToHost));
 
+    CHECK_ERROR(cudaMemcpy(C, gpuC, A_n * B_m * sizeof(double), cudaMemcpyDeviceToHost));
     CHECK_ERROR(cudaFree(gpuA));
     CHECK_ERROR(cudaFree(gpuB));
     CHECK_ERROR(cudaFree(gpuC));
 }
 
+// CPU reference: naive O(M*K*N) matmul
+static void cpu_mmul(const double* A, std::size_t M, std::size_t K, const double* B, std::size_t N, double* C)
+{
+    for (std::size_t i = 0; i < M; ++i)
+    {
+        for (std::size_t j = 0; j < N; ++j)
+        {
+            double acc = 0.0;
+            for (std::size_t k = 0; k < K; ++k)
+            {
+                acc += A[i * K + k] * B[k * N + j];
+            }
+            C[i * N + j] = acc;
+        }
+    }
+}
+
+// Simple LCG — no dependency on <random> or srand
+static double next_val(unsigned& state)
+{
+    state = state * 1664525u + 1013904223u;
+    return static_cast<double>(static_cast<int>(state >> 8) & 0xFFFF) / 32768.0 - 1.0;
+}
+
 int main()
 {
-    constexpr std::size_t N = 128;
-    std::vector<double> A(N * N, 1.0);
-    std::vector<double> B(N * N, 2.0);
-    std::vector<double> C(N * N, 0.0);
+    constexpr std::size_t M = 128; // rows of A / rows of C
+    constexpr std::size_t K = 128; // cols of A / rows of B
+    constexpr std::size_t N = 128; // cols of B / cols of C
 
-    launch_cuda_mmul(A.data(), N, N, B.data(), N, N, C.data());
+    std::vector<double> A(M * K);
+    std::vector<double> B(K * N);
+    std::vector<double> C(M * N, 0.0);
+    std::vector<double> ref(M * N, 0.0);
 
-    // Each C[i][j] = sum_{k=0}^{N-1} A[i][k] * B[k][j]
-    //             = sum_{k=0}^{N-1} 1.0 * 2.0 = N * 2.0 = 40.0
-    constexpr double expected = static_cast<double>(N) * 2.0;
-    bool ok = true;
-    for (std::size_t i = 0; i < N * N; ++i)
+    unsigned state = 0xDEADBEEFu;
+    for (auto& v : A)
     {
-        if (C[i] != expected)
+        v = next_val(state);
+    }
+    for (auto& v : B)
+    {
+        v = next_val(state);
+    }
+
+    launch_cuda_mmul(A.data(), M, K, B.data(), K, N, C.data());
+    cpu_mmul(A.data(), M, K, B.data(), N, ref.data());
+
+    // For K=64 double accumulations ~1e-10 relative error is safe
+    constexpr double tol = 1e-9;
+    bool ok = true;
+
+    for (std::size_t i = 0; i < M; ++i)
+    {
+        for (std::size_t j = 0; j < N; ++j)
         {
-            std::cerr << "FAIL: C[" << i / N << "][" << i % N << "] = " << C[i] << ", expected " << expected << "\n";
-            ok = false;
+            const std::size_t idx = i * N + j;
+            const double diff = std::abs(C[idx] - ref[idx]);
+            const double scale = std::max(std::abs(ref[idx]), 1e-12);
+            if (diff / scale > tol)
+            {
+                std::cerr << "FAIL: C[" << i << "][" << j << "] = " << C[idx] << ", expected " << ref[idx]
+                          << "  (rel_diff=" << diff / scale << ")\n";
+                ok = false;
+            }
         }
     }
 
     if (ok)
     {
-        std::cout << "OK: all " << N * N << " elements equal " << expected << "\n";
+        std::cout << "OK: " << M << "x" << K << " * " << K << "x" << N << " matmul verified against CPU reference\n";
     }
 
     return ok ? 0 : 1;
