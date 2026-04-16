@@ -810,8 +810,14 @@
                     "arg_type": "children",
                     "parent_type": "dataType",
                     "values": [
-                        "f32",
+                        "u16",
+                        "u32",
+                        "u64",
+                        "s16",
+                        "s32",
                         "s64",
+                        "f16",
+                        "f32",
                         "f64"
                     ]
                 },

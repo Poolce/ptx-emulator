@@ -1,4 +1,6 @@
-#include "cuda_runtime.h"
+#include "cuda.h"
+
+#include <math_constants.h>
 
 #include <cassert>
 #include <cmath>
@@ -7,20 +9,15 @@
 
 #define CHECK_ERROR(x) assert(x == cudaError_t::cudaSuccess);
 
-template <int block_size>
-__global__ void gelu(const float* input, float* output, std::size_t n)
+__global__ void Gelu(const float* input, float* output, int n)
 {
-    std::size_t idx = blockIdx.x * block_size + threadIdx.x;
-    if (idx >= n)
-        return;
-
-    float x = input[idx];
-    float x3 = x * x * x;
-
-    constexpr float sqrt_2_over_pi = 0.7978845608f;
-    constexpr float coeff = 0.044715f;
-
-    output[idx] = 0.5f * x * (1.0f + tanhf(sqrt_2_over_pi * (x + coeff * x3)));
+    int id = threadIdx.x + blockIdx.x * blockDim.x;
+    if (id < n)
+    {
+        float x = input[id];
+        float y = 0.5f * x * (1.0f + tanhf(sqrtf(2.0f / CUDART_PI_F) * (x + 0.044715f * x * x * x)));
+        output[id] = y;
+    }
 }
 
 void launch_cuda_gelu(const float* input, float* output, std::size_t n)
@@ -37,7 +34,7 @@ void launch_cuda_gelu(const float* input, float* output, std::size_t n)
     dim3 block(block_size);
     dim3 grid((n + block_size - 1) / block_size);
 
-    gelu<block_size><<<grid, block>>>(gpuIn, gpuOut, n);
+    Gelu<<<grid, block>>>(gpuIn, gpuOut, n);
     cudaDeviceSynchronize();
 
     CHECK_ERROR(cudaMemcpy(output, gpuOut, n * sizeof(float), cudaMemcpyDeviceToHost));
