@@ -66,14 +66,14 @@ class BlockContext : public std::enable_shared_from_this<BlockContext>
 
     std::unordered_map<std::string, size_t> shared_symbol_offsets_;
     size_t shared_offset_ = 0;
-    mutable std::mutex shared_mutex_;
+    mutable std::unique_ptr<std::mutex> shared_mutex_;
 
     std::unique_ptr<BlockBarrier> block_barrier_;
 
   public:
-    BlockContext() = default;
+    BlockContext();
 
-    void Init(const std::shared_ptr<GlobalContext>& global_context,
+    void Init(std::shared_ptr<GlobalContext> global_context,
               const dim3& gridDim,
               const dim3& gridId,
               const dim3& blockDim,

@@ -6,7 +6,9 @@
 namespace Emulator
 {
 
-void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
+BlockContext::BlockContext() : shared_mutex_{std::make_unique<std::mutex>()} {}
+
+void BlockContext::Init(std::shared_ptr<GlobalContext> global_context,
                         const dim3& gridDim,
                         const dim3& gridId,
                         const dim3& blockDim,
@@ -23,10 +25,12 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
     std::vector<dim3> warp_thread_ids;
     warp_thread_ids.reserve(cfg.warp_size);
 
-    auto make_warp = [&]()
+    auto self = shared_from_this();
+
+    const auto make_warp = [&]()
     {
         auto warp = std::make_shared<WarpContext>();
-        warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);
+        warp->Init(self, gridDim, gridId, blockDim, warp_thread_ids);
         warp->warp_id = static_cast<uint32_t>(warps_.size());
         warps_.push_back(std::move(warp));
     };
@@ -49,6 +53,17 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
     if (!warp_thread_ids.empty())
     {
         make_warp();
+    }
+
+    const auto &entry_name = global_context->GetEntryFunction().GetName();
+    const auto pc = global_context->GetEntryFunction().getOffset();
+#ifdef EMULATOR_OPENMP_ENABLED
+    #pragma omp parallel for schedule(static)
+#endif
+    for (const auto& warp : GetWarps())
+    {
+        warp->cur_function = entry_name;
+        warp->pc = pc;
     }
 }
 
@@ -79,7 +94,7 @@ void* BlockContext::GetParamPtr(const std::string& name) const
 
 void BlockContext::RegisterSharedSymbol(const std::string& name, size_t size, size_t align)
 {
-    std::lock_guard<std::mutex> lock(shared_mutex_);
+    std::lock_guard<std::mutex> lock(*shared_mutex_);
     if (shared_symbol_offsets_.contains(name))
     {
         return; // already registered by another warp

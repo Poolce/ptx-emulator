@@ -29,38 +29,28 @@ void GlobalContext::Init(const std::shared_ptr<Ptx::Module>& ptx,
         {
             for (uint32_t gidx = 0; gidx < gridDim.x; ++gidx)
             {
-                size_t idx = ((size_t)gidz * gridDim.y * gridDim.x) + (gidy * gridDim.x) + gidx;
                 dim3 gid{gidx, gidy, gidz};
-                auto bc = std::make_shared<BlockContext>();
-                bc->Init(self, gridDim, gid, blockDim, sharedMem);
-                blocks_[idx] = std::move(bc);
+                const size_t block_idx = static_cast<size_t>(gidz * gridDim.y * gridDim.x + gidy * gridDim.x + gidx);
+                blocks_[block_idx] = DeferredAllocator<std::shared_ptr<BlockContext>>{[self, gridDim, gid, blockDim, sharedMem]()
+                {
+                    auto bc = std::make_shared<BlockContext>();
+                    bc->Init(self, gridDim, gid, blockDim, sharedMem);
+                    return bc;
+                }};
             }
         }
     }
 }
 
-std::vector<std::shared_ptr<BlockContext>> GlobalContext::GetBlocks() const
+std::vector<DeferredAllocator<std::shared_ptr<BlockContext>>> GlobalContext::GetBlocks() const
 {
     return blocks_;
 }
 
 void GlobalContext::SetEntryFunction(const std::string& func_name)
 {
-    auto func = ptx_module_->GetEntryFunction(func_name);
-    auto pc = func->getOffset();
-    global_parameters_ = func->getParameters();
-
-#ifdef EMULATOR_OPENMP_ENABLED
-    #pragma omp parallel for schedule(static)
-#endif
-    for (auto& block : blocks_)
-    {
-        for (const auto& warp : block->GetWarps())
-        {
-            warp->cur_function = func_name;
-            warp->pc = pc;
-        }
-    }
+    entry_function_ = ptx_module_->GetEntryFunction(func_name);
+    global_parameters_ = entry_function_->getParameters();
 }
 
 std::shared_ptr<Ptx::Instruction> GlobalContext::GetInstruction(uint64_t pc) const

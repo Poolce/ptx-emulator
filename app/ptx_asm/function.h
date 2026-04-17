@@ -41,6 +41,7 @@ class Function
     uint64_t GetBasicBlockOffset(const std::string& bb_name) const;
     std::string GetBasicBlockAt(uint64_t abs_pc) const;
     std::unordered_map<std::string, FunctionParameter> getParameters() const;
+    const std::string &GetName() const { return name_; }
 };
 } // namespace Ptx
 

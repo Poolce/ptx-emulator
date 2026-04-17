@@ -68,11 +68,11 @@ const char* cudaGetErrorString([[maybe_unused]] cudaError_t error)
     return "No error\n";
 }
 
-cudaError_t __cudaLaunchKernel([[maybe_unused]] const void* func,
-                               [[maybe_unused]] dim3 gridDim,
-                               [[maybe_unused]] dim3 blockDim,
-                               [[maybe_unused]] void** args,
-                               [[maybe_unused]] size_t sharedMem,
+cudaError_t __cudaLaunchKernel(const void* func,
+                               dim3 gridDim,
+                               dim3 blockDim,
+                               void** args,
+                               size_t sharedMem,
                                [[maybe_unused]] cudaStream_t stream)
 {
     LOG_DEBUG("__cudaLaunchKernel intercepted");
@@ -93,6 +93,16 @@ cudaError_t __cudaLaunchKernel([[maybe_unused]] const void* func,
         throw;
     }
     return cudaError_t::cudaSuccess;
+}
+
+cudaError_t cudaLaunchKernel(const void* func,
+                             dim3 gridDim,
+                             dim3 blockDim,
+                             void** args,
+                             size_t sharedMem,
+                             cudaStream_t stream)
+{
+    return __cudaLaunchKernel(func, gridDim, blockDim, args, sharedMem, stream);
 }
 
 cudaError_t cudaDeviceSynchronize()

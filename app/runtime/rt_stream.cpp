@@ -35,8 +35,10 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
         }
 
         auto start = std::chrono::high_resolution_clock::now();
-        for (auto& block : gpu_context->GetBlocks())
+        for (auto blockAllocator : gpu_context->GetBlocks())
         {
+            std::shared_ptr<BlockContext> block = blockAllocator();
+
             const auto& warps = block->GetWarps();
 
             // Allocate profiling buffers once per warp before any parallel execution.
