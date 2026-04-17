@@ -45,6 +45,17 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
         warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);
         warps_.push_back(warp);
     }
+
+    const auto &entry_name = global_context->GetEntryFunction().GetName();
+    const auto pc = global_context->GetEntryFunction().getOffset();
+#ifdef EMULATOR_OPENMP_ENABLED
+    #pragma omp parallel for schedule(static)
+#endif
+    for (const auto& warp : GetWarps())
+    {
+        warp->cur_function = entry_name;
+        warp->pc = pc;
+    }
 }
 
 std::vector<std::shared_ptr<WarpContext>> BlockContext::GetWarps() const

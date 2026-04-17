@@ -21,9 +21,12 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
     gpu_context_->SetEntryFunction(func);
 
     auto start = std::chrono::high_resolution_clock::now();
-    for (auto& block : gpu_context_->GetBlocks())
+    for (auto& blockAllocator : gpu_context_->GetBlocks())
     {
-        const auto& warps = block->GetWarps();
+        BlockContext block = blockAllocator();
+
+        const auto& warps = block.GetWarps();
+
 #ifdef EMULATOR_OPENMP_ENABLED
     #pragma omp parallel for
 #endif
