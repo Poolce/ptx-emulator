@@ -1,5 +1,7 @@
 #include "rt_interface.h"
 
+#include "logger.h"
+
 #include <array>
 #include <cstdio>
 #include <cstdlib>
@@ -22,6 +24,7 @@ void RtInterface::LoadPtx()
         throw std::runtime_error("Environment variable CUEMU_TARGET_EXEC not set.");
     }
     auto object = fs::path(env);
+    LOG_INFO("Loading PTX from: " + object.string());
 
     if (!fs::is_regular_file(object))
     {
@@ -48,7 +51,9 @@ void RtInterface::LoadPtx()
         throw std::runtime_error("Ptx section is empty");
     }
 
+    LOG_INFO("Parsing PTX module (" + std::to_string(result.size()) + " bytes)");
     ptx_module_ = Ptx::Module::Make(result);
+    LOG_INFO("PTX module parsed successfully");
 }
 
 uint64_t RtInterface::MakeStream()
@@ -58,6 +63,7 @@ uint64_t RtInterface::MakeStream()
         throw std::runtime_error("Module is not defined");
     }
     uint64_t stream_id = streams_.size();
+    LOG_DEBUG("Creating stream id=" + std::to_string(stream_id));
     streams_.push_back(std::make_unique<RtStream>(ptx_module_));
     return stream_id;
 }
