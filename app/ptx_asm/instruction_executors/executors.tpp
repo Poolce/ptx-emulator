@@ -651,6 +651,9 @@ void cvtInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 void barInstruction::ExecuteWarp(std::shared_ptr<Emulator::WarpContext>& wc)
 {
     (void)wc;
+#ifdef EMULATOR_OPENMP_ENABLED
+    #pragma omp barrier
+#endif
 }
 
 

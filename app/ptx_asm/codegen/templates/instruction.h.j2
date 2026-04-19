@@ -2,6 +2,7 @@
 
 #include "ptx_types.h"
 #include "warp_context.h"
+#include "logger.h"
 
 #include <memory>
 #include <regex>
@@ -11,6 +12,7 @@
 #include <array>
 #include <tuple>
 #include <utility>
+#include <string_view>
 
 // NOLINTBEGIN
 
@@ -48,6 +50,7 @@ public:
     Instruction() = default;
     virtual void Execute(std::shared_ptr<WarpContext>& wc) = 0;
     virtual void Dump() = 0;
+    virtual std::string_view Name() const = 0;
 };
 
 {% for i_name, instr in instructions.items() %}
@@ -75,6 +78,7 @@ private:
     {{ i_name }}Instruction() {};
     void Execute(std::shared_ptr<WarpContext>& wc) override;
     void Dump() override;
+    std::string_view Name() const override { return "{{ i_name }}"; }
 
     static std::shared_ptr<{{ i_name }}Instruction> Make(const std::string& line);
     friend std::shared_ptr<Instruction> makeInstruction(const std::string& line);

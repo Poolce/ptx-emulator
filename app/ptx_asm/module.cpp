@@ -1,6 +1,7 @@
 #include "module.h"
 
 #include "function.h"
+#include "logger.h"
 
 #include <iostream>
 #include <regex>
@@ -14,6 +15,7 @@ namespace Ptx
 
 std::shared_ptr<Module> Module::Make(const std::string& ptx)
 {
+    LOG_INFO("PTX parsing: scanning functions");
     auto module = std::make_shared<Module>();
     constexpr std::string_view Pattern = R"((.*)\s\.(entry|func)\s([A-Za-z0-9_]+)\(([^)]+)\)\n?\{([^}]+)})";
     static const std::regex Re(Pattern.data(), std::regex::ECMAScript | std::regex::optimize);
@@ -44,6 +46,8 @@ std::shared_ptr<Module> Module::Make(const std::string& ptx)
             throw std::runtime_error("Function is not matched");
         }
     }
+    LOG_INFO("PTX parsing done: " + std::to_string(module->function_map_.size()) + " function(s), " +
+             std::to_string(module->instructions_.size()) + " instruction(s)");
     return module;
 }
 
