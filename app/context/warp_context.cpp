@@ -107,7 +107,8 @@ dim3 WarpContext::GetBlockId() const
         return dim3{0, 0, 0};
     }
     const auto& lane0 = spr_regs[0];
-    auto get = [&](Ptx::sprType t) -> uint32_t {
+    auto get = [&](Ptx::sprType t) -> uint32_t
+    {
         auto it = lane0.find(t);
         return it != lane0.end() ? static_cast<uint32_t>(it->second) : 0u;
     };

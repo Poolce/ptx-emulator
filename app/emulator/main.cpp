@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <string_view>
 
 namespace fs = std::filesystem;
 
@@ -28,43 +29,80 @@ static fs::path GetLibDir()
     return lib_path.lexically_normal();
 }
 
+static void PrintHelp(std::string_view prog)
+{
+    std::cout << "Usage: " << prog << " [OPTIONS] <binary>\n"
+              << "\n"
+              << "Run a CUDA binary under the PTX emulator.\n"
+              << "\n"
+              << "Options:\n"
+              << "  --collect-profiling          Enable profiling metric collection\n"
+              << "  --profiling-output <path>    Output file for profiling data (default: profiling.txt)\n"
+              << "  -h, --help                   Show this help message and exit\n"
+              << "\n"
+              << "Examples:\n"
+              << "  " << prog << " ./my_cuda_app\n"
+              << "  " << prog << " --collect-profiling --profiling-output prof.log ./my_cuda_app\n";
+}
+
 int main(int argc, char* argv[])
 {
     bool collect_profiling = false;
     std::string profiling_output;
-    int binary_arg = -1;
+    std::string binary;
 
     for (int i = 1; i < argc; ++i)
     {
-        std::string_view arg = argv[i];
+        const std::string_view arg = argv[i];
+
+        if (arg == "-h" || arg == "--help")
+        {
+            PrintHelp(argv[0]);
+            return 0;
+        }
         if (arg == "--collect-profiling")
         {
             collect_profiling = true;
         }
-        else if (arg == "--profiling-output" && i + 1 < argc)
+        else if (arg == "--profiling-output")
         {
+            if (i + 1 >= argc)
+            {
+                std::cerr << "error: --profiling-output requires an argument\n";
+                return 1;
+            }
             profiling_output = argv[++i];
+        }
+        else if (arg.starts_with('-'))
+        {
+            std::cerr << "error: unknown option '" << arg << "'\n"
+                      << "Run '" << argv[0] << " --help' for usage.\n";
+            return 1;
         }
         else
         {
-            binary_arg = i;
+            if (!binary.empty())
+            {
+                std::cerr << "error: unexpected argument '" << arg << "'" << " (binary already set to '" << binary
+                          << "')\n";
+                return 1;
+            }
+            binary = arg;
         }
     }
 
-    if (binary_arg < 0)
+    if (binary.empty())
     {
-        std::cerr << "Usage: " << argv[0]
-                  << " [--collect-profiling] [--profiling-output <path>] <binary>\n";
+        std::cerr << "error: missing required argument <binary>\n\n";
+        PrintHelp(argv[0]);
         return 1;
     }
 
-    const std::string file = argv[binary_arg];
-
     std::string cmd;
-    cmd += "PATH=" + GetExecutableDir().string() + ":$PATH" + " ";
-    cmd += "LD_LIBRARY_PATH=" + GetLibDir().string() + ":$LD_LIBRARY_PATH" + " ";
+    cmd += "PATH=" + GetExecutableDir().string() + ":$PATH ";
+    cmd += "LD_LIBRARY_PATH=" + GetLibDir().string() + ":$LD_LIBRARY_PATH ";
     cmd += "LD_PRELOAD=" + std::string(RuntimeLibName) + " ";
-    cmd += "CUEMU_TARGET_EXEC=" + file + " ";
+    cmd += "CUEMU_TARGET_EXEC=" + binary + " ";
     if (collect_profiling)
     {
         cmd += "CUEMU_COLLECT_PROFILING=1 ";
@@ -73,7 +111,7 @@ int main(int argc, char* argv[])
             cmd += "CUEMU_PROFILING_OUTPUT=" + profiling_output + " ";
         }
     }
-    cmd += file;
+    cmd += binary;
 
     return system(cmd.c_str());
 }
