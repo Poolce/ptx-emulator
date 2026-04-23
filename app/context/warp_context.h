@@ -1,5 +1,6 @@
 #pragma once
 
+#include "profiler.h"
 #include "ptx_types.h"
 #include "types.h"
 
@@ -7,6 +8,7 @@
 #include <iterator>
 #include <memory>
 #include <stack>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -35,6 +37,10 @@ class WarpContext
     std::vector<ThreadContext> thread_regs;
     std::vector<SprContext> spr_regs;
 
+    // Profiling
+    uint32_t warp_id = 0;
+    WarpProfilingBuffer* profiling_buf = nullptr;
+
     constexpr static uint64_t EOC = 0xffffffffffffffff;
     WarpContext() = default;
     void Init(const std::shared_ptr<BlockContext>& block_context,
@@ -50,6 +56,9 @@ class WarpContext
     void* getParamPtr(const std::string& name);
     void registerSharedSymbol(const std::string& name, size_t size, size_t align);
     void* getSharedPtr(const std::string& name);
+
+    dim3 GetBlockId() const;
+    std::string GetBasicBlockAt(uint64_t pc) const;
 };
 
 } // namespace Emulator

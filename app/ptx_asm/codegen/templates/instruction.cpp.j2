@@ -1,8 +1,13 @@
 #include "instructions.h"
 #include "constant.h"
+#include "profiler.h"
 #include "utils.h"
 
+#include <chrono>
+
 // NOLINTBEGIN
+
+#include "profilers.tpp"
 
 namespace Emulator {
 namespace Ptx {
@@ -41,6 +46,11 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
         }
     }
 {% endif %}
+{% if instr.profiling_metrics %}
+    if (wc->profiling_buf) [[unlikely]] {
+        Profile(wc, wc->pc, wc->execution_mask, *wc->profiling_buf);
+    }
+{% endif %}
     wc->pc++;
 }
 {% endif %}
@@ -65,10 +75,19 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
 {% else %}
     ExecuteWarp(wc);
 {% endif %}
+{% if instr.profiling_metrics %}
+    if (wc->profiling_buf) [[unlikely]] {
+        Profile(wc, wc->pc, wc->execution_mask, *wc->profiling_buf);
+    }
+{% endif %}
     wc->pc++;
 }
 {% endif %}
 {% if instr.exec_type == "branch" %}
+{% if instr.profiling_metrics %}
+    const uint64_t orig_pc__ = wc->pc;
+    const uint32_t orig_mask__ = wc->execution_mask;
+{% endif %}
 {% if "typed_executor" in instr %}
     using ET = EnumTable<{% for t_name in instr.typed_executor %}{{funcs.get_type_name(i_name, t_name, instr.params[t_name])}}{% if not loop.last%}, {% endif %}{% endfor %}>;
 
@@ -89,12 +108,41 @@ void {{ i_name }}Instruction::Execute( std::shared_ptr<WarpContext>& wc ) {
 {% else %}
     ExecuteBranch(wc);
 {% endif %}
+{% if instr.profiling_metrics %}
+    if (wc->profiling_buf) [[unlikely]] {
+        Profile(wc, orig_pc__, orig_mask__, *wc->profiling_buf);
+    }
+{% endif %}
 }
 {% endif %}
 
 void {{ i_name }}Instruction::Dump() {
     std::cout<<"\t\t"<<"{{ i_name }}"<<"\n";
 }
+
+{% if instr.profiling_metrics %}
+void {{ i_name }}Instruction::Profile(std::shared_ptr<WarpContext>& wc, uint64_t pc, uint32_t orig_mask, WarpProfilingBuffer& buf) {
+    using namespace std::chrono;
+    ProfilingRecord rec;
+    rec.timestamp_ns = static_cast<uint64_t>(
+        duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count());
+    rec.pc = pc;
+    rec.block_id = wc->GetBlockId();
+    rec.warp_id = wc->warp_id;
+    rec.execution_mask = orig_mask;
+    rec.function_name = wc->cur_function;
+    rec.basic_block = wc->GetBasicBlockAt(pc);
+    rec.instr_name = "{{ i_name }}";
+{% for metric in instr.profiling_metrics %}
+{% if metric.type == "float" %}
+    rec.metrics.emplace_back("{{ metric.name }}", Profiling::FormatFloat(Profiling::Compute{{ metric.name | to_camel }}(*this, orig_mask, wc)));
+{% else %}
+    rec.metrics.emplace_back("{{ metric.name }}", std::to_string(Profiling::Compute{{ metric.name | to_camel }}(*this, orig_mask, wc)));
+{% endif %}
+{% endfor %}
+    buf.push_back(std::move(rec));
+}
+{% endif %}
 
 std::shared_ptr<{{ i_name }}Instruction> {{ i_name }}Instruction::Make(const std::string& line) {
     constexpr std::string_view Pattern = R"ptx({{ funcs.make_regexp(instr) }})ptx";

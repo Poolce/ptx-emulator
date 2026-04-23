@@ -99,6 +99,30 @@ def gen_code(isa, out_dir: Path):
         f.write(content)
 
 
+def load_profiling_metrics(isa):
+    profiling_path = _SCRIPT_DIR / "profiling_metrics.json"
+    profiling = {"metrics": {}, "instructions": {}}
+    if profiling_path.exists():
+        with open(profiling_path, "r") as f:
+            profiling = json.load(f)
+
+    default_metrics = profiling["instructions"].get("*", {}).get("metrics", [])
+    for i_name, instr in isa["instructions"].items():
+        if "regexp_template" not in instr:
+            instr["profiling_metrics"] = []
+            continue
+        instr_specific = profiling["instructions"].get(i_name, {}).get("metrics", [])
+        merged = list(default_metrics)
+        for m in instr_specific:
+            if m not in merged:
+                merged.append(m)
+        instr["profiling_metrics"] = [
+            {"name": m, "type": profiling["metrics"][m]["type"]}
+            for m in merged
+            if m in profiling["metrics"]
+        ]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -114,4 +138,5 @@ if __name__ == "__main__":
 
     regexp_map["operands"] = ptx_isa["operands"]
     regexp_map["types"] = ptx_isa["types"]
+    load_profiling_metrics(ptx_isa)
     gen_code(ptx_isa, args.out.resolve())

@@ -73,6 +73,11 @@ uint64_t GlobalContext::GetBasicBlockOffset(const std::string& func_name, const 
     return ptx_module_->GetBasicBlockOffset(func_name, sym);
 }
 
+std::string GlobalContext::GetBasicBlockAt(const std::string& func_name, uint64_t pc) const
+{
+    return ptx_module_->GetBasicBlockAt(func_name, pc);
+}
+
 void* GlobalContext::GetParamPtr(const std::string& name) const
 {
     auto it = global_parameters_.find(name);

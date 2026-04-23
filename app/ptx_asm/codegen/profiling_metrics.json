@@ -1,0 +1,20 @@
+{
+    "metrics": {
+        "branch_efficiency": {
+            "type": "float",
+            "description": "Ratio of active threads that follow the same execution path (1.0 = all threads converged)"
+        },
+        "bank_conflicts": {
+            "type": "int",
+            "description": "Number of shared memory bank conflicts for this access (max serialized accesses minus 1)"
+        }
+    },
+    "instructions": {
+        "*": {
+            "metrics": ["branch_efficiency"]
+        },
+        "ld": {
+            "metrics": ["branch_efficiency", "bank_conflicts"]
+        }
+    }
+}

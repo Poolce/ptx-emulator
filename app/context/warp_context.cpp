@@ -100,4 +100,28 @@ void* WarpContext::getSharedPtr(const std::string& name)
     return block_context->GetSharedPtr(name);
 }
 
+dim3 WarpContext::GetBlockId() const
+{
+    if (spr_regs.empty())
+    {
+        return dim3{0, 0, 0};
+    }
+    const auto& lane0 = spr_regs[0];
+    auto get = [&](Ptx::sprType t) -> uint32_t {
+        auto it = lane0.find(t);
+        return it != lane0.end() ? static_cast<uint32_t>(it->second) : 0u;
+    };
+    return dim3{get(Ptx::sprType::CtaidX), get(Ptx::sprType::CtaidY), get(Ptx::sprType::CtaidZ)};
+}
+
+std::string WarpContext::GetBasicBlockAt(uint64_t target_pc) const
+{
+    auto block_context = block_context_.lock();
+    if (!block_context)
+    {
+        return "";
+    }
+    return block_context->GetBasicBlockAt(cur_function, target_pc);
+}
+
 } // namespace Emulator

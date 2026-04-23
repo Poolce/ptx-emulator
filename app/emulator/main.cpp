@@ -30,18 +30,49 @@ static fs::path GetLibDir()
 
 int main(int argc, char* argv[])
 {
-    if (argc < 2)
+    bool collect_profiling = false;
+    std::string profiling_output;
+    int binary_arg = -1;
+
+    for (int i = 1; i < argc; ++i)
     {
-        std::cerr << "Usage: " << argv[0] << " <binary>\n";
+        std::string_view arg = argv[i];
+        if (arg == "--collect-profiling")
+        {
+            collect_profiling = true;
+        }
+        else if (arg == "--profiling-output" && i + 1 < argc)
+        {
+            profiling_output = argv[++i];
+        }
+        else
+        {
+            binary_arg = i;
+        }
+    }
+
+    if (binary_arg < 0)
+    {
+        std::cerr << "Usage: " << argv[0]
+                  << " [--collect-profiling] [--profiling-output <path>] <binary>\n";
         return 1;
     }
-    const std::string file = argv[1];
+
+    const std::string file = argv[binary_arg];
 
     std::string cmd;
     cmd += "PATH=" + GetExecutableDir().string() + ":$PATH" + " ";
     cmd += "LD_LIBRARY_PATH=" + GetLibDir().string() + ":$LD_LIBRARY_PATH" + " ";
     cmd += "LD_PRELOAD=" + std::string(RuntimeLibName) + " ";
     cmd += "CUEMU_TARGET_EXEC=" + file + " ";
+    if (collect_profiling)
+    {
+        cmd += "CUEMU_COLLECT_PROFILING=1 ";
+        if (!profiling_output.empty())
+        {
+            cmd += "CUEMU_PROFILING_OUTPUT=" + profiling_output + " ";
+        }
+    }
     cmd += file;
 
     return system(cmd.c_str());

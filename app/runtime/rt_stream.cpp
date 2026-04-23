@@ -1,6 +1,7 @@
 #include "rt_stream.h"
 
 #include "logger.h"
+#include "profiler.h"
 
 #ifdef EMULATOR_OPENMP_ENABLED
     #include <omp.h>
@@ -38,6 +39,11 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
             for (size_t i = 0; i < warps.size(); ++i) // NOLINT(modernize-loop-convert)
             {
                 auto warp = warps[i];
+                WarpProfilingBuffer prof_buf;
+                if (Profiler::instance().IsEnabled())
+                {
+                    warp->profiling_buf = &prof_buf;
+                }
                 while (warp->isActive())
                 {
                     auto instr = gpu_context_->GetInstruction(warp->pc);
@@ -47,6 +53,11 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
                     }
                     LOG_DEBUG("Execute " + std::string(instr->Name()) + " at pc=" + std::to_string(warp->pc));
                     instr->Execute(warp);
+                }
+                if (Profiler::instance().IsEnabled())
+                {
+                    Profiler::instance().Flush(prof_buf);
+                    warp->profiling_buf = nullptr;
                 }
             }
         }

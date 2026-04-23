@@ -33,6 +33,7 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
                 {
                     auto warp = std::make_shared<WarpContext>();
                     warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);
+                    warp->warp_id = static_cast<uint32_t>(warps_.size());
                     warps_.push_back(warp);
                     warp_thread_ids.clear();
                 }
@@ -43,6 +44,7 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
     {
         auto warp = std::make_shared<WarpContext>();
         warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);
+        warp->warp_id = static_cast<uint32_t>(warps_.size());
         warps_.push_back(warp);
     }
 }
@@ -90,6 +92,16 @@ void* BlockContext::GetSharedPtr(const std::string& name) const
 {
     auto it = shared_symbols_.find(name);
     return it != shared_symbols_.end() ? it->second : nullptr;
+}
+
+std::string BlockContext::GetBasicBlockAt(const std::string& func_name, uint64_t pc) const
+{
+    auto global_context = global_context_.lock();
+    if (!global_context)
+    {
+        return "";
+    }
+    return global_context->GetBasicBlockAt(func_name, pc);
 }
 
 } // namespace Emulator
