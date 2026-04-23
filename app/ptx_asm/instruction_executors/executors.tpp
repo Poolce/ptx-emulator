@@ -97,6 +97,13 @@ void pragmaInstruction::ExecuteWarp(std::shared_ptr<WarpContext>& wc) // NOLINT(
     (void)wc;
 }
 
+// loc — debug line-info directive, no runtime effect
+// ---------------------------------------------------------------------------
+void locInstruction::ExecuteWarp(std::shared_ptr<WarpContext>& wc)
+{
+    (void)wc;
+}
+
 // ---------------------------------------------------------------------------
 // cvta — address-space conversion
 // In this flat-memory emulator all address spaces share the host address

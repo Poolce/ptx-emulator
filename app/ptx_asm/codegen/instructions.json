@@ -87,6 +87,21 @@
             },
             "exec_type": "thread"
         },
+        "loc": {
+            "regexp_template": "\\.loc\\s($file)\\s($line);",
+            "params": {
+                "file": {
+                    "arg_type": "operand",
+                    "dtype": "symbolOperand"
+                },
+                "line": {
+                    "regexp": "[0-9]+",
+                    "arg_type": "local",
+                    "dtype": "uint32_t"
+                }
+            },
+            "exec_type": "warp"
+        },
         "shared": {
             "regexp_template": "\\.shared\\s\\.align\\s($align)\\s*\\.($data)\\s($symbol)\\[($count)\\];",
             "params": {

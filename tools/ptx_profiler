@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""ptx_profiler — profile a CUDA binary and generate an HTML report.
+
+Usage:
+    ptx_profiler [OPTIONS] <binary>
+
+The binary must be linked with --cudart=shared.  Compile with -lineinfo to
+enable source-line annotation in the report:
+
+    nvcc kernel.cu -o kernel_bin --cudart=shared -O2 -lineinfo
+    ptx_profiler kernel_bin
+
+The tool:
+  1. Locates cuemu automatically (build/bin/ or PATH).
+  2. Runs the binary under cuemu with profiling enabled.
+  3. Extracts the embedded PTX via cuobjdump.
+  4. Generates a self-contained HTML report.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Locate the tools package relative to this script.
+# Handles two install layouts:
+#   • Source tree:  tools/ptx_profiler  (alongside tools/ptx_report/)
+#   • Build tree:   build/bin/ptx_profiler  (copied by CMake)
+# ---------------------------------------------------------------------------
+def _find_package_root() -> Path:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent, here.parent.parent, here.parent.parent.parent]:
+        if (candidate / "tools" / "ptx_report" / "__init__.py").exists():
+            return candidate
+    raise RuntimeError(
+        "Cannot locate tools/ptx_report package. "
+        "Run from the project root or install the package with 'pip install -e .'."
+    )
+
+sys.path.insert(0, str(_find_package_root()))
+
+from tools.ptx_report.__main__ import main as _report_main  # noqa: E402
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def _build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="ptx_profiler",
+        description="Profile a CUDA binary under the PTX emulator and generate an HTML report.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    p.add_argument(
+        "binary",
+        metavar="<binary>",
+        type=Path,
+        help="CUDA binary to profile. Compile with -lineinfo for source annotation.",
+    )
+    p.add_argument(
+        "--source",
+        metavar="FILE",
+        type=Path,
+        action="append",
+        default=[],
+        dest="source_files",
+        help=(
+            "CUDA source file (.cu). Repeat for multiple files. "
+            "If omitted, paths from .file directives in the PTX are tried."
+        ),
+    )
+    p.add_argument(
+        "-o", "--output",
+        metavar="FILE",
+        type=Path,
+        default=None,
+        help=(
+            "Output HTML report file "
+            "(default: <binary_name>_report.html in the current directory)."
+        ),
+    )
+    p.add_argument(
+        "--cuemu",
+        metavar="PATH",
+        type=Path,
+        default=None,
+        help="Path to the cuemu executable (default: auto-detected).",
+    )
+    p.add_argument(
+        "--title",
+        default=None,
+        help="Report title (default: '<binary_name> — PTX Profile Report').",
+    )
+    return p
+
+
+def main() -> int:
+    args = _build_parser().parse_args()
+
+    output = args.output or Path(f"{args.binary.stem}_report.html")
+    title  = args.title  or f"{args.binary.name} — PTX Profile Report"
+
+    # Build the argv list that tools.ptx_report.__main__.main() expects.
+    report_argv: list[str] = [
+        "--binary", str(args.binary),
+        "--output", str(output),
+        "--title", title,
+    ]
+    for src in args.source_files:
+        report_argv += ["--source", str(src)]
+    if args.cuemu is not None:
+        report_argv += ["--cuemu", str(args.cuemu)]
+
+    return _report_main(report_argv)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

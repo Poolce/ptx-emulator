@@ -76,6 +76,11 @@ static InstructionList parseInstructions(const std::string& content)
         if (match.size() >= 3)
         {
             std::string name = match[2].str();
+            // .loc directives are debug metadata — skip silently
+            if (name == "loc")
+            {
+                continue;
+            }
             try
             {
                 auto instr = makeInstruction(name, match[0].str());
