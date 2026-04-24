@@ -67,6 +67,7 @@ def _run_emulator(
     binary: Path,
     prof_output: Path,
     config: Optional[Path] = None,
+    log_level: Optional[str] = None,
 ) -> bool:
     """Run *binary* under cuemu with profiling enabled.
 
@@ -76,6 +77,8 @@ def _run_emulator(
     cmd = [str(cuemu)]
     if config is not None:
         cmd += ["--config", str(config)]
+    if log_level is not None:
+        cmd += ["--log-level", log_level]
     cmd += [
         "--collect-profiling",
         "--profiling-output", str(prof_output),
@@ -234,6 +237,13 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     p.add_argument(
+        "-l", "--log-level",
+        metavar="LEVEL",
+        default=None,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Emulator log verbosity: DEBUG, INFO, WARNING, ERROR (default: INFO).",
+    )
+    p.add_argument(
         "-o", "--output",
         metavar="FILE",
         type=Path,
@@ -293,7 +303,7 @@ def main(argv: list[str] | None = None) -> int:
                 tmp_path = Path(tmp.name)
 
             try:
-                ok = _run_emulator(cuemu, binary, tmp_path, config=args.config)
+                ok = _run_emulator(cuemu, binary, tmp_path, config=args.config, log_level=args.log_level)
                 if not ok:
                     return 1
                 profiling_parts.append(tmp_path.read_text())

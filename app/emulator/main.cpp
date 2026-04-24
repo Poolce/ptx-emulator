@@ -39,11 +39,13 @@ static void PrintHelp(std::string_view prog)
               << "  --config <path>              GPU architecture config file (TOML)\n"
               << "  --collect-profiling          Enable profiling metric collection\n"
               << "  --profiling-output <path>    Output file for profiling data (default: profiling.txt)\n"
+              << "  -l, --log-level <level>      Log verbosity: DEBUG, INFO, WARNING, ERROR (default: INFO)\n"
               << "  -h, --help                   Show this help message and exit\n"
               << "\n"
               << "Examples:\n"
               << "  " << prog << " ./my_cuda_app\n"
-              << "  " << prog << " --config gpu_arch.toml --collect-profiling ./my_cuda_app\n";
+              << "  " << prog << " --config gpu_arch.toml --collect-profiling ./my_cuda_app\n"
+              << "  " << prog << " -l DEBUG ./my_cuda_app\n";
 }
 
 int main(int argc, char* argv[])
@@ -51,6 +53,7 @@ int main(int argc, char* argv[])
     bool collect_profiling = false;
     std::string profiling_output;
     std::string config_path;
+    std::string log_level;
     std::string binary;
 
     for (int i = 1; i < argc; ++i)
@@ -74,6 +77,21 @@ int main(int argc, char* argv[])
                 return 1;
             }
             config_path = argv[++i];
+        }
+        else if (arg == "-l" || arg == "--log-level")
+        {
+            if (i + 1 >= argc)
+            {
+                std::cerr << "error: " << arg << " requires an argument\n";
+                return 1;
+            }
+            log_level = argv[++i];
+            if (log_level != "DEBUG" && log_level != "INFO" && log_level != "WARNING" && log_level != "ERROR")
+            {
+                std::cerr << "error: invalid log level '" << log_level
+                          << "' (expected DEBUG, INFO, WARNING, or ERROR)\n";
+                return 1;
+            }
         }
         else if (arg == "--profiling-output")
         {
@@ -117,6 +135,10 @@ int main(int argc, char* argv[])
     if (!config_path.empty())
     {
         cmd += "CUEMU_CONFIG=" + config_path + " ";
+    }
+    if (!log_level.empty())
+    {
+        cmd += "CUEMU_LOG_LEVEL=" + log_level + " ";
     }
     if (collect_profiling)
     {

@@ -101,6 +101,13 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     p.add_argument(
+        "-l", "--log-level",
+        metavar="LEVEL",
+        default=None,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Emulator log verbosity: DEBUG, INFO, WARNING, ERROR (default: INFO).",
+    )
+    p.add_argument(
         "--title",
         default=None,
         help="Report title (default: '<binary_name> — PTX Profile Report').",
@@ -126,6 +133,8 @@ def main() -> int:
         report_argv += ["--cuemu", str(args.cuemu)]
     if args.config is not None:
         report_argv += ["--config", str(args.config)]
+    if args.log_level is not None:
+        report_argv += ["--log-level", args.log_level]
 
     return _report_main(report_argv)
 
