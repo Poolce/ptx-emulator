@@ -87,7 +87,6 @@ cudaError_t __cudaLaunchKernel([[maybe_unused]] const void* func,
 cudaError_t cudaDeviceSynchronize()
 {
     LOG_DEBUG("cudaDeviceSynchronize");
-    interface->RemoveAllStreams();
     return cudaError_t::cudaSuccess;
 }
 
@@ -151,6 +150,7 @@ void __cudaUnregisterFatBinary(void** fatCubinHandle)
     LOG_DEBUG("__cudaUnregisterFatBinary intercepted");
     try
     {
+        interface->RemoveAllStreams();
         interface = nullptr;
         decltype(auto) orig = reinterpret_cast<void* (*)(void**)>(dlsym(RTLD_NEXT, "__cudaUnregisterFatBinary"));
         if (!orig)

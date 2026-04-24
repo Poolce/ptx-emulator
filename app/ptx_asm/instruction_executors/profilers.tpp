@@ -21,13 +21,6 @@ inline std::string FormatFloat(float v)
     return oss.str();
 }
 
-// ---------------------------------------------------------------------------
-// branch_efficiency
-// For non-branch instructions all active threads execute the same code path,
-// so efficiency is 1.0.  For bra, after ExecuteBranch() wc->execution_mask
-// holds the threads that took the branch; orig_mask was the pre-branch mask.
-// Efficiency = max(taken, not_taken) / total_active.
-// ---------------------------------------------------------------------------
 inline float ComputeBranchEfficiency(const Instruction& /*instr*/,
                                      uint32_t orig_mask,
                                      const std::shared_ptr<WarpContext>& wc)
@@ -35,7 +28,7 @@ inline float ComputeBranchEfficiency(const Instruction& /*instr*/,
     const auto active = static_cast<uint32_t>(std::popcount(orig_mask));
     if (active == 0)
     {
-        return 1.0f;
+        return 0.0f;
     }
     const auto on_path = static_cast<uint32_t>(std::popcount(wc->execution_mask & orig_mask));
     const auto off_path = active - on_path;

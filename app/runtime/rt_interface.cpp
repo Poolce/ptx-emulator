@@ -78,6 +78,7 @@ uint64_t RtInterface::MakeStream()
 
 void RtInterface::RemoveAllStreams()
 {
+    LOG_DEBUG("Removing all streams");
     streams_.clear();
     functions_.clear();
 }

@@ -35,6 +35,7 @@ class BlockContext : public std::enable_shared_from_this<BlockContext>
     void* GetParamPtr(const std::string& name) const;
     void RegisterSharedSymbol(const std::string& name, size_t size, size_t align);
     void* GetSharedPtr(const std::string& name) const;
+    void* GetSharedBase() const;
 };
 
 } // namespace Emulator

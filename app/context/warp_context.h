@@ -56,6 +56,7 @@ class WarpContext
     void* getParamPtr(const std::string& name);
     void registerSharedSymbol(const std::string& name, size_t size, size_t align);
     void* getSharedPtr(const std::string& name);
+    void* getSharedBase();
 
     dim3 GetBlockId() const;
     std::string GetBasicBlockAt(uint64_t pc) const;

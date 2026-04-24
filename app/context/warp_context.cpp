@@ -3,6 +3,8 @@
 #include "block_context.h"
 #include "gpu_config.h"
 
+#include <iostream>
+
 namespace Emulator
 {
 
@@ -78,6 +80,13 @@ void* WarpContext::getParamPtr(const std::string& name)
     {
         throw std::runtime_error("Block context is expired.");
     }
+    void* shared_ptr = block_context->GetSharedPtr(name);
+    if (shared_ptr)
+    {
+        auto* base = static_cast<uint8_t*>(block_context->GetSharedBase());
+        auto offset = static_cast<uintptr_t>(static_cast<uint8_t*>(shared_ptr) - base);
+        return reinterpret_cast<void*>(offset);
+    }
     return block_context->GetParamPtr(name);
 }
 
@@ -99,6 +108,16 @@ void* WarpContext::getSharedPtr(const std::string& name)
         throw std::runtime_error("Block context is expired.");
     }
     return block_context->GetSharedPtr(name);
+}
+
+void* WarpContext::getSharedBase()
+{
+    auto block_context = block_context_.lock();
+    if (!block_context)
+    {
+        throw std::runtime_error("Block context is expired.");
+    }
+    return block_context->GetSharedBase();
 }
 
 dim3 WarpContext::GetBlockId() const

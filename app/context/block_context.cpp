@@ -87,6 +87,11 @@ void BlockContext::RegisterSharedSymbol(const std::string& name, size_t size, si
     {
         shared_offset_ = (shared_offset_ + align - 1) & ~(align - 1);
     }
+    size_t required = shared_offset_ + size;
+    if (required > shared_memory_.size())
+    {
+        shared_memory_.resize(required);
+    }
     shared_symbols_[name] = &shared_memory_[shared_offset_];
     shared_offset_ += size;
 }
@@ -95,6 +100,11 @@ void* BlockContext::GetSharedPtr(const std::string& name) const
 {
     auto it = shared_symbols_.find(name);
     return it != shared_symbols_.end() ? it->second : nullptr;
+}
+
+void* BlockContext::GetSharedBase() const
+{
+    return shared_memory_.empty() ? nullptr : const_cast<uint8_t*>(shared_memory_.data());
 }
 
 std::string BlockContext::GetBasicBlockAt(const std::string& func_name, uint64_t pc) const

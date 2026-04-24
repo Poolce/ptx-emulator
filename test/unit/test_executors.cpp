@@ -812,11 +812,14 @@ TEST(SharedMemExecutor, RegistersSymbolNonNullAddress)
     // Note: symbol names must not start with hex digits (a-f) to avoid
     // ambiguity in the mov regex that also matches hex immediates.
     sharedInstruction::Make(".shared .align 4 .f32 smTile[64];")->Execute(wc);
+    sharedInstruction::Make(".shared .align 4 .f32 smTile2[4];")->Execute(wc);
 
-    // mov.u32 %r0, smTile — loads symbol address into R slot (stored as uint64_t)
     movInstruction::Make("mov.u32 %r0, smTile;")->Execute(wc);
+    movInstruction::Make("mov.u32 %r1, smTile2;")->Execute(wc);
 
-    EXPECT_NE(wc->thread_regs[0][registerType::R][0], 0ULL);
+    // First symbol is at offset 0 (fits in 32 bits); second is non-zero.
+    EXPECT_LT(wc->thread_regs[0][registerType::R][0], 1024ULL);
+    EXPECT_NE(wc->thread_regs[0][registerType::R][1], 0ULL);
 }
 
 TEST(SharedMemExecutor, TwoSymbolsHaveDistinctAddresses)
