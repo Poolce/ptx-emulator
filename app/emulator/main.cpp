@@ -36,19 +36,21 @@ static void PrintHelp(std::string_view prog)
               << "Run a CUDA binary under the PTX emulator.\n"
               << "\n"
               << "Options:\n"
+              << "  --config <path>              GPU architecture config file (TOML)\n"
               << "  --collect-profiling          Enable profiling metric collection\n"
               << "  --profiling-output <path>    Output file for profiling data (default: profiling.txt)\n"
               << "  -h, --help                   Show this help message and exit\n"
               << "\n"
               << "Examples:\n"
               << "  " << prog << " ./my_cuda_app\n"
-              << "  " << prog << " --collect-profiling --profiling-output prof.log ./my_cuda_app\n";
+              << "  " << prog << " --config gpu_arch.toml --collect-profiling ./my_cuda_app\n";
 }
 
 int main(int argc, char* argv[])
 {
     bool collect_profiling = false;
     std::string profiling_output;
+    std::string config_path;
     std::string binary;
 
     for (int i = 1; i < argc; ++i)
@@ -63,6 +65,15 @@ int main(int argc, char* argv[])
         if (arg == "--collect-profiling")
         {
             collect_profiling = true;
+        }
+        else if (arg == "--config")
+        {
+            if (i + 1 >= argc)
+            {
+                std::cerr << "error: --config requires an argument\n";
+                return 1;
+            }
+            config_path = argv[++i];
         }
         else if (arg == "--profiling-output")
         {
@@ -103,6 +114,10 @@ int main(int argc, char* argv[])
     cmd += "LD_LIBRARY_PATH=" + GetLibDir().string() + ":$LD_LIBRARY_PATH ";
     cmd += "LD_PRELOAD=" + std::string(RuntimeLibName) + " ";
     cmd += "CUEMU_TARGET_EXEC=" + binary + " ";
+    if (!config_path.empty())
+    {
+        cmd += "CUEMU_CONFIG=" + config_path + " ";
+    }
     if (collect_profiling)
     {
         cmd += "CUEMU_COLLECT_PROFILING=1 ";

@@ -15,4 +15,4 @@ target_include_directories(context
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(context PUBLIC encoder)
+target_link_libraries(context PUBLIC encoder utils)

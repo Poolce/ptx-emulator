@@ -234,7 +234,7 @@ void shflInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& 
         default:               src_lane = lid;
     }
 
-    const bool valid = (src_lane < static_cast<uint32_t>(Emulator::WarpSize))
+    const bool valid = (src_lane < Emulator::GpuConfig::instance().warp_size)
                     && (((wc->execution_mask >> src_lane) & 1U) != 0U);
     if (!valid) {
         src_lane = lid;

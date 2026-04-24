@@ -62,14 +62,21 @@ def _find_cuemu(explicit: Optional[Path]) -> Optional[Path]:
     return None
 
 
-def _run_emulator(cuemu: Path, binary: Path, prof_output: Path) -> bool:
+def _run_emulator(
+    cuemu: Path,
+    binary: Path,
+    prof_output: Path,
+    config: Optional[Path] = None,
+) -> bool:
     """Run *binary* under cuemu with profiling enabled.
 
     Emulator output (INFO/ERROR lines) is forwarded to stderr so the user
     can see progress.  Returns True on success.
     """
-    cmd = [
-        str(cuemu),
+    cmd = [str(cuemu)]
+    if config is not None:
+        cmd += ["--config", str(config)]
+    cmd += [
         "--collect-profiling",
         "--profiling-output", str(prof_output),
         str(binary),
@@ -217,6 +224,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Path to the cuemu executable (default: auto-detected).",
     )
     p.add_argument(
+        "--config",
+        metavar="FILE",
+        type=Path,
+        default=None,
+        help=(
+            "GPU architecture config file (TOML). "
+            "If omitted, built-in defaults are used (Ampere sm_80 profile)."
+        ),
+    )
+    p.add_argument(
         "-o", "--output",
         metavar="FILE",
         type=Path,
@@ -276,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
                 tmp_path = Path(tmp.name)
 
             try:
-                ok = _run_emulator(cuemu, binary, tmp_path)
+                ok = _run_emulator(cuemu, binary, tmp_path, config=args.config)
                 if not ok:
                     return 1
                 profiling_parts.append(tmp_path.read_text())

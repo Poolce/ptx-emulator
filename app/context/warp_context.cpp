@@ -1,7 +1,7 @@
 #include "warp_context.h"
 
 #include "block_context.h"
-#include "constant.h"
+#include "gpu_config.h"
 
 namespace Emulator
 {
@@ -13,8 +13,9 @@ void WarpContext::Init(const std::shared_ptr<BlockContext>& block_context,
                        const std::vector<dim3>& tids)
 {
     block_context_ = block_context;
-    thread_regs = std::vector<ThreadContext>(WarpSize);
-    spr_regs = std::vector<SprContext>(WarpSize);
+    const uint32_t ws = GpuConfig::instance().warp_size;
+    thread_regs = std::vector<ThreadContext>(ws);
+    spr_regs = std::vector<SprContext>(ws);
 
     uint32_t tid_id = 0;
     for (const auto& tid : tids)
@@ -36,7 +37,7 @@ void WarpContext::Init(const std::shared_ptr<BlockContext>& block_context,
 uint32_t WarpContext::GetPredicateMask(uint64_t prd_id) const
 {
     uint32_t mask = 0;
-    for (uint32_t i = 0; i < WarpSize; ++i)
+    for (uint32_t i = 0; i < GpuConfig::instance().warp_size; ++i)
     {
         bool prd = false;
         if (i < thread_regs.size())

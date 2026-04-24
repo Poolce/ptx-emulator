@@ -2,14 +2,13 @@
 // New metrics require: (1) entry in profiling_metrics.json, (2) ComputeXxx function here.
 #pragma once
 
-#include "constant.h"
 #include "profiler.h"
 
 #include <algorithm>
-#include <array>
 #include <bit>
 #include <iomanip>
 #include <sstream>
+#include <vector>
 
 namespace Emulator {
 namespace Ptx {
@@ -60,8 +59,11 @@ inline int ComputeBankConflicts(const Instruction& instr,
         return 0;
     }
 
-    std::array<uint32_t, 32> bank_count{};
-    for (uint32_t lid = 0; lid < Emulator::WarpSize; ++lid)
+    const auto& cfg = Emulator::GpuConfig::instance();
+    const uint32_t n_banks = cfg.bank_count;
+    const uint32_t b_width = cfg.bank_width;
+    std::vector<uint32_t> bank_hits(n_banks, 0u);
+    for (uint32_t lid = 0; lid < cfg.warp_size; ++lid)
     {
         if (!((orig_mask >> lid) & 1U))
         {
@@ -74,10 +76,10 @@ inline int ComputeBankConflicts(const Instruction& instr,
                 wc->thread_regs[lid].at(ld.addr_.reg.type)[ld.addr_.reg.reg_id]);
         }
         addr += static_cast<uintptr_t>(static_cast<ptrdiff_t>(ld.addr_.imm));
-        bank_count[(addr / 4u) % 32u]++;
+        bank_hits[(addr / b_width) % n_banks]++;
     }
 
-    const auto max_bank = *std::max_element(bank_count.begin(), bank_count.end());
+    const auto max_bank = *std::max_element(bank_hits.begin(), bank_hits.end());
     return max_bank > 1u ? static_cast<int>(max_bank - 1u) : 0;
 }
 

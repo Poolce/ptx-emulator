@@ -1,7 +1,7 @@
 #include "block_context.h"
 
-#include "constant.h"
 #include "global_context.h"
+#include "gpu_config.h"
 
 namespace Emulator
 {
@@ -15,12 +15,21 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
     global_context_ = global_context;
     shared_memory_ = std::vector<uint8_t>(sharedMem);
 
+    const auto& cfg = GpuConfig::instance();
     uint32_t total_threads = blockDim.x * blockDim.y * blockDim.z;
-    uint32_t num_warps = (total_threads + WarpSize - 1) / WarpSize;
+    uint32_t num_warps = (total_threads + cfg.warp_size - 1) / cfg.warp_size;
     warps_.reserve(num_warps);
 
     std::vector<dim3> warp_thread_ids;
-    warp_thread_ids.reserve(WarpSize);
+    warp_thread_ids.reserve(cfg.warp_size);
+
+    auto make_warp = [&]()
+    {
+        auto warp = std::make_shared<WarpContext>();
+        warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);
+        warp->warp_id = static_cast<uint32_t>(warps_.size());
+        warps_.push_back(std::move(warp));
+    };
 
     for (uint32_t tidz = 0; tidz < blockDim.z; ++tidz)
     {
@@ -29,12 +38,9 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
             for (uint32_t tidx = 0; tidx < blockDim.x; ++tidx)
             {
                 warp_thread_ids.emplace_back(tidx, tidy, tidz);
-                if (warp_thread_ids.size() == WarpSize)
+                if (warp_thread_ids.size() == cfg.warp_size)
                 {
-                    auto warp = std::make_shared<WarpContext>();
-                    warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);
-                    warp->warp_id = static_cast<uint32_t>(warps_.size());
-                    warps_.push_back(warp);
+                    make_warp();
                     warp_thread_ids.clear();
                 }
             }
@@ -42,10 +48,7 @@ void BlockContext::Init(const std::shared_ptr<GlobalContext>& global_context,
     }
     if (!warp_thread_ids.empty())
     {
-        auto warp = std::make_shared<WarpContext>();
-        warp->Init(shared_from_this(), gridDim, gridId, blockDim, warp_thread_ids);
-        warp->warp_id = static_cast<uint32_t>(warps_.size());
-        warps_.push_back(warp);
+        make_warp();
     }
 }
 

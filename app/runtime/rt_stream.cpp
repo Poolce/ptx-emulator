@@ -25,12 +25,12 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
 
     try
     {
-        gpu_context_ = std::make_shared<GlobalContext>();
-        gpu_context_->Init(ptx_module_, gridDim, blockDim, args, sharedMem);
-        gpu_context_->SetEntryFunction(func);
+        auto gpu_context = std::make_shared<GlobalContext>();
+        gpu_context->Init(ptx_module_, gridDim, blockDim, args, sharedMem);
+        gpu_context->SetEntryFunction(func);
 
         auto start = std::chrono::high_resolution_clock::now();
-        for (auto& block : gpu_context_->GetBlocks())
+        for (auto& block : gpu_context->GetBlocks())
         {
             const auto& warps = block->GetWarps();
 #ifdef EMULATOR_OPENMP_ENABLED
@@ -46,7 +46,7 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
                 }
                 while (warp->isActive())
                 {
-                    auto instr = gpu_context_->GetInstruction(warp->pc);
+                    auto instr = gpu_context->GetInstruction(warp->pc);
                     if (!instr)
                     {
                         throw std::runtime_error("No instruction at pc " + std::to_string(warp->pc));

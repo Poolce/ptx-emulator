@@ -91,6 +91,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Path to the cuemu executable (default: auto-detected).",
     )
     p.add_argument(
+        "--config",
+        metavar="FILE",
+        type=Path,
+        default=None,
+        help=(
+            "GPU architecture config file (TOML). "
+            "If omitted, built-in defaults are used (Ampere sm_80 profile)."
+        ),
+    )
+    p.add_argument(
         "--title",
         default=None,
         help="Report title (default: '<binary_name> — PTX Profile Report').",
@@ -114,6 +124,8 @@ def main() -> int:
         report_argv += ["--source", str(src)]
     if args.cuemu is not None:
         report_argv += ["--cuemu", str(args.cuemu)]
+    if args.config is not None:
+        report_argv += ["--config", str(args.config)]
 
     return _report_main(report_argv)
 
