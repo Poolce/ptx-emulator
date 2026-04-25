@@ -24,6 +24,18 @@ void GpuConfig::SetInstance(const GpuConfig& cfg)
 namespace
 {
 
+uint32_t parseUint(const std::string& s)
+{
+    try
+    {
+        return static_cast<uint32_t>(std::stoul(s));
+    }
+    catch (...)
+    {
+        throw std::runtime_error("gpu_arch.toml: expected integer, got '" + s + "'");
+    }
+}
+
 std::string strip(const std::string& s)
 {
     size_t a = s.find_first_not_of(" \t\r");
@@ -118,18 +130,6 @@ void ApplyConfig(GpuConfig& cfg, const std::string& section, const std::string& 
         {
             cfg.registers_per_thread = parseUint(val);
         }
-    }
-}
-
-uint32_t parseUint(const std::string& s)
-{
-    try
-    {
-        return static_cast<uint32_t>(std::stoul(s));
-    }
-    catch (...)
-    {
-        throw std::runtime_error("gpu_arch.toml: expected integer, got '" + s + "'");
     }
 }
 
