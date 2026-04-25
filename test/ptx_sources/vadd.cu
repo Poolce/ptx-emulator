@@ -26,8 +26,8 @@ int main()
     float* h_b = new float[n];
     float* h_c = new float[n];
 
-    cuemu_io::generate<float>("a", h_a, n, [](size_t i) { return float(i) / 10.0f; });
-    cuemu_io::generate<float>("b", h_b, n, [](size_t i) { return float(i) / 10.0f; });
+    CuemuIo::generate<float>("a", h_a, n, [](size_t i) { return float(i) / 10.0f; });
+    CuemuIo::generate<float>("b", h_b, n, [](size_t i) { return float(i) / 10.0f; });
 
     float *d_a, *d_b, *d_c;
     cudaMalloc(&d_a, size);

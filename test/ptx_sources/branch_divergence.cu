@@ -88,7 +88,7 @@ int main()
     static constexpr int BLOCK = 32;
 
     float h_in[N];
-    cuemu_io::generate<float>("in", h_in, N, [](size_t i) { return (static_cast<float>(i) - 15.5f) * 0.05f; });
+    CuemuIo::generate<float>("in", h_in, N, [](size_t i) { return (static_cast<float>(i) - 15.5f) * 0.05f; });
 
     float h_ref_div[N], h_ref_conv[N];
     for (int i = 0; i < N; ++i)

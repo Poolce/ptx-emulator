@@ -74,7 +74,7 @@ int main()
     std::vector<float> out(rows * cols, 0.0f);
     std::vector<float> ref(rows * cols, 0.0f);
 
-    cuemu_io::generate<float>("in", in, [&](size_t i) { return -2.0f + 4.0f * float(i) / float(rows * cols - 1); });
+    CuemuIo::generate<float>("in", in, [&](size_t i) { return -2.0f + 4.0f * float(i) / float(rows * cols - 1); });
 
     launch_cuda_softmax(in.data(), out.data(), rows);
     cpu_softmax(in.data(), ref.data(), rows, cols);

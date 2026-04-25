@@ -59,7 +59,7 @@ int main()
     constexpr float hi = 3.0f;
 
     std::vector<float> in(N), out(N, 0.0f);
-    cuemu_io::generate<float>("in", in, [&](size_t i) { return lo + (hi - lo) * float(i) / float(N - 1); });
+    CuemuIo::generate<float>("in", in, [&](size_t i) { return lo + (hi - lo) * float(i) / float(N - 1); });
 
     launch_cuda_gelu(in.data(), out.data(), N);
 

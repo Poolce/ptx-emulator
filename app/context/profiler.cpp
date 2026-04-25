@@ -70,7 +70,7 @@ void Profiler::Flush(const WarpProfilingBuffer& buf)
     output_.flush();
 }
 
-std::string Profiler::FormatRecord(const ProfilingRecord& rec) const
+std::string Profiler::FormatRecord(const ProfilingRecord& rec)
 {
     std::ostringstream oss;
     oss << "[" << FormatTimestamp(rec.timestamp_ns) << "] ";

@@ -18,7 +18,7 @@ struct ProfilingRecord
 {
     uint64_t timestamp_ns = 0;
     uint64_t pc = 0;
-    dim3 block_id{};
+    dim3 block_id;
     uint32_t warp_id = 0;
     uint32_t execution_mask = 0;
     std::string function_name;
@@ -41,7 +41,7 @@ class Profiler
   private:
     Profiler();
 
-    std::string FormatRecord(const ProfilingRecord& rec) const;
+    static std::string FormatRecord(const ProfilingRecord& rec);
     static std::string FormatTimestamp(uint64_t ns);
 
     bool enabled_ = false;

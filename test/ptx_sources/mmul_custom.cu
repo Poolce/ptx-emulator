@@ -86,8 +86,8 @@ int main()
     std::vector<double> ref(M * N, 0.0);
 
     unsigned state = 0xDEADBEEFu;
-    cuemu_io::generate<double>("A", A, [&](size_t) { return next_val(state); });
-    cuemu_io::generate<double>("B", B, [&](size_t) { return next_val(state); });
+    CuemuIo::generate<double>("A", A, [&](size_t) { return next_val(state); });
+    CuemuIo::generate<double>("B", B, [&](size_t) { return next_val(state); });
 
     launch_cuda_mmul(A.data(), M, K, B.data(), K, N, C.data());
     cpu_mmul(A.data(), M, K, B.data(), N, ref.data());

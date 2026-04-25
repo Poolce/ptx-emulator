@@ -3,6 +3,7 @@
 #include "block_context.h"
 #include "gpu_config.h"
 
+#include <bit>
 #include <iostream>
 
 namespace Emulator
@@ -95,7 +96,7 @@ void* WarpContext::getParamPtr(const std::string& name)
     {
         auto* base = static_cast<uint8_t*>(block_context->GetSharedBase());
         auto offset = static_cast<uintptr_t>(static_cast<uint8_t*>(shared_ptr) - base);
-        return reinterpret_cast<void*>(offset);
+        return std::bit_cast<void*>(offset);
     }
     return block_context->GetParamPtr(name);
 }
@@ -140,7 +141,7 @@ dim3 WarpContext::GetBlockId() const
     auto get = [&](Ptx::sprType t) -> uint32_t
     {
         auto it = lane0.find(t);
-        return it != lane0.end() ? static_cast<uint32_t>(it->second) : 0u;
+        return it != lane0.end() ? static_cast<uint32_t>(it->second) : 0U;
     };
     return dim3{get(Ptx::sprType::CtaidX), get(Ptx::sprType::CtaidY), get(Ptx::sprType::CtaidZ)};
 }

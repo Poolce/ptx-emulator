@@ -60,7 +60,7 @@ int main()
     static constexpr int N = TILE * TILE;
 
     float h_in[N];
-    cuemu_io::generate<float>("in", h_in, N, [](size_t i) { return static_cast<float>(i % 7) - 3.f; });
+    CuemuIo::generate<float>("in", h_in, N, [](size_t i) { return static_cast<float>(i % 7) - 3.f; });
 
     float h_ref[TILE];
     cpu_row_reduce(h_in, h_ref);

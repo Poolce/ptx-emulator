@@ -89,9 +89,9 @@ int main()
     std::vector<float> Kt(D * S);
 
     unsigned state = 0xC0FFEE42u;
-    cuemu_io::generate<float>("Q", Q, [&](size_t) { return next_val(state); });
-    cuemu_io::generate<float>("K", K, [&](size_t) { return next_val(state); });
-    cuemu_io::generate<float>("V", V, [&](size_t) { return next_val(state); });
+    CuemuIo::generate<float>("Q", Q, [&](size_t) { return next_val(state); });
+    CuemuIo::generate<float>("K", K, [&](size_t) { return next_val(state); });
+    CuemuIo::generate<float>("V", V, [&](size_t) { return next_val(state); });
 
     for (int i = 0; i < S; ++i)
     {

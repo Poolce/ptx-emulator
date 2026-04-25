@@ -12,17 +12,19 @@
 #include <unordered_map>
 #include <vector>
 
-namespace cuemu_io
+namespace CuemuIo
 {
 
-namespace detail
+namespace Detail
 {
 
 inline std::string to_upper(const std::string& s)
 {
     std::string r = s;
     for (char& c : r)
+    {
         c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
     return r;
 }
 
@@ -69,7 +71,9 @@ void apply_spec(const std::string& spec, T* data, size_t n, std::function<T(size
     if (mode == "default" || mode.empty())
     {
         for (size_t i = 0; i < n; ++i)
+        {
             data[i] = default_gen(i);
+        }
     }
     else if (mode == "zeros")
     {
@@ -89,7 +93,9 @@ void apply_spec(const std::string& spec, T* data, size_t n, std::function<T(size
         const double start = get_d(m, "start", 0.0);
         const double step = get_d(m, "step", 1.0);
         for (size_t i = 0; i < n; ++i)
-            data[i] = static_cast<T>(start + double(i) * step);
+        {
+            data[i] = static_cast<T>(start + (double(i) * step));
+        }
     }
     else if (mode == "uniform")
     {
@@ -98,7 +104,9 @@ void apply_spec(const std::string& spec, T* data, size_t n, std::function<T(size
         std::mt19937_64 rng(get_seed(m));
         std::uniform_real_distribution<double> dist(lo, hi);
         for (size_t i = 0; i < n; ++i)
+        {
             data[i] = static_cast<T>(dist(rng));
+        }
     }
     else if (mode == "normal")
     {
@@ -107,26 +115,34 @@ void apply_spec(const std::string& spec, T* data, size_t n, std::function<T(size
         std::mt19937_64 rng(get_seed(m));
         std::normal_distribution<double> dist(mean, std);
         for (size_t i = 0; i < n; ++i)
+        {
             data[i] = static_cast<T>(dist(rng));
+        }
     }
     else
     {
-        throw std::runtime_error(std::string("cuemu_io: unknown generation mode '") + mode + "'");
+        throw std::runtime_error(std::string("CuemuIo: unknown generation mode '") + mode + "'");
     }
 }
 
-} // namespace detail
+} // namespace Detail
 
 template <typename T>
 void generate(const char* name, T* data, size_t n, std::function<T(size_t)> default_gen)
 {
-    const std::string key = "CUEMU_GEN_" + detail::to_upper(name);
+    const std::string key = "CUEMU_GEN_" + Detail::to_upper(name);
     const char* spec_env = std::getenv(key.c_str());
     if (spec_env && spec_env[0] != '\0')
-        detail::apply_spec<T>(std::string(spec_env), data, n, default_gen);
+    {
+        Detail::apply_spec<T>(std::string(spec_env), data, n, default_gen);
+    }
     else
+    {
         for (size_t i = 0; i < n; ++i)
+        {
             data[i] = default_gen(i);
+        }
+    }
 }
 
 template <typename T>
@@ -135,4 +151,4 @@ void generate(const char* name, std::vector<T>& v, std::function<T(size_t)> defa
     generate<T>(name, v.data(), v.size(), default_gen);
 }
 
-} // namespace cuemu_io
+} // namespace CuemuIo
