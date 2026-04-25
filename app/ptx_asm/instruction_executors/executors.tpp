@@ -732,15 +732,15 @@ void cvtInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 }
 
 // ---------------------------------------------------------------------------
-// bar — block barrier
-// Warps within a block are executed sequentially, so bar.sync is a no-op.
+// bar — block barrier (__syncthreads)
+// In OMP mode: delegates to the cyclic BlockBarrier via syncBarrier(), which
+// blocks until all active warps in the block have arrived.
+// In round-robin mode: block_barrier_ is nullptr so syncBarrier() is a no-op;
+// the round-robin scheduler in rt_stream.cpp handles yielding at barriers.
 // ---------------------------------------------------------------------------
 void barInstruction::ExecuteWarp(std::shared_ptr<Emulator::WarpContext>& wc)
 {
-    (void)wc;
-#ifdef EMULATOR_OPENMP_ENABLED
-    #pragma omp barrier
-#endif
+    wc->syncBarrier();
 }
 
 // ---------------------------------------------------------------------------

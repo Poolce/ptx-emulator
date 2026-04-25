@@ -79,6 +79,7 @@ void* BlockContext::GetParamPtr(const std::string& name) const
 
 void BlockContext::RegisterSharedSymbol(const std::string& name, size_t size, size_t align)
 {
+    std::lock_guard<std::mutex> lock(shared_mutex_);
     if (shared_symbols_.contains(name))
     {
         return; // already registered by another warp
@@ -115,6 +116,27 @@ std::string BlockContext::GetBasicBlockAt(const std::string& func_name, uint64_t
         return "";
     }
     return global_context->GetBasicBlockAt(func_name, pc);
+}
+
+void BlockContext::InitBarrier(int n)
+{
+    block_barrier_ = std::make_unique<BlockBarrier>(n);
+}
+
+void BlockContext::SyncBarrier()
+{
+    if (block_barrier_)
+    {
+        block_barrier_->sync();
+    }
+}
+
+void BlockContext::WarpDone()
+{
+    if (block_barrier_)
+    {
+        block_barrier_->warp_done();
+    }
 }
 
 } // namespace Emulator

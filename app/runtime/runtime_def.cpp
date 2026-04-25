@@ -46,6 +46,13 @@ cudaError_t cudaMemcpy([[maybe_unused]] void* dst,
     return cudaError_t::cudaSuccess;
 }
 
+cudaError_t cudaMemset(void* devPtr, int value, size_t count)
+{
+    LOG_DEBUG("cudaMemset count=" + std::to_string(count) + " value=" + std::to_string(value));
+    memset(devPtr, value, count);
+    return cudaError_t::cudaSuccess;
+}
+
 cudaError_t cudaGetLastError()
 {
     LOG_DEBUG("cudaGetLastError");

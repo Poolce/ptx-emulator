@@ -63,7 +63,10 @@
                 "ctaid.z",
                 "ntid.x",
                 "ntid.y",
-                "ntid.z"
+                "ntid.z",
+                "nctaid.x",
+                "nctaid.y",
+                "nctaid.z"
             ]
         }
     },

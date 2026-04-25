@@ -70,6 +70,8 @@ class WarpContext
     void* getSharedPtr(const std::string& name);
     void* getSharedBase();
 
+    void syncBarrier();
+
     dim3 GetBlockId() const;
     std::string GetBasicBlockAt(uint64_t pc) const;
 };

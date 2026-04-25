@@ -3,11 +3,11 @@
 #include "logger.h"
 #include "profiler.h"
 
+#include <chrono>
+
 #ifdef EMULATOR_OPENMP_ENABLED
     #include <omp.h>
 #endif
-
-#include <chrono>
 
 namespace Emulator
 {
@@ -38,40 +38,112 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
         for (auto& block : gpu_context->GetBlocks())
         {
             const auto& warps = block->GetWarps();
-#ifdef EMULATOR_OPENMP_ENABLED
-    #pragma omp parallel for
-#endif
-            for (size_t i = 0; i < warps.size(); ++i) // NOLINT(modernize-loop-convert)
-            {
-                auto warp = warps[i];
-                WarpProfilingBuffer prof_buf;
-                if (Profiler::instance().IsEnabled())
-                {
-                    warp->profiling_buf = &prof_buf;
-                }
-                while (warp->isActive())
-                {
-                    // PDOM reconvergence: if the taken (if) path reached the IPDOM
-                    // by falling through (no explicit bra), restore the merged mask.
-                    while (!warp->execution_stack.empty() && warp->execution_stack.top().is_convergence &&
-                           warp->execution_stack.top().pc == warp->pc)
-                    {
-                        warp->execution_mask = warp->execution_stack.top().mask;
-                        warp->execution_stack.pop();
-                    }
 
-                    auto instr = gpu_context->GetInstruction(warp->pc);
-                    if (!instr)
-                    {
-                        throw std::runtime_error("No instruction at pc " + std::to_string(warp->pc));
-                    }
-                    LOG_DEBUG("Execute " + std::string(instr->Name()) + " at pc=" + std::to_string(warp->pc));
-                    instr->Execute(warp);
-                }
-                if (Profiler::instance().IsEnabled())
+            // Allocate profiling buffers once per warp before any parallel execution.
+            std::vector<WarpProfilingBuffer> prof_bufs(warps.size());
+            if (Profiler::instance().IsEnabled())
+            {
+                for (size_t i = 0; i < warps.size(); ++i)
                 {
-                    Profiler::instance().Flush(prof_buf);
-                    warp->profiling_buf = nullptr;
+                    warps[i]->profiling_buf = &prof_bufs[i];
+                }
+            }
+
+#ifdef EMULATOR_OPENMP_ENABLED
+            // OMP path: one thread per warp, bar.sync implemented via BlockBarrier.
+            block->InitBarrier(static_cast<int>(warps.size()));
+            const int n_warps = static_cast<int>(warps.size());
+            std::exception_ptr first_ex;
+
+    #pragma omp parallel for schedule(static, 1) num_threads(n_warps)
+            for (int i = 0; i < n_warps; ++i)
+            {
+                auto warp = warps[static_cast<size_t>(i)];
+                try
+                {
+                    while (warp->isActive())
+                    {
+                        while (!warp->execution_stack.empty() && warp->execution_stack.top().is_convergence &&
+                               warp->execution_stack.top().pc == warp->pc)
+                        {
+                            warp->execution_mask = warp->execution_stack.top().mask;
+                            warp->execution_stack.pop();
+                        }
+
+                        auto instr = gpu_context->GetInstruction(warp->pc);
+                        if (!instr)
+                        {
+                            throw std::runtime_error("No instruction at pc " + std::to_string(warp->pc));
+                        }
+                        LOG_DEBUG("Execute " + std::string(instr->Name()) + " at pc=" + std::to_string(warp->pc));
+                        instr->Execute(warp);
+                    }
+                }
+                catch (...)
+                {
+    #pragma omp critical
+                    {
+                        if (!first_ex)
+                        {
+                            first_ex = std::current_exception();
+                        }
+                    }
+                }
+                // Always signal done so that other warps blocked in bar.sync are unblocked.
+                block->WarpDone();
+            }
+
+            if (first_ex)
+            {
+                std::rethrow_exception(first_ex);
+            }
+#else
+            bool any_active = true;
+            while (any_active)
+            {
+                any_active = false;
+                for (size_t i = 0; i < warps.size(); ++i)
+                {
+                    auto warp = warps[i];
+                    if (!warp->isActive())
+                    {
+                        continue;
+                    }
+                    any_active = true;
+
+                    while (warp->isActive())
+                    {
+                        while (!warp->execution_stack.empty() && warp->execution_stack.top().is_convergence &&
+                               warp->execution_stack.top().pc == warp->pc)
+                        {
+                            warp->execution_mask = warp->execution_stack.top().mask;
+                            warp->execution_stack.pop();
+                        }
+
+                        auto instr = gpu_context->GetInstruction(warp->pc);
+                        if (!instr)
+                        {
+                            throw std::runtime_error("No instruction at pc " + std::to_string(warp->pc));
+                        }
+                        LOG_DEBUG("Execute " + std::string(instr->Name()) + " at pc=" + std::to_string(warp->pc));
+                        const bool is_barrier = (instr->Name() == "bar");
+                        instr->Execute(warp);
+
+                        if (is_barrier)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+#endif
+
+            if (Profiler::instance().IsEnabled())
+            {
+                for (size_t i = 0; i < warps.size(); ++i)
+                {
+                    Profiler::instance().Flush(prof_bufs[i]);
+                    warps[i]->profiling_buf = nullptr;
                 }
             }
         }

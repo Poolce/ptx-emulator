@@ -10,7 +10,7 @@ namespace Emulator
 {
 
 void WarpContext::Init(const std::shared_ptr<BlockContext>& block_context,
-                       [[maybe_unused]] const dim3& gridDim,
+                       const dim3& gridDim,
                        const dim3& gridId,
                        const dim3& blockDim,
                        const std::vector<dim3>& tids)
@@ -32,6 +32,9 @@ void WarpContext::Init(const std::shared_ptr<BlockContext>& block_context,
         spr_regs[tid_id][Ptx::sprType::NtidX] = blockDim.x;
         spr_regs[tid_id][Ptx::sprType::NtidY] = blockDim.y;
         spr_regs[tid_id][Ptx::sprType::NtidZ] = blockDim.z;
+        spr_regs[tid_id][Ptx::sprType::NctaidX] = gridDim.x;
+        spr_regs[tid_id][Ptx::sprType::NctaidY] = gridDim.y;
+        spr_regs[tid_id][Ptx::sprType::NctaidZ] = gridDim.z;
         tid_id++;
     }
     execution_mask = ((((uint64_t)1 << tid_id) - 1) & 0xffffffff);
@@ -129,6 +132,15 @@ void* WarpContext::getSharedBase()
         throw std::runtime_error("Block context is expired.");
     }
     return block_context->GetSharedBase();
+}
+
+void WarpContext::syncBarrier()
+{
+    auto block_context = block_context_.lock();
+    if (block_context)
+    {
+        block_context->SyncBarrier();
+    }
 }
 
 dim3 WarpContext::GetBlockId() const

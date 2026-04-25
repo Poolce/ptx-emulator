@@ -28,6 +28,7 @@ extern "C"
     cudaError_t cudaMalloc(void** devPtr, size_t size);
     cudaError_t cudaFree(void* devPtr);
     cudaError_t cudaMemcpy(void* dst, const void* src, size_t count, cudaMemcpyKind kind);
+    cudaError_t cudaMemset(void* devPtr, int value, size_t count);
     cudaError_t cudaGetLastError();
     const char* cudaGetErrorString(cudaError_t error);
     cudaError_t __cudaLaunchKernel(const void* func,
