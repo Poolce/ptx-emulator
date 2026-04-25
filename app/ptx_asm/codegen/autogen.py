@@ -111,7 +111,8 @@ def load_profiling_metrics(isa):
         if "regexp_template" not in instr:
             instr["profiling_metrics"] = []
             continue
-        instr_specific = profiling["instructions"].get(i_name, {}).get("metrics", [])
+        instr_specific = profiling["instructions"].get(i_name, {})\
+            .get("metrics", [])
         merged = list(default_metrics)
         for m in instr_specific:
             if m not in merged:

@@ -1,5 +1,4 @@
-"""Generate a self-contained HTML profiling report."""
-
+# flake8: noqa
 from __future__ import annotations
 
 import html
@@ -8,7 +7,7 @@ import re
 from datetime import datetime
 from typing import Optional
 
-from .aggregator import FunctionReport, InstrStats, Report, SourceLineStats
+from .aggregator import FunctionReport, InstrStats, Report
 
 
 def _heat_rgb(value: float, lo: float, hi: float) -> str:
@@ -16,15 +15,17 @@ def _heat_rgb(value: float, lo: float, hi: float) -> str:
         return "rgb(200,220,200)"
     t = max(0.0, min(1.0, (value - lo) / (hi - lo)))
     if t < 0.5:
-        r = int(t * 2 * 220); g = 180
+        r = int(t * 2 * 220)
+        g = 180
     else:
-        r = 220; g = int((1 - (t - 0.5) * 2) * 180)
+        r = 220
+        g = int((1 - (t - 0.5) * 2) * 180)
     return f"rgb({r},{g},0)"
 
 
 def _efficiency_rgb(eff: float) -> str:
     t = max(0.0, min(1.0, eff))
-    return f"rgb({int((1-t)*220)},{int(t*180)},0)"
+    return f"rgb({int((1 - t) * 220)},{int(t * 180)},0)"
 
 
 def _fmt_pct(v: float) -> str:
@@ -35,8 +36,17 @@ def _esc(s: str) -> str:
     return html.escape(str(s))
 
 
-def _bar(value: float, max_value: float, width: int = 80, color: str = "#4a90d9") -> str:
-    filled = 0 if max_value <= 0 else int(width * min(1.0, value / max_value))
+def _bar(
+    value: float,
+    max_value: float,
+    width: int = 80,
+    color: str = "#4a90d9",
+) -> str:
+    filled = (
+        0
+        if max_value <= 0
+        else int(width * min(1.0, value / max_value))
+    )
     return (
         f'<svg width="{width}" height="12" style="vertical-align:middle">'
         f'<rect width="{width}" height="12" rx="2" fill="#e8e8e8"/>'
@@ -348,10 +358,11 @@ function _fmtN(n) {
     return String(n);
 }
 function _miniBar(pct, color, valStr, valColor) {
+    const spanStyle = `font-size:11px;font-variant-numeric:tabular-nums;color:${valColor||'#333'}`;
     return `<div style="display:flex;align-items:center;gap:5px">` +
         `<div style="flex:0 0 54px;height:9px;background:#e8e8e8;border-radius:2px;overflow:hidden">` +
         `<div style="width:${pct}%;height:100%;background:${color};border-radius:2px"></div></div>` +
-        `<span style="font-size:11px;font-variant-numeric:tabular-nums;color:${valColor||'#333'}">${valStr}</span></div>`;
+        `<span style="${spanStyle}">${valStr}</span></div>`;
 }
 
 // =========================================================================
@@ -552,7 +563,9 @@ _AGGRID_CDN = """\
 <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/dist/ag-grid-community.min.js"></script>"""
 
 
-def _render_split_view(fn: FunctionReport, source_files: dict[str, list[str]]) -> str:
+def _render_split_view(
+    fn: FunctionReport, source_files: dict[str, list[str]]
+) -> str:
     kid = _kernel_id(fn)
     all_files = sorted(fn.source_lines.keys())
     file_idx = {f: i for i, f in enumerate(all_files)}
@@ -560,7 +573,9 @@ def _render_split_view(fn: FunctionReport, source_files: dict[str, list[str]]) -
     def _sid(sf: str, ln: int) -> str:
         return f"f{file_idx[sf]}l{ln}"
 
-    max_exec = max((i.issue_count for i in fn.instructions), default=1)
+    max_exec = max(
+        (i.issue_count for i in fn.instructions), default=1
+    )
 
     ptx_counts: dict[tuple[str, int], int] = {}
     for instr in fn.instructions:
@@ -569,9 +584,11 @@ def _render_split_view(fn: FunctionReport, source_files: dict[str, list[str]]) -
             ptx_counts[key] = ptx_counts.get(key, 0) + 1
 
     max_src_exec = max(
-        (s.exec_count
-         for line_map in fn.source_lines.values()
-         for s in line_map.values()),
+        (
+            s.exec_count
+            for line_map in fn.source_lines.values()
+            for s in line_map.values()
+        ),
         default=1,
     )
 
@@ -582,7 +599,9 @@ def _render_split_view(fn: FunctionReport, source_files: dict[str, list[str]]) -
         full_src: list[str] = source_files.get(sf, [])
 
         if full_src:
-            max_ln = max(max(line_map.keys(), default=1), len(full_src) - 1)
+            max_ln = max(
+                max(line_map.keys(), default=1), len(full_src) - 1
+            )
             line_range: list[int] = list(range(1, max_ln + 1))
         else:
             shown: set[int] = set()
@@ -603,18 +622,22 @@ def _render_split_view(fn: FunctionReport, source_files: dict[str, list[str]]) -
             else:
                 text = ""
 
-            src_rows.append({
-                "_id":    row_id,
-                "ln":     ln,
-                "text":   text,
-                "active": is_active,
-                "sid":    _sid(sf, ln) if n_ptx > 0 else None,
-                "n_ptx":  n_ptx,
-                "exec":   sl.exec_count if is_active else 0,
-                "eff":    sl.avg_branch_efficiency if is_active else 1.0,
-                "bc":     sl.bank_conflicts_total if is_active else 0,
-                "_hl":    None,
-            })
+            src_rows.append(
+                {
+                    "_id": row_id,
+                    "ln": ln,
+                    "text": text,
+                    "active": is_active,
+                    "sid": _sid(sf, ln) if n_ptx > 0 else None,
+                    "n_ptx": n_ptx,
+                    "exec": sl.exec_count if is_active else 0,
+                    "eff": (
+                        sl.avg_branch_efficiency if is_active else 1.0
+                    ),
+                    "bc": sl.bank_conflicts_total if is_active else 0,
+                    "_hl": None,
+                }
+            )
             row_id += 1
 
     asm_rows: list[dict] = []
@@ -629,41 +652,50 @@ def _render_split_view(fn: FunctionReport, source_files: dict[str, list[str]]) -
             sid = _sid(sf, ln)
             src_key = (sf, ln)
             if src_key != prev_src_key:
-                asm_rows.append({
-                    "_id":       f"sep{row_id}",
-                    "is_sep":    True,
-                    "sep_label": f"{sf.split('/')[-1]}:{ln}",
-                    "pc": "", "ptx": "", "exec": 0, "eff": 1.0, "bc": 0,
-                    "sid": None, "active": False, "_hl": None,
-                })
+                asm_rows.append(
+                    {
+                        "_id": f"sep{row_id}",
+                        "is_sep": True,
+                        "sep_label": f"{sf.split('/')[-1]}:{ln}",
+                        "pc": "",
+                        "ptx": "",
+                        "exec": 0,
+                        "eff": 1.0,
+                        "bc": 0,
+                        "sid": None,
+                        "active": False,
+                        "_hl": None,
+                    }
+                )
                 prev_src_key = src_key
 
-        asm_rows.append({
-            "_id":    row_id,
-            "is_sep": False,
-            "pc":     f"0x{instr.pc:04x}",
-            "ptx":    instr.ptx_line or instr.instr_name,
-            "exec":   instr.issue_count,
-            "eff":    instr.avg_branch_efficiency,
-            "bc":     instr.bank_conflicts_total,
-            "sid":    sid,
-            "active": True,
-            "_hl":    None,
-        })
+        asm_rows.append(
+            {
+                "_id": row_id,
+                "is_sep": False,
+                "pc": f"0x{instr.pc:04x}",
+                "ptx": instr.ptx_line or instr.instr_name,
+                "exec": instr.issue_count,
+                "eff": instr.avg_branch_efficiency,
+                "bc": instr.bank_conflicts_total,
+                "sid": sid,
+                "active": True,
+                "_hl": None,
+            }
+        )
         row_id += 1
 
     kd = {
-        "src":        src_rows,
-        "asm":        asm_rows,
-        "hasBc":      fn.has_bank_conflicts,
-        "maxExec":    max_exec,
+        "src": src_rows,
+        "asm": asm_rows,
+        "hasBc": fn.has_bank_conflicts,
+        "maxExec": max_exec,
         "maxSrcExec": max_src_exec,
     }
     data_js = (
-        f'<script>window.KERNEL_DATA=window.KERNEL_DATA||{{}};'
-        f'window.KERNEL_DATA["{kid}"]={json.dumps(kd, ensure_ascii=False, separators=(",",":"))};</script>'
+        f"<script>window.KERNEL_DATA=window.KERNEL_DATA||{{}};"
+        f'window.KERNEL_DATA["{kid}"]={json.dumps(kd, ensure_ascii=False, separators=(",", ":"))};</script>'
     )
-
 
     src_panel = (
         f'<div class="sa-panel-hdr">Source</div>'
@@ -676,27 +708,31 @@ def _render_split_view(fn: FunctionReport, source_files: dict[str, list[str]]) -
 
     return (
         '<p class="sa-hint">'
-        'Hover to highlight correspondence &mdash; click to pin. '
-        'Drag the centre bar to resize panels; drag column edges to resize columns.'
-        '</p>'
+        "Hover to highlight correspondence &mdash; click to pin. "
+        "Drag the centre bar to resize panels; drag column edges to resize columns."
+        "</p>"
         f'<div class="sa-split" data-kid="{kid}">'
         f'<div class="sa-left"  id="{kid}-src-panel">{src_panel}</div>'
         f'<div class="sa-divider" title="Drag to resize"></div>'
         f'<div class="sa-right" id="{kid}-asm-panel">{asm_panel}</div>'
-        f'</div>'
-        f'{data_js}'
+        f"</div>"
+        f"{data_js}"
     )
 
 
-
-
-
-
 def _render_asm_table(fn: FunctionReport) -> str:
-    max_exec = max((i.issue_count for i in fn.instructions), default=1)
+    max_exec = max(
+        (i.issue_count for i in fn.instructions), default=1
+    )
     has_bc = fn.has_bank_conflicts
 
-    cols = ["PC", "Basic Block", "PTX Instruction", "Exec Count", "Branch Eff"]
+    cols = [
+        "PC",
+        "Basic Block",
+        "PTX Instruction",
+        "Exec Count",
+        "Branch Eff",
+    ]
     if has_bc:
         cols.append("Bank Conflicts")
 
@@ -708,8 +744,13 @@ def _render_asm_table(fn: FunctionReport) -> str:
         hot = instr.issue_count >= max_exec * 0.8
         rc = ' class="hot-row"' if hot else ""
 
-        exec_bar = _bar(instr.issue_count, max_exec, 70, _heat_rgb(instr.issue_count, 0, max_exec))
-        eff_bar  = _bar(eff, 1.0, 60, _efficiency_rgb(eff))
+        exec_bar = _bar(
+            instr.issue_count,
+            max_exec,
+            70,
+            _heat_rgb(instr.issue_count, 0, max_exec),
+        )
+        eff_bar = _bar(eff, 1.0, 60, _efficiency_rgb(eff))
         ptx_line = _esc(instr.ptx_line or instr.instr_name)
 
         cells = [
@@ -724,26 +765,30 @@ def _render_asm_table(fn: FunctionReport) -> str:
         if has_bc:
             bc = instr.bank_conflicts_total
             bc_c = "#d32f2f" if bc > 0 else "#388e3c"
-            cells.append(f'<td class="metric-cell" style="color:{bc_c}">{bc:,}</td>')
+            cells.append(
+                f'<td class="metric-cell" style="color:{bc_c}">{bc:,}</td>'
+            )
 
         rows.append(f"<tr{rc}>{''.join(cells)}</tr>")
 
     return (
         '<div class="table-scroll">'
         f'<table class="asm-table"><thead><tr>{thead}</tr></thead>'
-        f'<tbody>{"".join(rows)}</tbody></table></div>'
+        f"<tbody>{''.join(rows)}</tbody></table></div>"
     )
-
-
-
-
 
 
 def _render_hotspots(fn: FunctionReport) -> str:
     def _hot_table(title: str, instrs: list[InstrStats]) -> str:
         if not instrs:
             return ""
-        cols = ["PC", "PTX Instruction", "Exec Count", "Branch Eff", "Bank Conflicts"]
+        cols = [
+            "PC",
+            "PTX Instruction",
+            "Exec Count",
+            "Branch Eff",
+            "Bank Conflicts",
+        ]
         if fn.has_source:
             cols.insert(2, "Src")
         thead = "".join(f"<th>{c}</th>" for c in cols)
@@ -755,16 +800,16 @@ def _render_hotspots(fn: FunctionReport) -> str:
             cells = [
                 f'<td class="pc-cell">0x{instr.pc:04x}</td>',
                 f'<td class="instr-cell" title="{_esc(instr.ptx_line or instr.instr_name)}">'
-                f'{_esc(instr.ptx_line or instr.instr_name)}</td>',
+                f"{_esc(instr.ptx_line or instr.instr_name)}</td>",
             ]
             if fn.has_source:
-                cells.insert(1, f'<td>{instr.source_line or ""}</td>')
+                cells.insert(1, f"<td>{instr.source_line or ''}</td>")
             cells += [
                 f'<td><span class="bar-wrap">'
-                f'{_bar(instr.issue_count, max_exec, 60, _heat_rgb(instr.issue_count, 0, max_exec))}'
+                f"{_bar(instr.issue_count, max_exec, 60, _heat_rgb(instr.issue_count, 0, max_exec))}"
                 f'<span class="val">{_fmt_exec(instr.issue_count)}</span></span></td>',
                 f'<td><span class="bar-wrap">'
-                f'{_bar(eff, 1.0, 50, _efficiency_rgb(eff))}'
+                f"{_bar(eff, 1.0, 50, _efficiency_rgb(eff))}"
                 f'<span class="eff-pct">{_fmt_pct(eff)}</span></span></td>',
                 f'<td style="color:{"#d32f2f" if bc > 0 else "#388e3c"}">{bc:,}</td>',
             ]
@@ -773,35 +818,61 @@ def _render_hotspots(fn: FunctionReport) -> str:
             f"<h3>{title}</h3>"
             '<div class="table-scroll">'
             f'<table class="hot-table"><thead><tr>{thead}</tr></thead>'
-            f'<tbody>{"".join(rows)}</tbody></table></div>'
+            f"<tbody>{''.join(rows)}</tbody></table></div>"
         )
 
-    sections = [_hot_table("Top instructions by execution count", fn.hotspots_by_exec(10))]
+    sections = [
+        _hot_table(
+            "Top instructions by execution count",
+            fn.hotspots_by_exec(10),
+        )
+    ]
     div_hot = fn.hotspots_by_divergence(10)
     if div_hot:
-        sections.append(_hot_table("Most divergent (lowest branch efficiency)", div_hot))
+        sections.append(
+            _hot_table(
+                "Most divergent (lowest branch efficiency)", div_hot
+            )
+        )
     bc_hot = fn.hotspots_by_conflicts(10)
     if bc_hot:
-        sections.append(_hot_table("Instructions with most bank conflicts", bc_hot))
+        sections.append(
+            _hot_table(
+                "Instructions with most bank conflicts", bc_hot
+            )
+        )
 
-    return "\n".join(s for s in sections if s) or '<p class="empty">No hotspot data.</p>'
-
-
-
-
+    return (
+        "\n".join(s for s in sections if s)
+        or '<p class="empty">No hotspot data.</p>'
+    )
 
 
 def _render_itype_chart(fn: FunctionReport) -> str:
     counts: dict[str, int] = {}
     for i in fn.instructions:
-        counts[i.instr_name] = counts.get(i.instr_name, 0) + i.issue_count
+        counts[i.instr_name] = (
+            counts.get(i.instr_name, 0) + i.issue_count
+        )
     if not counts:
         return ""
     max_count = max(counts.values())
-    palette = ["#3f51b5","#e91e63","#009688","#ff5722","#607d8b",
-               "#9c27b0","#ff9800","#2196f3","#4caf50","#795548"]
+    palette = [
+        "#3f51b5",
+        "#e91e63",
+        "#009688",
+        "#ff5722",
+        "#607d8b",
+        "#9c27b0",
+        "#ff9800",
+        "#2196f3",
+        "#4caf50",
+        "#795548",
+    ]
     bars = []
-    for idx, (name, cnt) in enumerate(sorted(counts.items(), key=lambda x: -x[1])[:16]):
+    for idx, (name, cnt) in enumerate(
+        sorted(counts.items(), key=lambda x: -x[1])[:16]
+    ):
         h = max(2, int(60 * cnt / max_count))
         color = palette[idx % len(palette)]
         bars.append(
@@ -812,17 +883,29 @@ def _render_itype_chart(fn: FunctionReport) -> str:
     return f'<div class="itype-chart">{"".join(bars)}</div>'
 
 
-
-
-
-
 def _render_stat_pills(fn: FunctionReport) -> str:
     eff = fn.avg_branch_efficiency
     pills = [
-        ("Total Executions", _fmt_exec(fn.total_exec_count), "warp-instruction issues"),
-        ("Avg Branch Eff",   f"{eff*100:.1f}%", "higher is better (1.0 = fully converged)"),
-        ("Bank Conflicts",   f"{fn.total_bank_conflicts:,}", "shared memory bank conflicts"),
-        ("Unique PCs",       str(len(fn.instructions)), "distinct instructions profiled"),
+        (
+            "Total Executions",
+            _fmt_exec(fn.total_exec_count),
+            "warp-instruction issues",
+        ),
+        (
+            "Avg Branch Eff",
+            f"{eff * 100:.1f}%",
+            "higher is better (1.0 = fully converged)",
+        ),
+        (
+            "Bank Conflicts",
+            f"{fn.total_bank_conflicts:,}",
+            "shared memory bank conflicts",
+        ),
+        (
+            "Unique PCs",
+            str(len(fn.instructions)),
+            "distinct instructions profiled",
+        ),
     ]
     parts = []
     for label, value, sub in pills:
@@ -831,41 +914,55 @@ def _render_stat_pills(fn: FunctionReport) -> str:
             f'<div class="label">{_esc(label)}</div>'
             f'<div class="value">{_esc(value)}</div>'
             f'<div class="sub">{_esc(sub)}</div>'
-            f'</div>'
+            f"</div>"
         )
     return f'<div class="stat-grid">{"".join(parts)}</div>'
 
 
-
-
-
-
-def _render_kernel_section(fn: FunctionReport, source_files: dict[str, list[str]]) -> str:
+def _render_kernel_section(
+    fn: FunctionReport, source_files: dict[str, list[str]]
+) -> str:
     kid = _kernel_id(fn)
     has_src = fn.has_source
 
     badges = []
     eff = fn.avg_branch_efficiency
     if eff < 0.9:
-        badges.append(f'<span class="badge danger">Avg eff {_fmt_pct(eff)}</span>')
+        badges.append(
+            f'<span class="badge danger">Avg eff {
+                _fmt_pct(eff)}</span>')
     if fn.total_bank_conflicts > 0:
-        badges.append(f'<span class="badge warn">{fn.total_bank_conflicts:,} bank conflicts</span>')
+        badges.append(
+            f'<span class="badge warn">{
+                fn.total_bank_conflicts:,    } bank conflicts</span>')
 
     if has_src:
-        tabs = [("stats", "Stats"), ("split", "Source \u2194 Assembly"), ("hot", "Hotspots")]
+        tabs = [
+            ("stats", "Stats"),
+            ("split", "Source \u2194 Assembly"),
+            ("hot", "Hotspots"),
+        ]
     else:
-        tabs = [("stats", "Stats"), ("asm", "Assembly"), ("hot", "Hotspots")]
+        tabs = [
+            ("stats", "Stats"),
+            ("asm", "Assembly"),
+            ("hot", "Hotspots"),
+        ]
 
     tab_btns = "".join(
         f'<button class="tab-btn{"  active" if i == 0 else ""}" '
-        f'data-tab="{tab}" onclick="switchTab(\'{kid}\',\'{tab}\')">{label}</button>'
+        f"data-tab=\"{tab}\" onclick=\"switchTab('{kid}','{tab}')\">{label}</button>"
         for i, (tab, label) in enumerate(tabs)
     )
 
     itype = _render_itype_chart(fn)
-    stats_content = (
-        _render_stat_pills(fn)
-        + (('<h3>Instruction type distribution (by exec count)</h3>' + itype) if itype else '')
+    stats_content = _render_stat_pills(fn) + (
+        (
+            "<h3>Instruction type distribution (by exec count)</h3>"
+            + itype
+        )
+        if itype
+        else ""
     )
 
     tab_panes = []
@@ -879,7 +976,8 @@ def _render_kernel_section(fn: FunctionReport, source_files: dict[str, list[str]
             content = _render_asm_table(fn)
         else:
             content = _render_hotspots(fn)
-        tab_panes.append(f'<div id="{kid}-tab-{tab}" class="tab-pane{active}">{content}</div>')
+        tab_panes.append(
+            f'<div id="{kid}-tab-{tab}" class="tab-pane{active}">{content}</div>')
 
     return f"""
 <section class="card kernel-section" id="{kid}">
@@ -895,10 +993,6 @@ def _render_kernel_section(fn: FunctionReport, source_files: dict[str, list[str]
 """
 
 
-
-
-
-
 def _render_summary(report: Report) -> str:
     rows = []
     for fn in report.functions:
@@ -908,17 +1002,17 @@ def _render_summary(report: Report) -> str:
         bc = fn.total_bank_conflicts
         src_indicator = "\u2713" if fn.has_source else "\u2014"
         rows.append(
-            f'<tr onclick="showKernel(\'{kid}\')">'
+            f"<tr onclick=\"showKernel('{kid}')\">"
             f'<td style="text-align:center;font-weight:600">{fn.launch_id}</td>'
             f'<td class="name-cell" title="{_esc(fn.name)}">'
-            f'<b>{_esc(fn.demangled_name)}</b><br>'
+            f"<b>{_esc(fn.demangled_name)}</b><br>"
             f'<span style="color:#aaa;font-size:11px">{_esc(fn.name)}</span></td>'
-            f'<td>{_fmt_exec(fn.total_exec_count)}</td>'
+            f"<td>{_fmt_exec(fn.total_exec_count)}</td>"
             f'<td><span style="color:{eff_color};font-weight:600">{_fmt_pct(eff)}</span></td>'
-            f'<td>{"&mdash;" if bc == 0 else f"<b style=color:#d32f2f>{bc:,}</b>"}</td>'
-            f'<td>{src_indicator}</td>'
-            f'<td>{len(fn.instructions)}</td>'
-            f'</tr>'
+            f"<td>{'&mdash;' if bc == 0 else f'<b style=color:#d32f2f>{bc:,}</b>'}</td>"
+            f"<td>{src_indicator}</td>"
+            f"<td>{len(fn.instructions)}</td>"
+            f"</tr>"
         )
     return f"""
 <section class="card" id="summary-section">
@@ -937,18 +1031,18 @@ def _render_summary(report: Report) -> str:
 """
 
 
-
-
-
-
 def render_html(report: Report) -> str:
     kernel_sections = "\n".join(
-        _render_kernel_section(fn, report.source_files) for fn in report.functions
+        _render_kernel_section(fn, report.source_files)
+        for fn in report.functions
     )
     summary = _render_summary(report)
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     n_kernels = len(report.functions)
-    n_records = sum(sum(i.issue_count for i in fn.instructions) for fn in report.functions)
+    n_records = sum(
+        sum(i.issue_count for i in fn.instructions)
+        for fn in report.functions
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -962,7 +1056,8 @@ def render_html(report: Report) -> str:
 <body>
 <header>
   <h1>{_esc(report.title)}</h1>
-  <span class="meta">{n_kernels} kernel(s) &middot; {_fmt_exec(n_records)} executions &middot; generated {_esc(ts)}</span>
+  <span class="meta">{n_kernels} kernel(s) &middot; {_fmt_exec(n_records)} executions
+  &middot; generated {_esc(ts)}</span>
 </header>
 <div class="container">
 {summary}

@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-
-# [19:47:48.689] [PC: 0x0000000000000004]  Block: [0, 0, 0] WarpId: 12 Execution Mask 0x0000ffff ld branch_efficiency: 1.0000, bank_conflicts: 0
+# [19:47:48.689] [PC: 0x0000000000000004]  Block: [0, 0, 0] WarpId: 12
+# Execution Mask 0x0000ffff ld branch_efficiency: 1.0000,
+# bank_conflicts: 0
 _RECORD_RE = re.compile(
     r"\[(\d{2}:\d{2}:\d{2}\.\d{3})\] "
     r"\[PC: 0x([0-9a-fA-F]+)\]  "
@@ -69,20 +70,32 @@ def parse_profiling(text: str) -> list[ProfilingRecord]:
         if not m:
             continue
 
-        ts, pc_hex, bx, by, bz, wid, mask_hex, instr_name, metrics_str = m.groups()
+        (
+            ts,
+            pc_hex,
+            bx,
+            by,
+            bz,
+            wid,
+            mask_hex,
+            instr_name,
+            metrics_str,
+        ) = m.groups()
         metrics = {k: v for k, v in _METRIC_RE.findall(metrics_str)}
 
-        records.append(ProfilingRecord(
-            timestamp=ts,
-            pc=int(pc_hex, 16),
-            block=(int(bx), int(by), int(bz)),
-            warp_id=int(wid),
-            execution_mask=int(mask_hex, 16),
-            function_name=cur_function,
-            basic_block=cur_bb,
-            instr_name=instr_name,
-            launch_id=cur_launch_id,
-            metrics=metrics,
-        ))
+        records.append(
+            ProfilingRecord(
+                timestamp=ts,
+                pc=int(pc_hex, 16),
+                block=(int(bx), int(by), int(bz)),
+                warp_id=int(wid),
+                execution_mask=int(mask_hex, 16),
+                function_name=cur_function,
+                basic_block=cur_bb,
+                instr_name=instr_name,
+                launch_id=cur_launch_id,
+                metrics=metrics,
+            )
+        )
 
     return records

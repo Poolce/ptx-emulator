@@ -1,5 +1,3 @@
-"""Aggregate raw profiling records into per-PC and per-source-line statistics."""
-
 from __future__ import annotations
 
 import subprocess
@@ -16,11 +14,14 @@ class InstrStats:
     function_name: str
     basic_block: str
     instr_name: str
-    exec_count: int = 0        # thread-weighted: sum of active threads across all warp passes
-    issue_count: int = 0       # number of warp instruction issues (passes through this PC)
+    exec_count: int = (
+        0
+    )
+    issue_count: int = (
+        0
+    )
     branch_efficiency_sum: float = 0.0
     bank_conflicts_total: int = 0
-    # Filled in from PTX module (if provided)
     ptx_line: str = ""
     source_file: Optional[str] = None
     source_line: Optional[int] = None
@@ -28,11 +29,19 @@ class InstrStats:
 
     @property
     def avg_branch_efficiency(self) -> float:
-        return self.branch_efficiency_sum / self.issue_count if self.issue_count > 0 else 1.0
+        return (
+            self.branch_efficiency_sum / self.issue_count
+            if self.issue_count > 0
+            else 1.0
+        )
 
     @property
     def avg_bank_conflicts(self) -> float:
-        return self.bank_conflicts_total / self.issue_count if self.issue_count > 0 else 0.0
+        return (
+            self.bank_conflicts_total / self.issue_count
+            if self.issue_count > 0
+            else 0.0
+        )
 
 
 @dataclass
@@ -46,15 +55,21 @@ class SourceLineStats:
 
     @property
     def avg_branch_efficiency(self) -> float:
-        return self.branch_efficiency_sum / self.pc_count if self.pc_count > 0 else 1.0
+        return (
+            self.branch_efficiency_sum / self.pc_count
+            if self.pc_count > 0
+            else 1.0
+        )
 
 
 @dataclass
 class FunctionReport:
     name: str
     demangled_name: str
-    instructions: list[InstrStats]  # sorted by PC
-    source_lines: dict[str, dict[int, SourceLineStats]]  # file -> {line -> stats}
+    instructions: list[InstrStats]
+    source_lines: dict[
+        str, dict[int, SourceLineStats]
+    ]
     total_exec_count: int = 0
     branch_efficiency_sum: float = 0.0
     total_bank_conflicts: int = 0
@@ -63,33 +78,52 @@ class FunctionReport:
     @property
     def avg_branch_efficiency(self) -> float:
         count = sum(i.issue_count for i in self.instructions)
-        return self.branch_efficiency_sum / count if count > 0 else 1.0
+        return (
+            self.branch_efficiency_sum / count if count > 0 else 1.0
+        )
 
     @property
     def has_source(self) -> bool:
-        return any(i.source_line is not None for i in self.instructions)
+        return any(
+            i.source_line is not None for i in self.instructions
+        )
 
     @property
     def has_bank_conflicts(self) -> bool:
         return self.total_bank_conflicts > 0
 
     def hotspots_by_exec(self, n: int = 10) -> list[InstrStats]:
-        return sorted(self.instructions, key=lambda i: i.exec_count, reverse=True)[:n]
+        return sorted(
+            self.instructions,
+            key=lambda i: i.exec_count,
+            reverse=True,
+        )[:n]
 
     def hotspots_by_divergence(self, n: int = 10) -> list[InstrStats]:
-        divergent = [i for i in self.instructions if i.issue_count > 0 and i.avg_branch_efficiency < 1.0]
-        return sorted(divergent, key=lambda i: i.avg_branch_efficiency)[:n]
+        divergent = [
+            i
+            for i in self.instructions
+            if i.issue_count > 0 and i.avg_branch_efficiency < 1.0
+        ]
+        return sorted(
+            divergent, key=lambda i: i.avg_branch_efficiency
+        )[:n]
 
     def hotspots_by_conflicts(self, n: int = 10) -> list[InstrStats]:
-        conflicted = [i for i in self.instructions if i.bank_conflicts_total > 0]
-        return sorted(conflicted, key=lambda i: i.bank_conflicts_total, reverse=True)[:n]
+        conflicted = [
+            i for i in self.instructions if i.bank_conflicts_total > 0
+        ]
+        return sorted(
+            conflicted,
+            key=lambda i: i.bank_conflicts_total,
+            reverse=True,
+        )[:n]
 
 
 @dataclass
 class Report:
     functions: list[FunctionReport]
     title: str = "PTX Emulator Profile Report"
-    # source_file_path -> lines list (index 0 unused, 1-based)
     source_files: dict[str, list[str]] = field(default_factory=dict)
 
 
@@ -97,7 +131,9 @@ def _demangle(name: str) -> str:
     try:
         r = subprocess.run(
             ["c++filt", name],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if r.returncode == 0:
             result = r.stdout.strip()
@@ -112,9 +148,6 @@ def aggregate(
     records: list[ProfilingRecord],
     ptx: Optional[PtxModule] = None,
 ) -> Report:
-    """Build a Report from flat profiling records, optionally enriched with PTX info."""
-
-    # Group records by (launch_id, function_name)
     launch_func_pcs: dict[tuple[int, str], dict[int, InstrStats]] = {}
 
     for rec in records:
@@ -149,7 +182,6 @@ def aggregate(
             except ValueError:
                 pass
 
-    # Enrich with PTX info
     if ptx:
         for (_, fn), pc_map in launch_func_pcs.items():
             for pc, stats in pc_map.items():
@@ -160,7 +192,6 @@ def aggregate(
                     stats.source_line = ptx_instr.source_line
                     stats.source_col = ptx_instr.source_col
 
-    # Build per-source-line aggregates
     function_reports: list[FunctionReport] = []
 
     for (launch_id, fn), pc_map in launch_func_pcs.items():
@@ -184,7 +215,9 @@ def aggregate(
                     )
                 sl = source_lines[sf][ln]
                 sl.exec_count += instr.issue_count
-                sl.branch_efficiency_sum += instr.branch_efficiency_sum
+                sl.branch_efficiency_sum += (
+                    instr.branch_efficiency_sum
+                )
                 sl.bank_conflicts_total += instr.bank_conflicts_total
                 sl.pc_count += instr.issue_count
 
@@ -192,18 +225,23 @@ def aggregate(
         be_sum = sum(i.branch_efficiency_sum for i in instructions)
         bc_total = sum(i.bank_conflicts_total for i in instructions)
 
-        function_reports.append(FunctionReport(
-            name=fn,
-            demangled_name=_demangle(fn),
-            instructions=instructions,
-            source_lines=source_lines,
-            total_exec_count=total_exec,
-            branch_efficiency_sum=be_sum,
-            total_bank_conflicts=bc_total,
-            launch_id=launch_id,
-        ))
+        function_reports.append(
+            FunctionReport(
+                name=fn,
+                demangled_name=_demangle(fn),
+                instructions=instructions,
+                source_lines=source_lines,
+                total_exec_count=total_exec,
+                branch_efficiency_sum=be_sum,
+                total_bank_conflicts=bc_total,
+                launch_id=launch_id,
+            )
+        )
 
-    # Sort by launch_id then total exec count descending
-    function_reports.sort(key=lambda f: (f.launch_id, -f.total_exec_count))
+    function_reports.sort(
+        key=lambda f: (f.launch_id, -f.total_exec_count)
+    )
     source_files = dict(ptx.source_files) if ptx else {}
-    return Report(functions=function_reports, source_files=source_files)
+    return Report(
+        functions=function_reports, source_files=source_files
+    )
