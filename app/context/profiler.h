@@ -35,6 +35,7 @@ class Profiler
     static Profiler& instance();
 
     bool IsEnabled() const { return enabled_; }
+    void BeginLaunch(const std::string& func_name);
     void Flush(const WarpProfilingBuffer& buf);
 
   private:
@@ -46,6 +47,7 @@ class Profiler
     bool enabled_ = false;
     std::ofstream output_;
     std::mutex mutex_;
+    uint32_t launch_counter_ = 0;
 };
 
 } // namespace Emulator

@@ -1,4 +1,5 @@
 #include "cuda_runtime.h"
+#include "cuemu_io.h"
 
 #include <cassert>
 #include <cmath>
@@ -7,12 +8,9 @@
 
 #define CHECK_ERROR(x) assert(x == cudaError_t::cudaSuccess)
 
-// Attention dimensions
-constexpr int S = 32; // sequence length
-constexpr int D = 32; // head dimension  (d_k = d_v = D)
+constexpr int S = 32;
+constexpr int D = 32;
 
-// ── Kernel 1: matmul (from mmul_custom) ──────────────────────────────────────
-// C[M×N] = A[M×K] * B[K×N]
 template <int block_size>
 __global__ void matmul(const float* A, int K, const float* B, int N, float* C)
 {
@@ -26,9 +24,6 @@ __global__ void matmul(const float* A, int K, const float* B, int N, float* C)
     C[row * N + col] = acc;
 }
 
-// ── Kernel 2: scale + softmax (from softmax_custom) ──────────────────────────
-// Each block = 1 warp processes one row of length block_size.
-// Multiplies each element by inv_scale before computing softmax.
 template <int block_size>
 __global__ void scale_softmax(const float* input, float* output, float inv_scale)
 {
@@ -37,15 +32,12 @@ __global__ void scale_softmax(const float* input, float* output, float inv_scale
 
     float val = expf(input[row * block_size + tid] * inv_scale);
 
-    // Butterfly reduction: after the loop every lane holds the full warp sum
     float sum = val;
     for (int offset = block_size / 2; offset > 0; offset >>= 1)
         sum += __shfl_xor_sync(0xFFFFFFFFu, sum, offset);
 
     output[row * block_size + tid] = val / sum;
 }
-
-// ── CPU helpers ───────────────────────────────────────────────────────────────
 
 static void cpu_matmul(const float* A, int M, int K, const float* B, int N, float* C)
 {
@@ -91,28 +83,16 @@ static float next_val(unsigned& state)
 
 int main()
 {
-    // Q, K, V: [S × D]
     std::vector<float> Q(S * D);
     std::vector<float> K(S * D);
     std::vector<float> V(S * D);
-    // Kt = K^T: [D × S]  (pre-transposed on CPU before upload)
     std::vector<float> Kt(D * S);
 
     unsigned state = 0xC0FFEE42u;
-    for (auto& v : Q)
-    {
-        v = next_val(state);
-    }
-    for (auto& v : K)
-    {
-        v = next_val(state);
-    }
-    for (auto& v : V)
-    {
-        v = next_val(state);
-    }
+    cuemu_io::generate<float>("Q", Q, [&](size_t) { return next_val(state); });
+    cuemu_io::generate<float>("K", K, [&](size_t) { return next_val(state); });
+    cuemu_io::generate<float>("V", V, [&](size_t) { return next_val(state); });
 
-    // Transpose K: Kt[d][i] = K[i][d]
     for (int i = 0; i < S; ++i)
     {
         for (int d = 0; d < D; ++d)
@@ -121,7 +101,6 @@ int main()
         }
     }
 
-    // ── GPU buffers ───────────────────────────────────────────────────────────
     float *gpuQ, *gpuKt, *gpuV, *gpuScores, *gpuAttn, *gpuOut;
     CHECK_ERROR(cudaMalloc((void**)&gpuQ, S * D * sizeof(float)));
     CHECK_ERROR(cudaMalloc((void**)&gpuKt, D * S * sizeof(float)));
@@ -134,17 +113,13 @@ int main()
     CHECK_ERROR(cudaMemcpy(gpuKt, Kt.data(), D * S * sizeof(float), cudaMemcpyHostToDevice));
     CHECK_ERROR(cudaMemcpy(gpuV, V.data(), S * D * sizeof(float), cudaMemcpyHostToDevice));
 
-    // ── Attention forward pass ────────────────────────────────────────────────
     constexpr int bs = 32;
     const float inv_scale = 1.0f / std::sqrt(static_cast<float>(D));
 
-    // Step 1: scores[S×S] = Q[S×D] * Kt[D×S]
     matmul<bs><<<dim3(S / bs, S / bs), dim3(bs, bs)>>>(gpuQ, D, gpuKt, S, gpuScores);
 
-    // Step 2: attn[S×S] = softmax(scores / sqrt(D))  — one warp per row
     scale_softmax<bs><<<S, bs>>>(gpuScores, gpuAttn, inv_scale);
 
-    // Step 3: out[S×D] = attn[S×S] * V[S×D]
     matmul<bs><<<dim3(D / bs, S / bs), dim3(bs, bs)>>>(gpuAttn, S, gpuV, D, gpuOut);
 
     cudaDeviceSynchronize();
@@ -161,7 +136,6 @@ int main()
     CHECK_ERROR(cudaFree(gpuAttn));
     CHECK_ERROR(cudaFree(gpuOut));
 
-    // ── CPU reference ─────────────────────────────────────────────────────────
     std::vector<float> ref_scores(S * S);
     std::vector<float> ref_attn(S * S);
     std::vector<float> ref_out(S * D);
@@ -170,11 +144,9 @@ int main()
     cpu_scale_softmax(ref_scores.data(), ref_attn.data(), S, S, inv_scale);
     cpu_matmul(ref_attn.data(), S, S, V.data(), D, ref_out.data());
 
-    // ── Verification ──────────────────────────────────────────────────────────
     constexpr float tol = 1e-3f;
     bool ok = true;
 
-    // Check final output
     for (int i = 0; i < S && ok; ++i)
     {
         for (int j = 0; j < D; ++j)
@@ -192,7 +164,6 @@ int main()
         }
     }
 
-    // Check attention rows sum to 1
     for (int r = 0; r < S && ok; ++r)
     {
         float row_sum = 0.0f;
@@ -205,11 +176,6 @@ int main()
             std::cerr << "FAIL: attn row " << r << " sums to " << row_sum << "\n";
             ok = false;
         }
-    }
-
-    if (ok)
-    {
-        std::cout << "OK: attention [" << S << "x" << D << "] verified against CPU reference\n";
     }
 
     return ok ? 0 : 1;

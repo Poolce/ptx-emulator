@@ -29,6 +29,11 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
         gpu_context->Init(ptx_module_, gridDim, blockDim, args, sharedMem);
         gpu_context->SetEntryFunction(func);
 
+        if (Profiler::instance().IsEnabled())
+        {
+            Profiler::instance().BeginLaunch(func);
+        }
+
         auto start = std::chrono::high_resolution_clock::now();
         for (auto& block : gpu_context->GetBlocks())
         {
@@ -46,6 +51,15 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
                 }
                 while (warp->isActive())
                 {
+                    // PDOM reconvergence: if the taken (if) path reached the IPDOM
+                    // by falling through (no explicit bra), restore the merged mask.
+                    while (!warp->execution_stack.empty() && warp->execution_stack.top().is_convergence &&
+                           warp->execution_stack.top().pc == warp->pc)
+                    {
+                        warp->execution_mask = warp->execution_stack.top().mask;
+                        warp->execution_stack.pop();
+                    }
+
                     auto instr = gpu_context->GetInstruction(warp->pc);
                     if (!instr)
                     {

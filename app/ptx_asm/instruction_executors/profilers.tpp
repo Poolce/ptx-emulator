@@ -3,6 +3,7 @@
 #pragma once
 
 #include "profiler.h"
+#include "gpu_config.h"
 
 #include <algorithm>
 #include <bit>
@@ -21,14 +22,20 @@ inline std::string FormatFloat(float v)
     return oss.str();
 }
 
-inline float ComputeBranchEfficiency(const Instruction& /*instr*/,
+inline float ComputeBranchEfficiency(const Instruction& instr,
                                      uint32_t orig_mask,
                                      const std::shared_ptr<WarpContext>& wc)
 {
+    const auto warp_size = static_cast<uint32_t>(GpuConfig::instance().warp_size);
     const auto active = static_cast<uint32_t>(std::popcount(orig_mask));
     if (active == 0)
     {
         return 0.0f;
+    }
+    if (!instr.HasExplicitPredicate())
+    {
+        // No explicit predicate: inactive lanes are idle due to prior divergence
+        return static_cast<float>(active) / static_cast<float>(warp_size);
     }
     const auto on_path = static_cast<uint32_t>(std::popcount(wc->execution_mask & orig_mask));
     const auto off_path = active - on_path;

@@ -30,6 +30,7 @@ class ProfilingRecord:
     function_name: str
     basic_block: str
     instr_name: str
+    launch_id: int = 0
     metrics: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -42,9 +43,20 @@ def parse_profiling(text: str) -> list[ProfilingRecord]:
     records: list[ProfilingRecord] = []
     cur_function = ""
     cur_bb = ""
+    cur_launch_id = 0
 
     for raw in text.splitlines():
         line = raw.rstrip()
+        if line.startswith("Launch "):
+            parts = line.split(" ", 2)
+            if len(parts) >= 2:
+                try:
+                    cur_launch_id = int(parts[1])
+                except ValueError:
+                    pass
+            cur_function = ""
+            cur_bb = ""
+            continue
         if line.startswith("Function "):
             cur_function = line[len("Function "):]
             cur_bb = ""
@@ -69,6 +81,7 @@ def parse_profiling(text: str) -> list[ProfilingRecord]:
             function_name=cur_function,
             basic_block=cur_bb,
             instr_name=instr_name,
+            launch_id=cur_launch_id,
             metrics=metrics,
         ))
 

@@ -73,6 +73,16 @@ void WarpContext::gotoBasicBlock(const std::string& sym)
     pc = block_context->GetBasicBlockOffset(cur_function, sym);
 }
 
+uint64_t WarpContext::GetBasicBlockPc(const std::string& sym) const
+{
+    auto block_context = block_context_.lock();
+    if (!block_context)
+    {
+        return EOC;
+    }
+    return block_context->GetBasicBlockOffset(cur_function, sym);
+}
+
 void* WarpContext::getParamPtr(const std::string& name)
 {
     auto block_context = block_context_.lock();

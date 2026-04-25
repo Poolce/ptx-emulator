@@ -1,4 +1,5 @@
 #include "cuda_runtime.h"
+#include "cuemu_io.h"
 
 #include <cassert>
 #include <cmath>
@@ -51,7 +52,6 @@ static void launch_cuda_mmul(const double* A,
     CHECK_ERROR(cudaFree(gpuC));
 }
 
-// CPU reference: naive O(M*K*N) matmul
 static void cpu_mmul(const double* A, std::size_t M, std::size_t K, const double* B, std::size_t N, double* C)
 {
     for (std::size_t i = 0; i < M; ++i)
@@ -68,7 +68,6 @@ static void cpu_mmul(const double* A, std::size_t M, std::size_t K, const double
     }
 }
 
-// Simple LCG — no dependency on <random> or srand
 static double next_val(unsigned& state)
 {
     state = state * 1664525u + 1013904223u;
@@ -77,9 +76,9 @@ static double next_val(unsigned& state)
 
 int main()
 {
-    constexpr std::size_t M = 128; // rows of A / rows of C
-    constexpr std::size_t K = 128; // cols of A / rows of B
-    constexpr std::size_t N = 128; // cols of B / cols of C
+    constexpr std::size_t M = 128;
+    constexpr std::size_t K = 128;
+    constexpr std::size_t N = 128;
 
     std::vector<double> A(M * K);
     std::vector<double> B(K * N);
@@ -87,19 +86,12 @@ int main()
     std::vector<double> ref(M * N, 0.0);
 
     unsigned state = 0xDEADBEEFu;
-    for (auto& v : A)
-    {
-        v = next_val(state);
-    }
-    for (auto& v : B)
-    {
-        v = next_val(state);
-    }
+    cuemu_io::generate<double>("A", A, [&](size_t) { return next_val(state); });
+    cuemu_io::generate<double>("B", B, [&](size_t) { return next_val(state); });
 
     launch_cuda_mmul(A.data(), M, K, B.data(), K, N, C.data());
     cpu_mmul(A.data(), M, K, B.data(), N, ref.data());
 
-    // For K=64 double accumulations ~1e-10 relative error is safe
     constexpr double tol = 1e-9;
     bool ok = true;
 
@@ -117,11 +109,6 @@ int main()
                 ok = false;
             }
         }
-    }
-
-    if (ok)
-    {
-        std::cout << "OK: " << M << "x" << K << " * " << K << "x" << N << " matmul verified against CPU reference\n";
     }
 
     return ok ? 0 : 1;

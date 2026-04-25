@@ -1,4 +1,5 @@
 #include "cuda_runtime.h"
+#include "cuemu_io.h"
 
 #include <cassert>
 #include <cmath>
@@ -73,9 +74,7 @@ int main()
     std::vector<float> out(rows * cols, 0.0f);
     std::vector<float> ref(rows * cols, 0.0f);
 
-    // Values linearly spread over [-2, 2]
-    for (int i = 0; i < rows * cols; ++i)
-        in[i] = -2.0f + 4.0f * float(i) / float(rows * cols - 1);
+    cuemu_io::generate<float>("in", in, [&](size_t i) { return -2.0f + 4.0f * float(i) / float(rows * cols - 1); });
 
     launch_cuda_softmax(in.data(), out.data(), rows);
     cpu_softmax(in.data(), ref.data(), rows, cols);
@@ -95,7 +94,6 @@ int main()
         }
     }
 
-    // Each row must sum to 1
     for (int r = 0; r < rows && ok; ++r)
     {
         float row_sum = 0.0f;
@@ -107,9 +105,6 @@ int main()
             ok = false;
         }
     }
-
-    if (ok)
-        std::cout << "OK: all " << rows << " rows pass softmax verification\n";
 
     return ok ? 0 : 1;
 }

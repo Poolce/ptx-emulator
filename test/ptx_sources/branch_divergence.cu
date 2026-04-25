@@ -1,3 +1,5 @@
+#include "cuemu_io.h"
+
 #include <cuda_runtime.h>
 
 #include <cassert>
@@ -86,8 +88,7 @@ int main()
     static constexpr int BLOCK = 32;
 
     float h_in[N];
-    for (int i = 0; i < N; ++i)
-        h_in[i] = (static_cast<float>(i) - 15.5f) * 0.05f;
+    cuemu_io::generate<float>("in", h_in, N, [](size_t i) { return (static_cast<float>(i) - 15.5f) * 0.05f; });
 
     float h_ref_div[N], h_ref_conv[N];
     for (int i = 0; i < N; ++i)
@@ -128,12 +129,5 @@ int main()
             ok = false;
         }
     }
-
-    std::printf("%s: branch_divergence — divergent vs. convergent kernel (%d threads, 1 warp)\n"
-                "  Profile with:  ptx_profiler ./branch_divergence\n"
-                "  Expect:  kernel_divergent   → branch efficiency ≈ 50%% (16/16 lane split)\n"
-                "           kernel_convergent  → branch efficiency = 100%% (no divergence)\n",
-                ok ? "OK" : "FAIL",
-                N);
     return ok ? 0 : 1;
 }

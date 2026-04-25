@@ -1,5 +1,7 @@
 // nvcc VectorAdd.cu --ptx
 
+#include "cuemu_io.h"
+
 #include <cuda_runtime.h>
 
 #include <cstdint>
@@ -24,11 +26,8 @@ int main()
     float* h_b = new float[n];
     float* h_c = new float[n];
 
-    for (int i = 0; i < n; i++)
-    {
-        h_a[i] = i / 10.0f;
-        h_b[i] = i / 10.0f;
-    }
+    cuemu_io::generate<float>("a", h_a, n, [](size_t i) { return float(i) / 10.0f; });
+    cuemu_io::generate<float>("b", h_b, n, [](size_t i) { return float(i) / 10.0f; });
 
     float *d_a, *d_b, *d_c;
     cudaMalloc(&d_a, size);

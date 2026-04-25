@@ -609,7 +609,7 @@ TEST(RetExecutor, NonEmptyStackRestoresState)
     auto wc = makeWarp();
     wc->pc = 10;
     wc->execution_mask = 0xF;
-    wc->execution_stack.push({42U, 0x3U});
+    wc->execution_stack.push({42U, 0x3U, /*is_convergence=*/false});
 
     auto instr = retInstruction::Make("ret;");
     instr->Execute(wc);
@@ -637,24 +637,24 @@ TEST(BraExecutor, NoBranchTakenIncrementsPC)
 
 TEST(BraExecutor, DivergentBranchPushesStack)
 {
-    // 2 threads active: thread 0 predicate true, thread 1 false
+    // 2 threads active: thread 0 predicate true (takes branch), thread 1 false (fall-through).
+    // Taken-first model: fall-through is saved on the stack; taken path executes now.
+    // gotoBasicBlock throws (no block context), so Execute throws after the push.
     auto wc = makeWarp(0x3);
     wc->pc = 10;
-    wc->thread_regs[0][registerType::P][0] = 1; // branch
-    wc->thread_regs[1][registerType::P][0] = 0; // fall-through
+    wc->thread_regs[0][registerType::P][0] = 1; // branching thread
+    wc->thread_regs[1][registerType::P][0] = 0; // fall-through thread
 
-    // We can't call gotoBasicBlock (no block context), so just verify
-    // that the execution stack is pushed and mask is updated.
-    // Use a try/catch since gotoBasicBlock will throw (expired block_context).
     auto instr = braInstruction::Make("@%p0 bra $TARGET;");
     EXPECT_THROW(instr->Execute(wc), std::runtime_error);
 
-    // The stack push happens before gotoBasicBlock, so state should reflect it
+    // Fall-through path saved on stack; taken (branch) mask executing.
     EXPECT_FALSE(wc->execution_stack.empty());
-    auto [saved_pc, saved_mask] = wc->execution_stack.top();
-    EXPECT_EQ(saved_pc, 11U);            // fall-through pc = 10+1
-    EXPECT_EQ(saved_mask, 0x2U);         // bit 1 = fall-through thread
-    EXPECT_EQ(wc->execution_mask, 0x1U); // only branching thread remains
+    const auto& frame = wc->execution_stack.top();
+    EXPECT_FALSE(frame.is_convergence);
+    EXPECT_EQ(frame.pc, 11U);            // fall-through pc = 10+1
+    EXPECT_EQ(frame.mask, 0x2U);         // fall-through thread saved
+    EXPECT_EQ(wc->execution_mask, 0x1U); // taken thread executing
 }
 
 TEST(BraExecutor, UnconditionalBranchNoPredicateThrowsWithoutContext)

@@ -32,6 +32,17 @@ Profiler::Profiler()
     enabled_ = true;
 }
 
+void Profiler::BeginLaunch(const std::string& func_name)
+{
+    if (!enabled_)
+    {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mutex_);
+    output_ << "Launch " << launch_counter_++ << " " << func_name << "\n";
+    output_.flush();
+}
+
 void Profiler::Flush(const WarpProfilingBuffer& buf)
 {
     if (buf.empty())

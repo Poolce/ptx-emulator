@@ -1,3 +1,5 @@
+#include "cuemu_io.h"
+
 #include <cuda_runtime.h>
 
 #include <cassert>
@@ -6,13 +8,13 @@
 
 #define CHECK(x) assert((x) == cudaSuccess)
 
-static constexpr int TILE = 32; // warp width == bank count
+static constexpr int TILE = 32;
 
 __global__ void row_reduce_conflicted(const float* __restrict__ in, float* __restrict__ out)
 {
     __shared__ float smem[TILE * TILE];
 
-    int tid = threadIdx.x; // 0 .. TILE-1
+    int tid = threadIdx.x;
 
     for (int i = 0; i < TILE; ++i)
         smem[tid * TILE + i] = in[tid * TILE + i];
@@ -27,7 +29,7 @@ __global__ void row_reduce_conflicted(const float* __restrict__ in, float* __res
 
 __global__ void row_reduce_free(const float* __restrict__ in, float* __restrict__ out)
 {
-    __shared__ float smem_pad[TILE * (TILE + 1)]; // +1 pad per row
+    __shared__ float smem_pad[TILE * (TILE + 1)];
 
     int tid = threadIdx.x;
 
@@ -58,8 +60,7 @@ int main()
     static constexpr int N = TILE * TILE;
 
     float h_in[N];
-    for (int i = 0; i < N; ++i)
-        h_in[i] = static_cast<float>(i % 7) - 3.f;
+    cuemu_io::generate<float>("in", h_in, N, [](size_t i) { return static_cast<float>(i % 7) - 3.f; });
 
     float h_ref[TILE];
     cpu_row_reduce(h_in, h_ref);
@@ -96,13 +97,5 @@ int main()
             ok = false;
         }
     }
-
-    std::printf("%s: bank_conflicts — conflicted vs. conflict-free row reduce (%dx%d tile)\n"
-                "  Profile with:  ptx_profiler ./bank_conflicts\n"
-                "  Expect:  row_reduce_conflicted  → 32-way bank conflicts on every ld.shared\n"
-                "           row_reduce_free        → 0 bank conflicts\n",
-                ok ? "OK" : "FAIL",
-                TILE,
-                TILE);
     return ok ? 0 : 1;
 }

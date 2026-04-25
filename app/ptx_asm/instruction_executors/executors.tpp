@@ -497,33 +497,88 @@ void subInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 
 // ---------------------------------------------------------------------------
 // bra — conditional / unconditional branch
-// When no predicate register is specified the branch is unconditional.
-// The .uni flag (uni_) only affects divergence semantics; the sequential
-// emulator ignores it.
+//
+// Divergence / reconvergence model (PDOM stack):
+//
+//   Conditional divergence:
+//     Execute the taken (if) path first; save the fall-through (else) path
+//     as a pending StackFrame {fall_through_pc, fall_through_mask, false}.
+//     NVCC always ends the taken path with a forward unconditional bra that
+//     jumps past the fall-through block to the merge point, so the IPDOM is
+//     always visible from the taken path's terminal branch.
+//
+//   Unconditional branch (forward) while diverged:
+//     Case A — stack top is a pending path (is_convergence=false) and the
+//               branch target is past the saved fall-through entry point:
+//               the taken path is done; the target IS the IPDOM.
+//               Pop the pending path, push a convergence frame at the target,
+//               then start executing the saved fall-through path.
+//     Case B — stack top is a convergence frame (is_convergence=true) whose
+//               pc matches the branch target: the fall-through path arrived
+//               at the IPDOM; merge masks and jump.
+//     Otherwise: normal unconditional jump (loop back-edges, trampolines, …).
 // ---------------------------------------------------------------------------
 void braInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc)
 {
     if (prd_.type == registerType::UNDEFINED)
     {
+        // ---- Unconditional branch ----
+        const uint64_t target_pc = wc->GetBasicBlockPc(sym_);
+
+        if (!wc->execution_stack.empty() && target_pc > wc->pc)
+        {
+            const auto& top = wc->execution_stack.top();
+
+            if (!top.is_convergence && target_pc > top.pc)
+            {
+                // Case A: taken path just finished; target = IPDOM.
+                // Swap to the saved fall-through path and record the
+                // convergence point so it can be detected on fallthrough too.
+                const uint64_t ft_pc      = top.pc;
+                const uint32_t ft_mask    = top.mask;
+                const uint32_t full_mask  = wc->execution_mask | ft_mask;
+                wc->execution_stack.pop();
+                wc->execution_stack.push({target_pc, full_mask, /*is_convergence=*/true});
+                wc->pc             = ft_pc;
+                wc->execution_mask = ft_mask;
+                return;
+            }
+
+            if (top.is_convergence && top.pc == target_pc)
+            {
+                // Case B: fall-through path arrived at the IPDOM via bra.
+                const uint32_t full_mask = top.mask;
+                wc->execution_stack.pop();
+                wc->execution_mask = full_mask;
+                wc->gotoBasicBlock(sym_);
+                return;
+            }
+        }
+
         wc->gotoBasicBlock(sym_);
         return;
     }
 
-    auto mask        = wc->GetPredicateMask(prd_.reg_id);
-    uint64_t branch_mask = mask & wc->execution_mask;
+    // ---- Conditional branch ----
+    const auto     pred_mask   = wc->GetPredicateMask(prd_.reg_id);
+    const uint32_t branch_mask = pred_mask & wc->execution_mask;
+
     if (branch_mask == wc->execution_mask)
     {
+        // All active threads take the branch — no divergence.
         wc->gotoBasicBlock(sym_);
     }
     else if (branch_mask == 0)
     {
+        // No active thread takes the branch — fall through.
         wc->pc += 1;
     }
     else
     {
-        uint32_t fall_through_mask = wc->execution_mask & ~(uint32_t)branch_mask;
-        wc->execution_mask = (uint32_t)branch_mask;
-        wc->execution_stack.push({wc->pc + 1, fall_through_mask});
+        // Diverge: execute taken (if) path first, save fall-through (else).
+        const uint32_t ft_mask = wc->execution_mask & ~branch_mask;
+        wc->execution_stack.push({wc->pc + 1, ft_mask, /*is_convergence=*/false});
+        wc->execution_mask = branch_mask;
         wc->gotoBasicBlock(sym_);
     }
 }
@@ -614,19 +669,28 @@ void madInstruction::ExecuteThread(uint32_t lid, std::shared_ptr<WarpContext>& w
 
 // ---------------------------------------------------------------------------
 // ret — return / pop execution stack
+// Convergence frames left on the stack when a path exits early (e.g. guard
+// clauses) are discarded: those threads are done.
 // ---------------------------------------------------------------------------
 void retInstruction::ExecuteBranch(std::shared_ptr<WarpContext>& wc) // NOLINT(readability-convert-member-functions-to-static)
 {
+    // Skip any stale convergence frames — they belong to paths that never
+    // reached the IPDOM because they exited early.
+    while (!wc->execution_stack.empty() && wc->execution_stack.top().is_convergence)
+    {
+        wc->execution_stack.pop();
+    }
+
     if (wc->execution_stack.empty())
     {
         wc->pc = WarpContext::EOC;
     }
     else
     {
-        auto [pc, mask] = wc->execution_stack.top();
-        wc->pc          = pc;
-        wc->execution_mask = mask;
+        const auto frame   = wc->execution_stack.top();
         wc->execution_stack.pop();
+        wc->pc             = frame.pc;
+        wc->execution_mask = frame.mask;
     }
 }
 
