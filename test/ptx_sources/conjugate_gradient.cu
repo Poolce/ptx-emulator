@@ -12,7 +12,6 @@ constexpr int N = 512;
 constexpr int MAX_ITER = 20;
 constexpr float TOL = 1e-4f;
 
-// Матрично-векторное умножение: y = A * x
 template <int block_size>
 __global__ void gemv(const float* A, const float* x, float* y, int n)
 {
@@ -26,7 +25,6 @@ __global__ void gemv(const float* A, const float* x, float* y, int n)
     }
 }
 
-// Скалярное произведение: result += dot(x, y)
 template <int block_size>
 __global__ void dot_product(const float* x, const float* y, float* result, int n)
 {
@@ -54,7 +52,6 @@ __global__ void dot_product(const float* x, const float* y, float* result, int n
         atomicAdd(result, cache[0]);
 }
 
-// Обновление векторов: x = x + alpha * p; r = r - alpha * Ap
 template <int block_size>
 __global__ void update_x_r(float* x, float* r, const float* p, const float* Ap, float alpha, int n)
 {
@@ -66,7 +63,6 @@ __global__ void update_x_r(float* x, float* r, const float* p, const float* Ap, 
     }
 }
 
-// Обновление вектора направления: p = r + beta * p
 template <int block_size>
 __global__ void update_p(float* p, const float* r, float beta, int n)
 {
@@ -92,7 +88,6 @@ static void cpu_cg(const float* A, const float* b, float* x, int n, int max_iter
 
     for (int iter = 0; iter < max_iter; ++iter)
     {
-        // Ap = A * p
         for (int i = 0; i < n; ++i)
         {
             float acc = 0.0f;
@@ -101,7 +96,6 @@ static void cpu_cg(const float* A, const float* b, float* x, int n, int max_iter
             Ap[i] = acc;
         }
 
-        // pAp = p * Ap
         float pAp = 0.0f;
         for (int i = 0; i < n; ++i)
             pAp += p[i] * Ap[i];
@@ -109,7 +103,6 @@ static void cpu_cg(const float* A, const float* b, float* x, int n, int max_iter
         float alpha = r_old_dot / pAp;
         float r_new_dot = 0.0f;
 
-        // x = x + alpha * p; r = r - alpha * Ap
         for (int i = 0; i < n; ++i)
         {
             x[i] += alpha * p[i];
@@ -122,7 +115,6 @@ static void cpu_cg(const float* A, const float* b, float* x, int n, int max_iter
 
         float beta = r_new_dot / r_old_dot;
 
-        // p = r + beta * p
         for (int i = 0; i < n; ++i)
             p[i] = r[i] + beta * p[i];
 
@@ -147,18 +139,16 @@ int main()
     CuemuIo::generate<float>("tmpA", tmpA, [&](size_t) { return next_val(state); });
     CuemuIo::generate<float>("x_true", x_true, [&](size_t) { return next_val(state); });
 
-    // Делаем матрицу A симметричной и положительно-определенной (SPD)
     for (int i = 0; i < N; ++i)
     {
         for (int j = 0; j < N; ++j)
         {
             A[i * N + j] = 0.5f * (tmpA[i * N + j] + tmpA[j * N + i]);
             if (i == j)
-                A[i * N + j] += N; // Диагональное преобладание
+                A[i * N + j] += N;
         }
     }
 
-    // Вычисляем референсный b = A * x_true, чтобы система гарантированно имела решение
     for (int i = 0; i < N; ++i)
     {
         float acc = 0.0f;
@@ -167,9 +157,9 @@ int main()
         b[i] = acc;
     }
 
-    std::vector<float> x(N, 0.0f); // Стартовое приближение: x_0 = 0
-    std::vector<float> r = b;      // r_0 = b - A*x_0 = b
-    std::vector<float> p = b;      // p_0 = r_0
+    std::vector<float> x(N, 0.0f);
+    std::vector<float> r = b;
+    std::vector<float> p = b;
 
     float *gpuA, *gpuB, *gpuX, *gpuR, *gpuP, *gpuAp, *gpuDotRes;
     CHECK_ERROR(cudaMalloc((void**)&gpuA, N * N * sizeof(float)));
@@ -195,23 +185,18 @@ int main()
     int iter = 0;
     for (; iter < MAX_ITER; ++iter)
     {
-        // 1. Ap = A * p
         gemv<bs><<<grid_size, bs>>>(gpuA, gpuP, gpuAp, N);
 
-        // 2. pAp = dot(p, Ap)
         CHECK_ERROR(cudaMemset(gpuDotRes, 0, sizeof(float)));
         dot_product<bs><<<grid_size, bs>>>(gpuP, gpuAp, gpuDotRes, N);
 
         float pAp;
         CHECK_ERROR(cudaMemcpy(&pAp, gpuDotRes, sizeof(float), cudaMemcpyDeviceToHost));
 
-        // 3. alpha = r_old_dot / pAp
         float alpha = r_old_dot / pAp;
 
-        // 4. x = x + alpha * p; r = r - alpha * Ap
         update_x_r<bs><<<grid_size, bs>>>(gpuX, gpuR, gpuP, gpuAp, alpha, N);
 
-        // 5. r_new_dot = dot(r, r)
         CHECK_ERROR(cudaMemset(gpuDotRes, 0, sizeof(float)));
         dot_product<bs><<<grid_size, bs>>>(gpuR, gpuR, gpuDotRes, N);
 
@@ -221,10 +206,8 @@ int main()
         if (std::sqrt(r_new_dot) < TOL)
             break;
 
-        // 6. beta = r_new_dot / r_old_dot
         float beta = r_new_dot / r_old_dot;
 
-        // 7. p = r + beta * p
         update_p<bs><<<grid_size, bs>>>(gpuP, gpuR, beta, N);
 
         r_old_dot = r_new_dot;
