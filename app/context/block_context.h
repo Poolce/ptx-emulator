@@ -19,13 +19,13 @@ class GlobalContext;
 class BlockBarrier
 {
     int total_active_;
-    int arrived_;
-    int generation_;
+    int arrived_{0};
+    int generation_{0};
     std::mutex mutex_;
     std::condition_variable cv_;
 
   public:
-    explicit BlockBarrier(int n) : total_active_(n), arrived_(0), generation_(0) {}
+    explicit BlockBarrier(int n) : total_active_(n) {}
 
     void sync()
     {

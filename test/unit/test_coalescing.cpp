@@ -91,7 +91,7 @@ TEST(GlobalCoalescing, PerfectlyCoalesced32Threads)
         addrs[i] = BASE + i * 4; // consecutive f32 elements
     }
 
-    const uint32_t mask = 0xFFFFFFFFu;
+    const uint32_t mask = 0xFFFFFFFFU;
     auto wc = makeGlobalWarp(mask, /*addr_reg=*/0, addrs);
     auto m = profile("ld.global.f32 %r1, [%r0];", wc, mask);
 
@@ -111,7 +111,7 @@ TEST(GlobalCoalescing, FullyDivergent32Threads)
         addrs[i] = BASE + i * 128; // one per cache line
     }
 
-    const uint32_t mask = 0xFFFFFFFFu;
+    const uint32_t mask = 0xFFFFFFFFU;
     auto wc = makeGlobalWarp(mask, 0, addrs);
     auto m = profile("ld.global.f32 %r1, [%r0];", wc, mask);
 
@@ -132,7 +132,7 @@ TEST(GlobalCoalescing, FourActiveThreadsCoalesced)
         addrs[i] = BASE + i * 4;
     }
 
-    const uint32_t mask = 0xFu;
+    const uint32_t mask = 0xFU;
     auto wc = makeGlobalWarp(mask, 0, addrs);
     auto m = profile("ld.global.f32 %r1, [%r0];", wc, mask);
 
@@ -152,7 +152,7 @@ TEST(GlobalCoalescing, F64PerfectlyCoalesced)
         addrs[i] = BASE + i * 8;
     }
 
-    const uint32_t mask = 0xFFFFFFFFu;
+    const uint32_t mask = 0xFFFFFFFFU;
     auto wc = makeGlobalWarp(mask, 0, addrs);
     auto m = profile("ld.global.f64 %rd1, [%r0];", wc, mask);
 
@@ -173,7 +173,7 @@ TEST(GlobalCoalescing, PartiallyCoalescedStride16)
         addrs[i] = BASE + i * 16; // stride 16 bytes: 32×16 = 512 bytes → 4 lines
     }
 
-    const uint32_t mask = 0xFFFFFFFFu;
+    const uint32_t mask = 0xFFFFFFFFU;
     auto wc = makeGlobalWarp(mask, 0, addrs);
     auto m = profile("ld.global.f32 %r1, [%r0];", wc, mask);
 
@@ -188,7 +188,7 @@ TEST(GlobalCoalescing, BroadcastAccess)
     constexpr uintptr_t ADDR = 0x5000;
 
     std::vector<uintptr_t> addrs(WS, ADDR);
-    const uint32_t mask = 0xFFFFFFFFu;
+    const uint32_t mask = 0xFFFFFFFFU;
     auto wc = makeGlobalWarp(mask, 0, addrs);
     auto m = profile("ld.global.u32 %r1, [%r0];", wc, mask);
 
@@ -208,7 +208,7 @@ TEST(GlobalCoalescing, SharedMemoryReturnsZero)
     {
         addrs[i] = i * 4;
     }
-    const uint32_t mask = 0xFFFFFFFFu;
+    const uint32_t mask = 0xFFFFFFFFU;
     auto wc = makeGlobalWarp(mask, 0, addrs);
     auto m = profile("ld.shared.f32 %r1, [%r0];", wc, mask);
 
@@ -231,7 +231,7 @@ TEST(GlobalCoalescing, StoreCoalesced)
         addrs[i] = BASE + i * 4;
     }
 
-    const uint32_t mask = 0xFFFFFFFFu;
+    const uint32_t mask = 0xFFFFFFFFU;
     auto wc = makeGlobalWarp(mask, 0, addrs);
     // st.global uses addr_ as first operand
     auto m = profile_st("st.global.f32 [%r0], %r1;", wc, mask);
@@ -249,7 +249,7 @@ TEST(GlobalCoalescing, StoreDivergent)
         addrs[i] = i * 128;
     }
 
-    const uint32_t mask = 0xFFFFFFFFu;
+    const uint32_t mask = 0xFFFFFFFFU;
     auto wc = makeGlobalWarp(mask, 0, addrs);
     auto m = profile_st("st.global.f32 [%r0], %r1;", wc, mask);
 
@@ -266,7 +266,7 @@ TEST(GlobalCoalescing, ImmediateOffset)
     constexpr uintptr_t BASE = 0x7000;
     // All threads share the same base address; the +16 offset is in the instruction.
     std::vector<uintptr_t> addrs(WS, BASE);
-    const uint32_t mask = 0xFFFFFFFFu;
+    const uint32_t mask = 0xFFFFFFFFU;
     auto wc = makeGlobalWarp(mask, 0, addrs);
     auto m = profile("ld.global.f32 %r1, [%r0+16];", wc, mask);
 

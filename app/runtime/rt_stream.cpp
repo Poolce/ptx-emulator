@@ -102,9 +102,8 @@ void RtStream::KernelLaunch(const std::string& func, dim3 gridDim, dim3 blockDim
             while (any_active)
             {
                 any_active = false;
-                for (size_t i = 0; i < warps.size(); ++i)
+                for (auto warp : warps)
                 {
-                    auto warp = warps[i];
                     if (!warp->isActive())
                     {
                         continue;
