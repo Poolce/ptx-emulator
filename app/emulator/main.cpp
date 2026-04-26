@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <string_view>
 
 namespace fs = std::filesystem;
 
@@ -28,21 +29,155 @@ static fs::path GetLibDir()
     return lib_path.lexically_normal();
 }
 
-int main(int argc, char* argv[])
+static void PrintHelp(std::string_view prog)
 {
-    if (argc < 2)
+    std::cout << "Usage: " << prog << " [OPTIONS] <binary>\n"
+              << "\n"
+              << "Run a CUDA binary under the PTX emulator.\n"
+              << "\n"
+              << "Options:\n"
+              << "  --config <path>              GPU architecture config file (TOML)\n"
+              << "  --collect-profiling          Enable profiling metric collection\n"
+              << "  --profiling-output <path>    Output file for profiling data (default: profiling.txt)\n"
+              << "  -l, --log-level <level>      Log verbosity: DEBUG, INFO, WARNING, ERROR (default: INFO)\n"
+              << "  -h, --help                   Show this help message and exit\n"
+              << "\n"
+              << "Examples:\n"
+              << "  " << prog << " ./my_cuda_app\n"
+              << "  " << prog << " --config gpu_arch.toml --collect-profiling ./my_cuda_app\n"
+              << "  " << prog << " -l DEBUG ./my_cuda_app\n";
+}
+
+struct Args
+{
+    bool collect_profiling = false;
+    std::string profiling_output;
+    std::string config_path;
+    std::string log_level;
+    std::string binary;
+};
+
+static bool IsValidLogLevel(std::string_view level)
+{
+    return level == "DEBUG" || level == "INFO" || level == "WARNING" || level == "ERROR";
+}
+
+// Returns -1 on success, or an exit code (0 for --help, 1 for error).
+static int ParseArgAt(int& i, int argc, char* argv[], Args& args)
+{
+    const std::string_view arg = argv[i];
+    if (arg == "-h" || arg == "--help")
     {
-        std::cerr << "Usage: " << argv[0] << " <binary>\n";
+        PrintHelp(argv[0]);
+        return 0;
+    }
+    if (arg == "--collect-profiling")
+    {
+        args.collect_profiling = true;
+        return -1;
+    }
+    if (arg == "--config")
+    {
+        if (i + 1 >= argc)
+        {
+            std::cerr << "error: --config requires an argument\n";
+            return 1;
+        }
+        args.config_path = argv[++i];
+        return -1;
+    }
+    if (arg == "-l" || arg == "--log-level")
+    {
+        if (i + 1 >= argc)
+        {
+            std::cerr << "error: " << arg << " requires an argument\n";
+            return 1;
+        }
+        args.log_level = argv[++i];
+        if (!IsValidLogLevel(args.log_level))
+        {
+            std::cerr << "error: invalid log level '" << args.log_level
+                      << "' (expected DEBUG, INFO, WARNING, or ERROR)\n";
+            return 1;
+        }
+        return -1;
+    }
+    if (arg == "--profiling-output")
+    {
+        if (i + 1 >= argc)
+        {
+            std::cerr << "error: --profiling-output requires an argument\n";
+            return 1;
+        }
+        args.profiling_output = argv[++i];
+        return -1;
+    }
+    if (arg.starts_with('-'))
+    {
+        std::cerr << "error: unknown option '" << arg << "'\n"
+                  << "Run '" << argv[0] << " --help' for usage.\n";
         return 1;
     }
-    const std::string file = argv[1];
+    if (!args.binary.empty())
+    {
+        std::cerr << "error: unexpected argument '" << arg << "' (binary already set to '" << args.binary << "')\n";
+        return 1;
+    }
+    args.binary = arg;
+    return -1;
+}
+
+static int ParseArgs(int argc, char* argv[], Args& args)
+{
+    for (int i = 1; i < argc; ++i)
+    {
+        const int result = ParseArgAt(i, argc, argv, args);
+        if (result >= 0)
+        {
+            return result;
+        }
+    }
+    return -1;
+}
+
+int main(int argc, char* argv[])
+{
+    Args args;
+    const int parse_result = ParseArgs(argc, argv, args);
+    if (parse_result >= 0)
+    {
+        return parse_result;
+    }
+
+    if (args.binary.empty())
+    {
+        std::cerr << "error: missing required argument <binary>\n\n";
+        PrintHelp(argv[0]);
+        return 1;
+    }
 
     std::string cmd;
-    cmd += "PATH=" + GetExecutableDir().string() + ":$PATH" + " ";
-    cmd += "LD_LIBRARY_PATH=" + GetLibDir().string() + ":$LD_LIBRARY_PATH" + " ";
+    cmd += "PATH=" + GetExecutableDir().string() + ":$PATH ";
+    cmd += "LD_LIBRARY_PATH=" + GetLibDir().string() + ":$LD_LIBRARY_PATH ";
     cmd += "LD_PRELOAD=" + std::string(RuntimeLibName) + " ";
-    cmd += "CUEMU_TARGET_EXEC=" + file + " ";
-    cmd += file;
+    cmd += "CUEMU_TARGET_EXEC=" + args.binary + " ";
+    if (!args.config_path.empty())
+    {
+        cmd += "CUEMU_CONFIG=" + args.config_path + " ";
+    }
+    if (!args.log_level.empty())
+    {
+        cmd += "CUEMU_LOG_LEVEL=" + args.log_level + " ";
+    }
+    if (args.collect_profiling)
+    {
+        cmd += "CUEMU_COLLECT_PROFILING=1 ";
+        if (!args.profiling_output.empty())
+        {
+            cmd += "CUEMU_PROFILING_OUTPUT=" + args.profiling_output + " ";
+        }
+    }
+    cmd += args.binary;
 
     return system(cmd.c_str());
 }

@@ -1,0 +1,21 @@
+[gpu]
+name               = "NVIDIA A100 (Ampere sm_80)"
+compute_capability = "8.0"
+
+
+[warp]
+size = 32
+
+
+[shared_memory]
+total_size = 49152
+bank_count = 32
+bank_width = 4
+bank_groups = 4
+
+
+[limits]
+max_threads_per_block = 1024
+max_warps_per_sm      = 64
+max_blocks_per_sm     = 32
+registers_per_thread  = 255

@@ -96,5 +96,15 @@ uint64_t Module::GetBasicBlockOffset(const std::string& func_name, const std::st
     return func_it->second->GetBasicBlockOffset(sym);
 }
 
+std::string Module::GetBasicBlockAt(const std::string& func_name, uint64_t pc) const
+{
+    auto func_it = function_map_.find(func_name);
+    if (func_it == function_map_.end())
+    {
+        return "";
+    }
+    return func_it->second->GetBasicBlockAt(pc);
+}
+
 } // namespace Ptx
 } // namespace Emulator

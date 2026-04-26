@@ -7,6 +7,7 @@ target_sources(context
     warp_context.cpp
     block_context.cpp
     global_context.cpp
+    profiler.cpp
 )
 
 target_include_directories(context
@@ -14,4 +15,4 @@ target_include_directories(context
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(context PUBLIC encoder)
+target_link_libraries(context PUBLIC encoder utils)

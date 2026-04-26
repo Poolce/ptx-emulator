@@ -76,6 +76,11 @@ static InstructionList parseInstructions(const std::string& content)
         if (match.size() >= 3)
         {
             std::string name = match[2].str();
+            // .loc directives are debug metadata — skip silently
+            if (name == "loc")
+            {
+                continue;
+            }
             try
             {
                 auto instr = makeInstruction(name, match[0].str());
@@ -169,6 +174,23 @@ uint64_t Function::getOffset() const
 uint64_t Function::GetBasicBlockOffset(const std::string& bb_name) const
 {
     return basic_blocks_.at(bb_name);
+}
+
+std::string Function::GetBasicBlockAt(uint64_t abs_pc) const
+{
+    std::string best_label;
+    uint64_t best_pc = 0;
+    bool found = false;
+    for (const auto& [label, bb_pc] : basic_blocks_)
+    {
+        if (bb_pc <= abs_pc && (!found || bb_pc > best_pc))
+        {
+            best_pc = bb_pc;
+            best_label = label;
+            found = true;
+        }
+    }
+    return found ? best_label : "";
 }
 
 std::unordered_map<std::string, FunctionParameter> Function::getParameters() const

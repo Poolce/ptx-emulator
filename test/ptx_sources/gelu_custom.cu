@@ -1,4 +1,5 @@
 #include "cuda.h"
+#include "cuemu_io.h"
 
 #include <math_constants.h>
 
@@ -58,8 +59,7 @@ int main()
     constexpr float hi = 3.0f;
 
     std::vector<float> in(N), out(N, 0.0f);
-    for (std::size_t i = 0; i < N; ++i)
-        in[i] = lo + (hi - lo) * float(i) / float(N - 1);
+    CuemuIo::generate<float>("in", in, [&](size_t i) { return lo + (hi - lo) * float(i) / float(N - 1); });
 
     launch_cuda_gelu(in.data(), out.data(), N);
 
@@ -77,9 +77,6 @@ int main()
             ok = false;
         }
     }
-
-    if (ok)
-        std::cout << "OK: all " << N << " GELU values match CPU reference\n";
 
     return ok ? 0 : 1;
 }

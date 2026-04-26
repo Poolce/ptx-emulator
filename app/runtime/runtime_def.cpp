@@ -20,7 +20,11 @@ std::unique_ptr<RtInterface> interface;
 cudaError_t cudaMalloc(void** devPtr, size_t size)
 {
     LOG_DEBUG("cudaMalloc size=" + std::to_string(size));
-    *devPtr = malloc(size);
+    // Real CUDA guarantees 256-byte alignment. Match that so warp-level address
+    // analysis in the profiler sees clean cache-line boundaries.
+    constexpr size_t CudaMallocAlign = 256;
+    const size_t aligned_size = (size + CudaMallocAlign - 1) & ~(CudaMallocAlign - 1);
+    *devPtr = std::aligned_alloc(CudaMallocAlign, aligned_size);
     if (*devPtr == nullptr)
     {
         LOG_ERROR("cudaMalloc failed: allocation of " + std::to_string(size) + " bytes returned nullptr");
@@ -43,6 +47,13 @@ cudaError_t cudaMemcpy([[maybe_unused]] void* dst,
 {
     LOG_DEBUG("cudaMemcpy count=" + std::to_string(count));
     memcpy(dst, src, count);
+    return cudaError_t::cudaSuccess;
+}
+
+cudaError_t cudaMemset(void* devPtr, int value, size_t count)
+{
+    LOG_DEBUG("cudaMemset count=" + std::to_string(count) + " value=" + std::to_string(value));
+    memset(devPtr, value, count);
     return cudaError_t::cudaSuccess;
 }
 
@@ -87,7 +98,6 @@ cudaError_t __cudaLaunchKernel([[maybe_unused]] const void* func,
 cudaError_t cudaDeviceSynchronize()
 {
     LOG_DEBUG("cudaDeviceSynchronize");
-    interface->RemoveAllStreams();
     return cudaError_t::cudaSuccess;
 }
 
@@ -151,6 +161,7 @@ void __cudaUnregisterFatBinary(void** fatCubinHandle)
     LOG_DEBUG("__cudaUnregisterFatBinary intercepted");
     try
     {
+        interface->RemoveAllStreams();
         interface = nullptr;
         decltype(auto) orig = reinterpret_cast<void* (*)(void**)>(dlsym(RTLD_NEXT, "__cudaUnregisterFatBinary"));
         if (!orig)

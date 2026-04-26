@@ -1,0 +1,44 @@
+{
+    "metrics": {
+        "branch_efficiency": {
+            "type": "float",
+            "description": "Ratio of active threads that follow the same execution path (1.0 = all threads converged)"
+        },
+        "bank_conflicts": {
+            "type": "int",
+            "description": "Number of shared memory bank conflicts for this access (max serialized accesses minus 1)"
+        },
+        "global_mem_transactions": {
+            "type": "int",
+            "description":
+                "Number of 128-byte L1 cache-line transactions issued for a global memory access (0 = non-global)"
+        },
+        "global_coalescing": {
+            "type": "float",
+            "description":
+                "Global memory coalescing efficiency: ideal_transactions / actual_transactions (1.0 = fully coalesced, 0 = non-global)"
+        }
+    },
+    "instructions": {
+        "*": {
+            "metrics": [
+                "branch_efficiency"
+            ]
+        },
+        "ld": {
+            "metrics": [
+                "branch_efficiency",
+                "bank_conflicts",
+                "global_mem_transactions",
+                "global_coalescing"
+            ]
+        },
+        "st": {
+            "metrics": [
+                "branch_efficiency",
+                "global_mem_transactions",
+                "global_coalescing"
+            ]
+        }
+    }
+}

@@ -48,6 +48,7 @@ add_custom_command(
   DEPENDS
     "${ENCODER_CODEGEN_DIR}/autogen.py"
     "${ENCODER_CODEGEN_DIR}/instructions.json"
+    "${ENCODER_CODEGEN_DIR}/profiling_metrics.json"
     ${ENCODER_CODEGEN_TEMPLATES}
   VERBATIM
 )

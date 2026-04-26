@@ -3,6 +3,7 @@
 #include "ptx_types.h"
 #include "warp_context.h"
 #include "logger.h"
+#include "profiler.h"
 
 #include <memory>
 #include <regex>
@@ -51,6 +52,7 @@ public:
     virtual void Execute(std::shared_ptr<WarpContext>& wc) = 0;
     virtual void Dump() = 0;
     virtual std::string_view Name() const = 0;
+    virtual bool HasExplicitPredicate() const { return false; }
 };
 
 {% for i_name, instr in instructions.items() %}
@@ -79,6 +81,12 @@ private:
     void Execute(std::shared_ptr<WarpContext>& wc) override;
     void Dump() override;
     std::string_view Name() const override { return "{{ i_name }}"; }
+{% if "prd" in instr.params %}
+    bool HasExplicitPredicate() const override { return prd_.type != registerType::UNDEFINED; }
+{% endif %}
+{% if instr.profiling_metrics %}
+    void Profile(std::shared_ptr<WarpContext>& wc, uint64_t pc, uint32_t orig_mask, WarpProfilingBuffer& buf);
+{% endif %}
 
     static std::shared_ptr<{{ i_name }}Instruction> Make(const std::string& line);
     friend std::shared_ptr<Instruction> makeInstruction(const std::string& line);

@@ -10,7 +10,6 @@ namespace Emulator
 class RtStream
 {
   private:
-    std::shared_ptr<GlobalContext> gpu_context_ = nullptr;
     std::shared_ptr<Ptx::Module> ptx_module_ = nullptr;
 
   public:

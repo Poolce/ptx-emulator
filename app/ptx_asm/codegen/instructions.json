@@ -63,7 +63,10 @@
                 "ctaid.z",
                 "ntid.x",
                 "ntid.y",
-                "ntid.z"
+                "ntid.z",
+                "nctaid.x",
+                "nctaid.y",
+                "nctaid.z"
             ]
         }
     },
@@ -86,6 +89,21 @@
                 }
             },
             "exec_type": "thread"
+        },
+        "loc": {
+            "regexp_template": "\\.loc\\s($file)\\s($line);",
+            "params": {
+                "file": {
+                    "arg_type": "operand",
+                    "dtype": "symbolOperand"
+                },
+                "line": {
+                    "regexp": "[0-9]+",
+                    "arg_type": "local",
+                    "dtype": "uint32_t"
+                }
+            },
+            "exec_type": "warp"
         },
         "shared": {
             "regexp_template": "\\.shared\\s\\.align\\s($align)\\s*\\.($data)\\s($symbol)\\[($count)\\];",
@@ -195,7 +213,21 @@
                 "data"
             ]
         },
-        "membar": {},
+        "membar": {
+            "regexp_template": "membar\\.($level);",
+            "params": {
+                "level": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "cta",
+                        "gl",
+                        "sys",
+                        "cluster"
+                    ]
+                }
+            },
+            "exec_type": "warp"
+        },
         "setp": {
             "regexp_template": "setp\\.($cmp)?\\.?($bool)?\\.?($data)?\\s($dst)\\s($src1)\\s($src2)?($imm)?;",
             "params": {
@@ -270,10 +302,117 @@
             ]
         },
         "vabsdiff": {},
-        "activemask": {},
-        "discard": {},
-        "min": {},
-        "shf": {},
+        "activemask": {
+            "regexp_template": "activemask\\.b32\\s*($dst);",
+            "params": {
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "warp"
+        },
+        "discard": {
+            "regexp_template": "discard\\.($level)\\s*[$addr];",
+            "params": {
+                "level": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "L1",
+                        "L2"
+                    ]
+                },
+                "addr": {
+                    "arg_type": "operand",
+                    "dtype": "addressOperand"
+                }
+            },
+            "exec_type": "warp"
+        },
+        "min": {
+            "regexp_template": "min($ftz)?\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
+            "params": {
+                "ftz": {
+                    "arg_type": "local",
+                    "regexp": "\\.ftz",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "s16",
+                        "s32",
+                        "s64",
+                        "u16",
+                        "u32",
+                        "u64",
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "shf": {
+            "regexp_template": "shf\\.($dir)\\.($mode)\\.b32\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3)?($imm)?;",
+            "params": {
+                "dir": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "l",
+                        "r"
+                    ]
+                },
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "clamp",
+                        "wrap"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread"
+        },
         "vabsdiff2": {},
         "add": {
             "regexp_template": "add\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
@@ -415,7 +554,46 @@
             ]
         },
         "vabsdiff4": {},
-        "addc": {},
+        "addc": {
+            "regexp_template": "addc($cc)?\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
+            "params": {
+                "cc": {
+                    "arg_type": "local",
+                    "regexp": "\\.cc",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "dp2a": {},
         "mov": {
             "regexp_template": "mov\\.($data)\\s*($dst),\\s*($src)?($spr)?($imm)?($symbol)?;",
@@ -498,7 +676,46 @@
         "alloca": {},
         "dp4a": {},
         "movmatrix": {},
-        "shr": {},
+        "shr": {
+            "regexp_template": "shr\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b16",
+                        "b32",
+                        "b64",
+                        "u16",
+                        "u32",
+                        "u64",
+                        "s16",
+                        "s32",
+                        "s64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "vadd2": {},
         "and": {
             "regexp_template": "and\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
@@ -535,7 +752,20 @@
                 "data"
             ]
         },
-        "elect": {},
+        "elect": {
+            "regexp_template": "elect\\.sync\\.b32\\s*($dst),\\s*($mask);",
+            "params": {
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "mask": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "warp"
+        },
         "mul": {
             "regexp_template": "mul\\.?($mode)?\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
             "params": {
@@ -584,9 +814,65 @@
                 "data"
             ]
         },
-        "sin": {},
+        "sin": {
+            "regexp_template": "sin\\.approx($ftz)?\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "ftz": {
+                    "arg_type": "local",
+                    "regexp": "\\.ftz",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "f32"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "vadd4": {},
-        "applypriority": {},
+        "applypriority": {
+            "regexp_template": "applypriority\\.($space)\\.L2::evict_($evict)\\.b64\\s*[$addr],\\s*($src);",
+            "params": {
+                "space": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "global"
+                    ]
+                },
+                "evict": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "normal",
+                        "first",
+                        "last",
+                        "unchanged"
+                    ]
+                },
+                "addr": {
+                    "arg_type": "operand",
+                    "dtype": "addressOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "warp"
+        },
         "ex2": {
             "regexp_template": "ex2\\.approx($ftz)\\.($data)\\s*($dst),\\s*($src);",
             "params": {
@@ -618,13 +904,220 @@
                 "data"
             ]
         },
-        "mul24": {},
-        "slct": {},
+        "mul24": {
+            "regexp_template": "mul24\\.($mode)\\.($data)\\s*($dst),\\s*($src1),\\s*($src2);",
+            "params": {
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "lo",
+                        "hi"
+                    ]
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "s32",
+                        "u32"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "slct": {
+            "regexp_template": "slct\\.($dst_type)\\.($cmp_type)\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3);",
+            "params": {
+                "dst_type": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b16",
+                        "b32",
+                        "b64",
+                        "u16",
+                        "u32",
+                        "u64",
+                        "s16",
+                        "s32",
+                        "s64",
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "cmp_type": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "s32",
+                        "f32"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "dst_type",
+                "cmp_type"
+            ]
+        },
         "vavrg2": {},
-        "atom": {},
-        "exit": {},
+        "atom": {
+            "regexp_template":
+                "atom\\.?($scope)?\\.($space)\\.($op)\\.($data)\\s*($dst),\\s*($addr),\\s*($src1)?($imm1)?,?\\s*($src2)?($imm2)?;",
+            "params": {
+                "scope": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "gpu",
+                        "cta",
+                        "sys",
+                        "cluster"
+                    ]
+                },
+                "space": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "global",
+                        "shared",
+                        "local"
+                    ]
+                },
+                "op": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "add",
+                        "min",
+                        "max",
+                        "and",
+                        "or",
+                        "xor",
+                        "exch",
+                        "inc",
+                        "dec",
+                        "cas"
+                    ]
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b32",
+                        "b64",
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64",
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "addr": {
+                    "arg_type": "operand",
+                    "dtype": "addressOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm1": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm2": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "exit": {
+            "regexp_template": "exit;",
+            "params": {},
+            "exec_type": "branch"
+        },
         "multimem": {},
-        "sqrt": {},
+        "sqrt": {
+            "regexp_template": "sqrt\\.($mode)($ftz)?\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "approx",
+                        "rn",
+                        "rz",
+                        "rm",
+                        "rp"
+                    ]
+                },
+                "ftz": {
+                    "arg_type": "local",
+                    "regexp": "\\.ftz",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "vavrg4": {},
         "bar": {
             "regexp_template": "bar($cta)?\\.($mode)\\s*($id);",
@@ -649,10 +1142,47 @@
             },
             "exec_type": "warp"
         },
-        "fence": {},
-        "nanosleep": {},
+        "fence": {
+            "regexp_template": "fence\\.($scope)\\.($sem);",
+            "params": {
+                "scope": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "cta",
+                        "gpu",
+                        "sys",
+                        "cluster"
+                    ]
+                },
+                "sem": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "acquire",
+                        "release",
+                        "acq_rel",
+                        "sc",
+                        "relaxed"
+                    ]
+                }
+            },
+            "exec_type": "warp"
+        },
+        "nanosleep": {
+            "regexp_template": "nanosleep\\.u32\\s*($src)?($imm)?;",
+            "params": {
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "warp"
+        },
         "st": {
-            "regexp_template": "st\\.($space)?\\.($data)?\\s*($addr),\\s*($src);",
+            "regexp_template": "st\\.($space)?\\.?($mode)?\\.($data)?\\s*($addr),\\s*($src);",
             "params": {
                 "space": {
                     "arg_type": "qualifier",
@@ -666,6 +1196,15 @@
                         "shared",
                         "shared::cta",
                         "shared::cluster"
+                    ]
+                },
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "wb",
+                        "cg",
+                        "cs",
+                        "wt"
                     ]
                 },
                 "data": {
@@ -703,7 +1242,25 @@
             ]
         },
         "vmad": {},
-        "barrier": {},
+        "barrier": {
+            "regexp_template": "barrier\\.($mode)\\s*($id)?;",
+            "params": {
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "sync",
+                        "arrive",
+                        "red"
+                    ]
+                },
+                "id": {
+                    "arg_type": "local",
+                    "dtype": "uint32_t",
+                    "regexp": "[0-9]+"
+                }
+            },
+            "exec_type": "warp"
+        },
         "fma": {
             "regexp_template":
                 "fma\\.($mode)\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm1)?,\\s*($src3)?($imm2)?;",
@@ -790,19 +1347,222 @@
         },
         "stackrestore": {},
         "vmax": {},
-        "bfe": {},
-        "fns": {},
-        "not": {},
+        "bfe": {
+            "regexp_template": "bfe\\.($data)\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3)?($imm)?;",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "fns": {
+            "regexp_template": "fns\\.b32\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3)?($imm)?;",
+            "params": {
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread"
+        },
+        "not": {
+            "regexp_template": "not\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "pred",
+                        "b16",
+                        "b32",
+                        "b64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "stacksave": {},
         "vmax2": {},
-        "bfi": {},
+        "bfi": {
+            "regexp_template": "bfi\\.($data)\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3),\\s*($src4)?($imm)?;",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b32",
+                        "b64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src4": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "getctarank": {},
-        "or": {},
+        "or": {
+            "regexp_template": "or\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "pred",
+                        "b16",
+                        "b32",
+                        "b64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "stmatrix": {},
         "vmax4": {},
-        "bfind": {},
+        "bfind": {
+            "regexp_template": "bfind($sa)?\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "sa": {
+                    "arg_type": "local",
+                    "regexp": "\\.shiftamt",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "griddepcontrol": {},
-        "pmevent": {},
+        "pmevent": {
+            "regexp_template": "pmevent\\.mask\\s*($imm);",
+            "params": {
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "warp"
+        },
         "sub": {
             "regexp_template": "sub\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
             "params": {
@@ -844,10 +1604,123 @@
             ]
         },
         "vmin": {},
-        "bmsk": {},
-        "isspacep": {},
-        "popc": {},
-        "subc": {},
+        "bmsk": {
+            "regexp_template": "bmsk\\.($mode)\\.b32\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
+            "params": {
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "clamp",
+                        "wrap"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread"
+        },
+        "isspacep": {
+            "regexp_template": "isspacep\\.($space)\\s*($dst),\\s*($src);",
+            "params": {
+                "space": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "const",
+                        "global",
+                        "local",
+                        "shared"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread"
+        },
+        "popc": {
+            "regexp_template": "popc\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b32",
+                        "b64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "subc": {
+            "regexp_template": "subc($cc)?\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
+            "params": {
+                "cc": {
+                    "arg_type": "local",
+                    "regexp": "\\.cc",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "vmin2": {},
         "bra": {
             "regexp_template": "@?($prd)?\\s*bra($uni)?\\s*\\$($sym);",
@@ -878,13 +1751,271 @@
             },
             "exec_type": "thread"
         },
-        "istypep": {},
-        "prefetch": {},
+        "istypep": {
+            "regexp_template": "istypep\\.($type)\\s*($dst),\\s*($src);",
+            "params": {
+                "type": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "s8",
+                        "s16",
+                        "s32",
+                        "s64",
+                        "u8",
+                        "u16",
+                        "u32",
+                        "u64",
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread"
+        },
+        "prefetch": {
+            "regexp_template": "prefetch\\.($space)\\.($level)\\s*[$addr];",
+            "params": {
+                "space": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "global",
+                        "local"
+                    ]
+                },
+                "level": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "L1",
+                        "L2"
+                    ]
+                },
+                "addr": {
+                    "arg_type": "operand",
+                    "dtype": "addressOperand"
+                }
+            },
+            "exec_type": "warp"
+        },
         "suld": {},
         "vmin4": {},
-        "brev": {},
+        "brev": {
+            "regexp_template": "brev\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b32",
+                        "b64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "ld": {
-            "regexp_template": "ld\\.($space)?\\.($data)?\\s*($dst),\\s*($addr);",
+            "regexp_template": "ld\\.($space)?\\.?($mode)?\\.($data)?\\s*($dst),\\s*($addr);",
+            "params": {
+                "space": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "const",
+                        "global",
+                        "local",
+                        "param",
+                        "param::entry",
+                        "param::func",
+                        "shared",
+                        "shared::cta",
+                        "shared::cluster"
+                    ]
+                },
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "ca",
+                        "cg",
+                        "cs",
+                        "lu",
+                        "cv",
+                        "nc"
+                    ]
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b8",
+                        "b16",
+                        "b32",
+                        "b64",
+                        "u8",
+                        "u16",
+                        "u32",
+                        "u64",
+                        "s8",
+                        "s16",
+                        "s32",
+                        "s64",
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "addr": {
+                    "arg_type": "operand",
+                    "dtype": "addressOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "prefetchu": {
+            "regexp_template": "prefetchu\\.($level)\\s*[$addr];",
+            "params": {
+                "level": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "L1",
+                        "L2"
+                    ]
+                },
+                "addr": {
+                    "arg_type": "operand",
+                    "dtype": "addressOperand"
+                }
+            },
+            "exec_type": "warp"
+        },
+        "suq": {},
+        "vote": {
+            "regexp_template": "vote($sync)?\\.($mode)\\.($data)\\s*($dst),\\s*($src),?\\s*($mask_imm)?;",
+            "params": {
+                "sync": {
+                    "arg_type": "local",
+                    "regexp": "\\.sync",
+                    "dtype": "bool"
+                },
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "any",
+                        "all",
+                        "uni",
+                        "ballot"
+                    ]
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "pred",
+                        "b32"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "mask_imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "warp"
+        },
+        "brkpt": {
+            "regexp_template": "brkpt;",
+            "params": {},
+            "exec_type": "warp"
+        },
+        "ldmatrix": {},
+        "prmt": {
+            "regexp_template": "prmt\\.b32\\.?($mode)?\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3)?($imm)?;",
+            "params": {
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "f4e",
+                        "b4e",
+                        "rc8",
+                        "ecl",
+                        "ecr",
+                        "rc16"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread"
+        },
+        "sured": {},
+        "vset": {},
+        "brx": {
+            "regexp_template": "@?($prd)?\\s*brx\\.idx\\s*($src),\\s*\\{($targets)\\};",
+            "params": {
+                "prd": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "targets": {
+                    "arg_type": "operand",
+                    "dtype": "symbolOperand"
+                }
+            },
+            "exec_type": "branch"
+        },
+        "ldu": {
+            "regexp_template": "ldu\\.($space)?\\.($data)?\\s*($dst),\\s*($addr);",
             "params": {
                 "space": {
                     "arg_type": "qualifier",
@@ -934,16 +2065,6 @@
                 "data"
             ]
         },
-        "prefetchu": {},
-        "suq": {},
-        "vote": {},
-        "brkpt": {},
-        "ldmatrix": {},
-        "prmt": {},
-        "sured": {},
-        "vset": {},
-        "brx": {},
-        "ldu": {},
         "rcp": {
             "regexp_template": "rcp\\.approx($ftz)\\.($data)\\s*($dst),\\s*($src);",
             "params": {
@@ -977,13 +2098,206 @@
         },
         "sust": {},
         "vset2": {},
-        "call": {},
-        "lg2": {},
-        "red": {},
-        "szext": {},
+        "call": {
+            "regexp_template": "call\\s*\\(?($ret)?\\)?\\s*,?\\s*($func),?\\s*\\(?($args)?\\)?;",
+            "params": {
+                "ret": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "func": {
+                    "arg_type": "operand",
+                    "dtype": "symbolOperand"
+                },
+                "args": {
+                    "arg_type": "operand",
+                    "dtype": "symbolOperand"
+                }
+            },
+            "exec_type": "branch"
+        },
+        "lg2": {
+            "regexp_template": "lg2\\.approx($ftz)?\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "ftz": {
+                    "arg_type": "local",
+                    "regexp": "\\.ftz",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "f32"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "red": {
+            "regexp_template": "red\\.?($scope)?\\.($space)\\.($op)\\.($data)\\s*($addr),\\s*($src)?($imm)?;",
+            "params": {
+                "scope": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "gpu",
+                        "cta",
+                        "sys",
+                        "cluster"
+                    ]
+                },
+                "space": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "global",
+                        "shared",
+                        "local"
+                    ]
+                },
+                "op": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "add",
+                        "min",
+                        "max",
+                        "and",
+                        "or",
+                        "xor",
+                        "inc",
+                        "dec"
+                    ]
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b32",
+                        "b64",
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64",
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "addr": {
+                    "arg_type": "operand",
+                    "dtype": "addressOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "szext": {
+            "regexp_template": "szext\\.($data)\\.($ext)\\s*($dst),\\s*($src);",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64"
+                    ]
+                },
+                "ext": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "s8",
+                        "s16",
+                        "u8",
+                        "u16"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "vset4": {},
-        "clz": {},
-        "lop3": {},
+        "clz": {
+            "regexp_template": "clz\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b32",
+                        "b64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "lop3": {
+            "regexp_template": "lop3\\.b32\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3),\\s*($imm);",
+            "params": {
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread"
+        },
         "redux": {},
         "tanh": {
             "regexp_template": "tanh\\.approx($ftz)\\.($data)\\s*($dst),\\s*($src);",
@@ -1016,9 +2330,35 @@
             ]
         },
         "vshl": {},
-        "cnot": {},
+        "cnot": {
+            "regexp_template": "cnot\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b16",
+                        "b32",
+                        "b64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "mad": {
-            "regexp_template": "mad\\.($mode)\\.($data)\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3);",
+            "regexp_template":
+                "mad\\.($mode)\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm1)?,\\s*($src3)?($imm2)?;",
             "params": {
                 "mode": {
                     "arg_type": "qualifier",
@@ -1052,7 +2392,46 @@
                     "arg_type": "operand",
                     "dtype": "registerOperand"
                 },
+                "imm1": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                },
                 "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm2": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "rem": {
+            "regexp_template": "rem\\.($data)\\s*($dst),\\s*($src1),\\s*($src2);",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
                     "arg_type": "operand",
                     "dtype": "registerOperand"
                 }
@@ -1062,7 +2441,6 @@
                 "data"
             ]
         },
-        "rem": {},
         "tcgen05": {},
         "vshr": {},
         "copysign": {
@@ -1098,7 +2476,46 @@
                 "data"
             ]
         },
-        "mad24": {},
+        "mad24": {
+            "regexp_template": "mad24\\.($mode)\\.($data)\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3);",
+            "params": {
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "lo",
+                        "hi"
+                    ]
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "s32",
+                        "u32"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "ret": {
             "regexp_template": "ret;",
             "params": {},
@@ -1106,14 +2523,191 @@
         },
         "tensormap": {},
         "vsub": {},
-        "cos": {},
-        "madc": {},
-        "rsqrt": {},
-        "testp": {},
+        "cos": {
+            "regexp_template": "cos\\.approx($ftz)?\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "ftz": {
+                    "arg_type": "local",
+                    "regexp": "\\.ftz",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "f32"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "madc": {
+            "regexp_template": "madc\\.($mode)($cc)?\\.($data)\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3)?($imm)?;",
+            "params": {
+                "mode": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "hi",
+                        "lo",
+                        "wide"
+                    ]
+                },
+                "cc": {
+                    "arg_type": "local",
+                    "regexp": "\\.cc",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "rsqrt": {
+            "regexp_template": "rsqrt\\.approx($ftz)?\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "ftz": {
+                    "arg_type": "local",
+                    "regexp": "\\.ftz",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "testp": {
+            "regexp_template": "testp\\.($op)\\.($data)\\s*($dst),\\s*($src);",
+            "params": {
+                "op": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "finite",
+                        "infinite",
+                        "number",
+                        "notanumber",
+                        "normal",
+                        "subnormal"
+                    ]
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "vsub2": {},
         "clusterlaunchcontrol": {},
         "mapa": {},
-        "sad": {},
+        "sad": {
+            "regexp_template": "sad\\.($data)\\s*($dst),\\s*($src1),\\s*($src2),\\s*($src3);",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "u32",
+                        "s32",
+                        "u64",
+                        "s64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src3": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
         "tex": {},
         "vsub4": {},
         "cp": {},
@@ -1171,10 +2765,153 @@
         },
         "tld4": {},
         "wgmma": {},
-        "createpolicy": {},
-        "max": {},
-        "set": {},
-        "trap": {},
+        "createpolicy": {
+            "regexp_template": "createpolicy\\.fractional\\.L2::evict_($evict)\\.b64\\s*($dst),\\s*($src)?($imm)?;",
+            "params": {
+                "evict": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "normal",
+                        "first",
+                        "last",
+                        "unchanged"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread"
+        },
+        "max": {
+            "regexp_template": "max($ftz)?\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
+            "params": {
+                "ftz": {
+                    "arg_type": "local",
+                    "regexp": "\\.ftz",
+                    "dtype": "bool"
+                },
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "s16",
+                        "s32",
+                        "s64",
+                        "u16",
+                        "u32",
+                        "u64",
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        },
+        "set": {
+            "regexp_template": "set\\.($cmp)\\.($dst_type)\\.($src_type)\\s*($dst),\\s*($src1),\\s*($src2);",
+            "params": {
+                "cmp": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "eq",
+                        "ne",
+                        "lt",
+                        "le",
+                        "gt",
+                        "ge",
+                        "lo",
+                        "ls",
+                        "hi",
+                        "hs",
+                        "equ",
+                        "neu",
+                        "ltu",
+                        "leu",
+                        "gtu",
+                        "geu",
+                        "num",
+                        "nan"
+                    ]
+                },
+                "dst_type": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "u32",
+                        "s32",
+                        "f32"
+                    ]
+                },
+                "src_type": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "b16",
+                        "b32",
+                        "b64",
+                        "u16",
+                        "u32",
+                        "u64",
+                        "s16",
+                        "s32",
+                        "s64",
+                        "f32",
+                        "f64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "dst_type",
+                "src_type"
+            ]
+        },
+        "trap": {
+            "regexp_template": "trap;",
+            "params": {},
+            "exec_type": "warp"
+        },
         "wmma": {},
         "cvt": {
             "regexp_template": "cvt\\.?($mode)?\\.($src_data)\\.($dst_data)\\s*($dst),\\s*($src);",
@@ -1239,10 +2976,68 @@
             ],
             "exec_type": "thread"
         },
-        "mbarrier": {},
+        "mbarrier": {
+            "regexp_template": "mbarrier\\.($op)\\.($scope)?.*?;",
+            "params": {
+                "op": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "init",
+                        "arrive",
+                        "arrive_drop",
+                        "try_wait",
+                        "wait",
+                        "test_wait",
+                        "pending_count"
+                    ]
+                },
+                "scope": {
+                    "arg_type": "qualifier",
+                    "values": [
+                        "cta",
+                        "cluster"
+                    ]
+                }
+            },
+            "exec_type": "warp"
+        },
         "setmaxnreg": {},
         "txq": {},
-        "xor": {}
+        "xor": {
+            "regexp_template": "xor\\.($data)\\s*($dst),\\s*($src1),\\s*($src2)?($imm)?;",
+            "params": {
+                "data": {
+                    "arg_type": "children",
+                    "parent_type": "dataType",
+                    "values": [
+                        "pred",
+                        "b16",
+                        "b32",
+                        "b64"
+                    ]
+                },
+                "dst": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src1": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "src2": {
+                    "arg_type": "operand",
+                    "dtype": "registerOperand"
+                },
+                "imm": {
+                    "arg_type": "operand",
+                    "dtype": "immediateOperand"
+                }
+            },
+            "exec_type": "thread",
+            "typed_executor": [
+                "data"
+            ]
+        }
     },
     "directives": {
         "address_size": {},

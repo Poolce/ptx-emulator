@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gpu_config.h"
 #include "rt_stream.h"
 #include "types.h"
 

@@ -18,6 +18,14 @@ namespace Emulator
 
 void RtInterface::LoadPtx()
 {
+    if (const char* cfg_path = std::getenv("CUEMU_CONFIG"))
+    {
+        LOG_INFO("Loading GPU config from: " + std::string(cfg_path));
+        auto cfg = GpuConfig::LoadFromFile(cfg_path);
+        LOG_INFO("GPU config: " + cfg.name + " (sm " + cfg.compute_capability + ")");
+        GpuConfig::SetInstance(cfg);
+    }
+
     const char* env = std::getenv("CUEMU_TARGET_EXEC");
     if (!env)
     {
@@ -70,6 +78,7 @@ uint64_t RtInterface::MakeStream()
 
 void RtInterface::RemoveAllStreams()
 {
+    LOG_DEBUG("Removing all streams");
     streams_.clear();
     functions_.clear();
 }

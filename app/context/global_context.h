@@ -28,6 +28,7 @@ class GlobalContext : public std::enable_shared_from_this<GlobalContext>
 
     std::shared_ptr<Ptx::Instruction> GetInstruction(uint64_t pc) const;
     uint64_t GetBasicBlockOffset(const std::string& func_name, const std::string& sym) const;
+    std::string GetBasicBlockAt(const std::string& func_name, uint64_t pc) const;
     void* GetParamPtr(const std::string& name) const;
 };
 
