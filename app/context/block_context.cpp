@@ -80,7 +80,7 @@ void* BlockContext::GetParamPtr(const std::string& name) const
 void BlockContext::RegisterSharedSymbol(const std::string& name, size_t size, size_t align)
 {
     std::lock_guard<std::mutex> lock(shared_mutex_);
-    if (shared_symbols_.contains(name))
+    if (shared_symbol_offsets_.contains(name))
     {
         return; // already registered by another warp
     }
@@ -93,14 +93,16 @@ void BlockContext::RegisterSharedSymbol(const std::string& name, size_t size, si
     {
         shared_memory_.resize(required);
     }
-    shared_symbols_[name] = &shared_memory_[shared_offset_];
+    shared_symbol_offsets_[name] = shared_offset_;
     shared_offset_ += size;
 }
 
 void* BlockContext::GetSharedPtr(const std::string& name) const
 {
-    auto it = shared_symbols_.find(name);
-    return it != shared_symbols_.end() ? it->second : nullptr;
+    auto it = shared_symbol_offsets_.find(name);
+    return it != shared_symbol_offsets_.end()
+               ? static_cast<void*>(const_cast<uint8_t*>(shared_memory_.data()) + it->second)
+               : nullptr;
 }
 
 void* BlockContext::GetSharedBase() const

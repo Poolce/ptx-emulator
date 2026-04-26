@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from typing import Optional
 
-from .aggregator import FunctionReport, InstrStats, Report
+from .aggregator import FunctionReport, InstrStats, RegisterInfo, Report
 
 
 def _heat_rgb(value: float, lo: float, hi: float) -> str:
@@ -960,8 +960,46 @@ def _render_itype_chart(fn: FunctionReport) -> str:
     return f'<div class="itype-chart">{"".join(bars)}</div>'
 
 
+def _render_register_table(fn: FunctionReport) -> str:
+    if not fn.registers:
+        return ""
+    total_declared = sum(r.declared for r in fn.registers)
+    rows = []
+    for reg in fn.registers:
+        write_cell = (
+            f'{reg.write_ops:,}'
+            if reg.write_ops
+            else '<span style="color:#aaa">&mdash;</span>'
+        )
+        rows.append(
+            f'<tr>'
+            f'<td><code style="color:#4db6ac">%{_esc(reg.prefix)}</code></td>'
+            f'<td>{_esc(reg.type_name)}</td>'
+            f'<td style="text-align:right;font-weight:600">{reg.declared}</td>'
+            f'<td style="text-align:right">{write_cell}</td>'
+            f'</tr>'
+        )
+    return (
+        f'<h3 style="margin-top:18px">Register Allocation'
+        f' <span style="font-weight:400;font-size:13px;color:#aaa">'
+        f'({total_declared} total per thread)</span></h3>'
+        f'<table class="summary-table" style="width:auto;min-width:320px">'
+        f'<thead><tr>'
+        f'<th>Prefix</th><th>Type</th>'
+        f'<th style="text-align:right">Declared</th>'
+        f'<th style="text-align:right">Write Ops</th>'
+        f'</tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody>'
+        f'</table>'
+        f'<p style="font-size:11px;color:#888;margin-top:4px">'
+        f'Write Ops = total register writes across all threads '
+        f'(active threads &times; warp issues).</p>'
+    )
+
+
 def _render_stat_pills(fn: FunctionReport) -> str:
     eff = fn.avg_branch_efficiency
+    total_regs = sum(r.declared for r in fn.registers)
     pills = [
         (
             "Total Executions",
@@ -984,6 +1022,15 @@ def _render_stat_pills(fn: FunctionReport) -> str:
             "distinct instructions profiled",
         ),
     ]
+    if total_regs:
+        pills.append((
+            "Registers / Thread",
+            str(total_regs),
+            f"{len(fn.registers)} type(s): "
+            + ", ".join(
+                f"%{r.prefix}={r.declared}" for r in fn.registers
+            ),
+        ))
     if fn.has_coalescing:
         pills += [
             (
@@ -1057,7 +1104,7 @@ def _render_kernel_section(
         )
         if itype
         else ""
-    )
+    ) + _render_register_table(fn)
 
     tab_panes = []
     for i, (tab, _label) in enumerate(tabs):

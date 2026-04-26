@@ -9,6 +9,14 @@ from .ptx_parser import PtxModule
 
 
 @dataclass
+class RegisterInfo:
+    prefix: str
+    type_name: str
+    declared: int
+    write_ops: int = 0
+
+
+@dataclass
 class InstrStats:
     pc: int
     function_name: str
@@ -87,6 +95,7 @@ class FunctionReport:
     total_global_mem_transactions: int = 0
     global_coalescing_sum: float = 0.0
     launch_id: int = 0
+    registers: list[RegisterInfo] = field(default_factory=list)
 
     @property
     def avg_branch_efficiency(self) -> float:
@@ -166,8 +175,6 @@ class Report:
     source_files: dict[str, list[str]] = field(default_factory=dict)
 
 
-# PTX directive instruction names (without the leading dot).
-# These are not executable instructions and must never appear in the report.
 _DIRECTIVE_NAMES: frozenset[str] = \
     frozenset({"loc", "reg", "shared", "pragma"})
 
@@ -248,7 +255,6 @@ def aggregate(
 
     if ptx:
         for (_, fn), pc_map in launch_func_pcs.items():
-            # Enrich existing records with PTX source info.
             for pc, stats in list(pc_map.items()):
                 ptx_instr = ptx.by_func_pc.get((fn, pc))
                 if ptx_instr:
@@ -257,8 +263,6 @@ def aggregate(
                     stats.source_line = ptx_instr.source_line
                     stats.source_col = ptx_instr.source_col
 
-            # Synthesize display-only rows for directive PCs that have no
-            # profiling record (C++ no longer emits records for directives).
             for (ptx_fn, ptx_pc), ptx_instr in ptx.by_func_pc.items():
                 if ptx_fn != fn or ptx_pc in pc_map:
                     continue
@@ -314,6 +318,28 @@ def aggregate(
         gmt_total = sum(i.global_mem_transactions_total for i in instructions)
         gc_sum = sum(i.global_coalescing_sum for i in instructions)
 
+        registers: list[RegisterInfo] = []
+        if ptx:
+            func_regs = ptx.func_reg_declarations.get(fn, {})
+            reg_map: dict[str, RegisterInfo] = {}
+            for prefix, (count, type_name) in func_regs.items():
+                reg_map[prefix] = RegisterInfo(
+                    prefix=prefix,
+                    type_name=type_name,
+                    declared=count,
+                )
+            for instr in instructions:
+                if instr.is_directive:
+                    continue
+                ptx_instr = ptx.by_func_pc.get((fn, instr.pc))
+                if ptx_instr and ptx_instr.dst_reg_prefix:
+                    pfx = ptx_instr.dst_reg_prefix
+                    if pfx in reg_map:
+                        reg_map[pfx].write_ops += instr.exec_count
+            registers = sorted(
+                reg_map.values(), key=lambda r: -r.declared
+            )
+
         function_reports.append(
             FunctionReport(
                 name=fn,
@@ -326,6 +352,7 @@ def aggregate(
                 total_global_mem_transactions=gmt_total,
                 global_coalescing_sum=gc_sum,
                 launch_id=launch_id,
+                registers=registers,
             )
         )
 

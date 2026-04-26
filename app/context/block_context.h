@@ -64,7 +64,7 @@ class BlockContext : public std::enable_shared_from_this<BlockContext>
     std::vector<std::shared_ptr<WarpContext>> warps_;
     std::vector<uint8_t> shared_memory_;
 
-    std::unordered_map<std::string, void*> shared_symbols_;
+    std::unordered_map<std::string, size_t> shared_symbol_offsets_;
     size_t shared_offset_ = 0;
     mutable std::mutex shared_mutex_;
 

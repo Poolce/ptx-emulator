@@ -23,12 +23,6 @@ import argparse
 import sys
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Locate the tools package relative to this script.
-# Handles two install layouts:
-#   • Source tree:  tools/ptx_profiler  (alongside tools/ptx_report/)
-#   • Build tree:   build/bin/ptx_profiler  (copied by CMake)
-# ---------------------------------------------------------------------------
 def _find_package_root() -> Path:
     here = Path(__file__).resolve()
     for candidate in [here.parent, here.parent.parent, here.parent.parent.parent]:
@@ -43,10 +37,6 @@ sys.path.insert(0, str(_find_package_root()))
 
 from tools.ptx_report.__main__ import main as _report_main  # noqa: E402
 
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -121,7 +111,6 @@ def main() -> int:
     output = args.output or Path(f"{args.binary.stem}_report.html")
     title  = args.title  or f"{args.binary.name} — PTX Profile Report"
 
-    # Build the argv list that tools.ptx_report.__main__.main() expects.
     report_argv: list[str] = [
         "--binary", str(args.binary),
         "--output", str(output),

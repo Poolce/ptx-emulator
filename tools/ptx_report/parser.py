@@ -5,9 +5,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-# [19:47:48.689] [PC: 0x0000000000000004]  Block: [0, 0, 0] WarpId: 12
-# Execution Mask 0x0000ffff ld branch_efficiency: 1.0000,
-# bank_conflicts: 0
 _RECORD_RE = re.compile(
     r"\[(\d{2}:\d{2}:\d{2}\.\d{3})\] "
     r"\[PC: 0x([0-9a-fA-F]+)\]  "
