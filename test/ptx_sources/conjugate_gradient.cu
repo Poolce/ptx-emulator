@@ -242,8 +242,5 @@ int main()
         }
     }
 
-    if (ok)
-        std::cout << "SUCCESS! Converged in " << iter << " iterations." << std::endl;
-
     return ok ? 0 : 1;
 }
