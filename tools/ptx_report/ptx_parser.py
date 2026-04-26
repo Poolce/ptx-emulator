@@ -152,6 +152,7 @@ def parse_ptx(ptx_text: str) -> PtxModule:
                     continue
 
                 name = instr_m.group(1)
+                # .loc is skipped by the C++ parser (no PC assigned).
                 if name == "loc":
                     continue
 

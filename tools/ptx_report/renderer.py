@@ -461,7 +461,10 @@ function _saInitGrids(kid) {
         {
             field: 'ptx', headerName: 'PTX Instruction', flex: 1, minWidth: 100,
             resizable: true,
-            cellStyle: { color: '#1e272e', whiteSpace: 'pre', overflow: 'hidden' },
+            cellStyle: p => ({
+                color: p.data.is_dir ? '#999' : '#1e272e',
+                whiteSpace: 'pre', overflow: 'hidden',
+            }),
             cellRenderer: p => p.data.is_sep ? '' : p.value,
             tooltipField: 'ptx',
         },
@@ -470,6 +473,7 @@ function _saInitGrids(kid) {
             resizable: true,
             cellRenderer: p => {
                 if (p.data.is_sep) return '';
+                if (p.data.is_dir) return '<span style="color:#bbb">—</span>';
                 return _miniBar(Math.round(100 * p.value / kd.maxExec),
                     _heatRgb(p.value, 0, kd.maxExec), _fmtN(p.value));
             },
@@ -479,6 +483,7 @@ function _saInitGrids(kid) {
             resizable: true,
             cellRenderer: p => {
                 if (p.data.is_sep) return '';
+                if (p.data.is_dir) return '<span style="color:#bbb">—</span>';
                 const c = _effRgb(p.value);
                 return _miniBar(Math.round(p.value * 100), c,
                     (p.value * 100).toFixed(1) + '%', c);
@@ -490,8 +495,32 @@ function _saInitGrids(kid) {
             field: 'bc', headerName: 'Bank Conflicts', width: 110, minWidth: 60,
             resizable: true,
             cellRenderer: p => {
-                if (p.data.is_sep || !p.value) return p.data.is_sep ? '' : '0';
+                if (p.data.is_sep) return '';
+                if (p.data.is_dir) return '<span style="color:#bbb">—</span>';
+                if (!p.value) return '0';
                 return `<span style="color:#d32f2f;font-weight:600">${p.value.toLocaleString()}</span>`;
+            },
+        });
+    }
+    if (kd.hasCoal) {
+        asmCols.push({
+            field: 'gmt', headerName: 'Mem Trans', width: 90, minWidth: 60,
+            resizable: true,
+            cellRenderer: p => {
+                if (p.data.is_sep) return '';
+                if (p.data.is_dir || !p.data.gmt) return '<span style="color:#bbb">—</span>';
+                return `<span style="font-variant-numeric:tabular-nums">${p.data.gmt}</span>`;
+            },
+        });
+        asmCols.push({
+            field: 'coal', headerName: 'Coalescing', width: 130, minWidth: 70,
+            resizable: true,
+            cellRenderer: p => {
+                if (p.data.is_sep) return '';
+                if (p.data.is_dir || !p.data.gmt) return '<span style="color:#bbb">—</span>';
+                const c = _effRgb(p.value);
+                return _miniBar(Math.round(p.value * 100), c,
+                    (p.value * 100).toFixed(1) + '%', c);
             },
         });
     }
@@ -635,6 +664,8 @@ def _render_split_view(
                         sl.avg_branch_efficiency if is_active else 1.0
                     ),
                     "bc": sl.bank_conflicts_total if is_active else 0,
+                    "gmt": sl.global_mem_transactions_total if is_active else 0,
+                    "coal": 0.0,
                     "_hl": None,
                 }
             )
@@ -662,6 +693,8 @@ def _render_split_view(
                         "exec": 0,
                         "eff": 1.0,
                         "bc": 0,
+                        "gmt": 0,
+                        "coal": 0.0,
                         "sid": None,
                         "active": False,
                         "_hl": None,
@@ -673,11 +706,14 @@ def _render_split_view(
             {
                 "_id": row_id,
                 "is_sep": False,
+                "is_dir": instr.is_directive,
                 "pc": f"0x{instr.pc:04x}",
                 "ptx": instr.ptx_line or instr.instr_name,
                 "exec": instr.issue_count,
                 "eff": instr.avg_branch_efficiency,
                 "bc": instr.bank_conflicts_total,
+                "gmt": instr.global_mem_transactions_total,
+                "coal": round(instr.avg_global_coalescing, 4),
                 "sid": sid,
                 "active": True,
                 "_hl": None,
@@ -689,6 +725,7 @@ def _render_split_view(
         "src": src_rows,
         "asm": asm_rows,
         "hasBc": fn.has_bank_conflicts,
+        "hasCoal": fn.has_coalescing,
         "maxExec": max_exec,
         "maxSrcExec": max_src_exec,
     }
@@ -725,6 +762,7 @@ def _render_asm_table(fn: FunctionReport) -> str:
         (i.issue_count for i in fn.instructions), default=1
     )
     has_bc = fn.has_bank_conflicts
+    has_coal = fn.has_coalescing
 
     cols = [
         "PC",
@@ -735,11 +773,30 @@ def _render_asm_table(fn: FunctionReport) -> str:
     ]
     if has_bc:
         cols.append("Bank Conflicts")
+    if has_coal:
+        cols += ["Mem Trans", "Avg Coalescing"]
 
     thead = "".join(f"<th>{c}</th>" for c in cols)
     rows = []
 
+    _dash = '<td class="metric-cell" style="color:#bbb">&mdash;</td>'
+
     for instr in fn.instructions:
+        ptx_line = _esc(instr.ptx_line or instr.instr_name)
+        if instr.is_directive:
+            cells = [
+                f'<td class="pc-cell">0x{instr.pc:04x}</td>',
+                f'<td class="bb-cell"></td>',
+                f'<td class="instr-cell" title="{ptx_line}" style="color:#999">{ptx_line}</td>',
+                _dash, _dash,
+            ]
+            if has_bc:
+                cells.append(_dash)
+            if has_coal:
+                cells += [_dash, _dash]
+            rows.append(f"<tr>{''.join(cells)}</tr>")
+            continue
+
         eff = instr.avg_branch_efficiency
         hot = instr.issue_count >= max_exec * 0.8
         rc = ' class="hot-row"' if hot else ""
@@ -751,7 +808,6 @@ def _render_asm_table(fn: FunctionReport) -> str:
             _heat_rgb(instr.issue_count, 0, max_exec),
         )
         eff_bar = _bar(eff, 1.0, 60, _efficiency_rgb(eff))
-        ptx_line = _esc(instr.ptx_line or instr.instr_name)
 
         cells = [
             f'<td class="pc-cell">0x{instr.pc:04x}</td>',
@@ -768,6 +824,20 @@ def _render_asm_table(fn: FunctionReport) -> str:
             cells.append(
                 f'<td class="metric-cell" style="color:{bc_c}">{bc:,}</td>'
             )
+        if has_coal:
+            gmt = instr.global_mem_transactions_total
+            coal = instr.avg_global_coalescing
+            if gmt == 0:
+                cells.append(_dash)
+                cells.append(_dash)
+            else:
+                coal_c = _efficiency_rgb(coal)
+                coal_bar = _bar(coal, 1.0, 50, coal_c)
+                cells.append(f'<td class="metric-cell">{gmt:,}</td>')
+                cells.append(
+                    f'<td class="metric-bar-cell"><span class="bar-wrap">{coal_bar}'
+                    f'<span class="eff-pct">{_fmt_pct(coal)}</span></span></td>'
+                )
 
         rows.append(f"<tr{rc}>{''.join(cells)}</tr>")
 
@@ -841,6 +911,13 @@ def _render_hotspots(fn: FunctionReport) -> str:
                 "Instructions with most bank conflicts", bc_hot
             )
         )
+    coal_hot = fn.hotspots_by_coalescing(10)
+    if coal_hot:
+        sections.append(
+            _hot_table(
+                "Instructions with worst global memory coalescing", coal_hot
+            )
+        )
 
     return (
         "\n".join(s for s in sections if s)
@@ -907,6 +984,19 @@ def _render_stat_pills(fn: FunctionReport) -> str:
             "distinct instructions profiled",
         ),
     ]
+    if fn.has_coalescing:
+        pills += [
+            (
+                "Mem Transactions",
+                f"{fn.total_global_mem_transactions:,}",
+                "total global L1 cache-line transactions",
+            ),
+            (
+                "Avg Coalescing",
+                f"{fn.avg_global_coalescing * 100:.1f}%",
+                "global memory coalescing efficiency",
+            ),
+        ]
     parts = []
     for label, value, sub in pills:
         parts.append(
@@ -935,6 +1025,10 @@ def _render_kernel_section(
         badges.append(
             f'<span class="badge warn">{
                 fn.total_bank_conflicts:,    } bank conflicts</span>')
+    if fn.has_coalescing and fn.avg_global_coalescing < 0.5:
+        badges.append(
+            f'<span class="badge warn">Avg coalescing {_fmt_pct(fn.avg_global_coalescing)}</span>'
+        )
 
     if has_src:
         tabs = [
@@ -994,6 +1088,7 @@ def _render_kernel_section(
 
 
 def _render_summary(report: Report) -> str:
+    any_coal = any(fn.has_coalescing for fn in report.functions)
     rows = []
     for fn in report.functions:
         kid = _kernel_id(fn)
@@ -1001,6 +1096,14 @@ def _render_summary(report: Report) -> str:
         eff_color = _efficiency_rgb(eff)
         bc = fn.total_bank_conflicts
         src_indicator = "\u2713" if fn.has_source else "\u2014"
+        coal_cell = ""
+        if any_coal:
+            if fn.has_coalescing:
+                coal = fn.avg_global_coalescing
+                coal_color = _efficiency_rgb(coal)
+                coal_cell = f'<td><span style="color:{coal_color};font-weight:600">{_fmt_pct(coal)}</span></td>'
+            else:
+                coal_cell = "<td>&mdash;</td>"
         rows.append(
             f"<tr onclick=\"showKernel('{kid}')\">"
             f'<td style="text-align:center;font-weight:600">{fn.launch_id}</td>'
@@ -1010,10 +1113,12 @@ def _render_summary(report: Report) -> str:
             f"<td>{_fmt_exec(fn.total_exec_count)}</td>"
             f'<td><span style="color:{eff_color};font-weight:600">{_fmt_pct(eff)}</span></td>'
             f"<td>{'&mdash;' if bc == 0 else f'<b style=color:#d32f2f>{bc:,}</b>'}</td>"
+            f"{coal_cell}"
             f"<td>{src_indicator}</td>"
             f"<td>{len(fn.instructions)}</td>"
             f"</tr>"
         )
+    coal_th = "<th>Avg Coalescing</th>" if any_coal else ""
     return f"""
 <section class="card" id="summary-section">
   <h2>Kernel Summary</h2>
@@ -1021,7 +1126,7 @@ def _render_summary(report: Report) -> str:
   <table class="summary-table">
     <thead><tr>
       <th>Launch</th><th>Kernel</th><th>Total Executions</th><th>Avg Branch Eff</th>
-      <th>Bank Conflicts</th><th>Source</th><th>Unique PCs</th>
+      <th>Bank Conflicts</th>{coal_th}<th>Source</th><th>Unique PCs</th>
     </tr></thead>
     <tbody>{"".join(rows)}</tbody>
   </table>

@@ -20,7 +20,11 @@ std::unique_ptr<RtInterface> interface;
 cudaError_t cudaMalloc(void** devPtr, size_t size)
 {
     LOG_DEBUG("cudaMalloc size=" + std::to_string(size));
-    *devPtr = malloc(size);
+    // Real CUDA guarantees 256-byte alignment. Match that so warp-level address
+    // analysis in the profiler sees clean cache-line boundaries.
+    constexpr size_t CUDA_MALLOC_ALIGN = 256;
+    const size_t aligned_size = (size + CUDA_MALLOC_ALIGN - 1) & ~(CUDA_MALLOC_ALIGN - 1);
+    *devPtr = std::aligned_alloc(CUDA_MALLOC_ALIGN, aligned_size);
     if (*devPtr == nullptr)
     {
         LOG_ERROR("cudaMalloc failed: allocation of " + std::to_string(size) + " bytes returned nullptr");
