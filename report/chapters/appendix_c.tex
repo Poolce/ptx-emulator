@@ -1,0 +1,95 @@
+\section{Трассировка PDOM\_Diverge на примере вложенной дивергенции}
+\label{app:pdom_trace}
+
+Рассмотрим фрагмент CUDA-кода с двумя вложенными условными ветвлениями:
+
+\begin{lstlisting}[language=C++, caption={Пример вложенной дивергенции}]
+// tid = threadIdx.x
+if (tid < 16) {           // outer if: threads 0-15 / 16-31
+    if (tid < 8) {        // inner if: threads 0-7 / 8-15
+        A();
+    } else {
+        B();
+    }
+    C();
+} else {
+    D();
+}
+E();  // reconvergence point
+\end{lstlisting}
+
+Начальная маска: $M_0 = \texttt{0xFFFFFFFF}$.
+Базовые блоки: $\mathrm{bb\_outer\_if}$, $\mathrm{bb\_inner\_if}$,
+$\mathrm{bb\_A}$, $\mathrm{bb\_B}$, $\mathrm{bb\_C}$, $\mathrm{bb\_D}$,
+$\mathrm{bb\_E}$ (реконвергенция).
+
+Пусть $\mathrm{PC}_E = 100$~--- PC метки \texttt{E},
+$\mathrm{PC}_C = 50$~--- PC метки \texttt{C}.
+
+\begin{table}[h]
+  \caption{Трассировка стека дивергенции}
+  \label{tab:pdom_trace}
+  \centering
+  \begin{tabular}{clp{8cm}}
+    \toprule
+    \textbf{Шаг} & \textbf{Текущий PC / инструкция} & \textbf{Стек $S$ (вершина справа)} \\
+    \midrule
+    1 & \texttt{setp.lt} + \texttt{@\%p bra \$outer}
+      & Внешняя дивергенция: \\
+    & & $M_{\mathrm{taken}} = \texttt{0x0000FFFF}$,
+        $M_{\mathrm{not}} = \texttt{0xFFFF0000}$ \\
+    & & push конвергенции $\{100, \texttt{0xFFFFFFFF}\}$,
+        push «не взята» $\{PC_{D}, \texttt{0xFFFF0000}\}$ \\
+    & & $S = [\{100, M_0, T\},\; \{PC_D, M_{\mathrm{not}}, F\}]$ \\
+    \midrule
+    2 & Исполнение $\mathrm{bb\_inner\_if}$: \texttt{@\%p bra \$inner}
+      & $M = \texttt{0x0000FFFF}$; \\
+    & Внутренняя дивергенция: &
+        $M_{\mathrm{tk}} = \texttt{0x000000FF}$,
+        $M_{\mathrm{nt}} = \texttt{0x0000FF00}$ \\
+    & & push $\{PC_C, \texttt{0x0000FFFF}, T\}$,
+        push $\{PC_B, \texttt{0x0000FF00}, F\}$ \\
+    & & $S = [\{100,M_0,T\},\{PC_D,M_{\mathrm{not\_outer}},F\},$ \\
+    & & $\quad\quad \{PC_C,\texttt{0x0000FFFF},T\},\{PC_B,\texttt{0x0000FF00},F\}]$ \\
+    \midrule
+    3 & Исполнение $\mathrm{bb\_A}$ ($M = \texttt{0x000000FF}$)
+      & $S$ без изменений \\
+    \midrule
+    4 & PC = $PC_B$ (CheckStack)
+      & Снимаем $\{PC_B, \texttt{0x0000FF00}, F\}$: \\
+    & & $M \leftarrow \texttt{0x0000FF00}$,
+        $S = [\{100,M_0,T\},\{PC_D,M_{\mathrm{not}},F\},\{PC_C,\texttt{0x0000FFFF},T\}]$ \\
+    \midrule
+    5 & Исполнение $\mathrm{bb\_B}$ ($M = \texttt{0x0000FF00}$)
+      & $S$ без изменений \\
+    \midrule
+    6 & PC = $PC_C$ (CheckStack)
+      & Снимаем $\{PC_C, \texttt{0x0000FFFF}, T\}$: \\
+    & & $M \leftarrow \texttt{0x0000FFFF}$,
+        $S = [\{100, M_0, T\},\; \{PC_D, M_{\mathrm{not}}, F\}]$ \\
+    \midrule
+    7 & Исполнение $\mathrm{bb\_C}$ ($M = \texttt{0x0000FFFF}$)
+      & $S$ без изменений \\
+    \midrule
+    8 & PC = $PC_D$ (CheckStack)
+      & Снимаем $\{PC_D, M_{\mathrm{not}}, F\}$: \\
+    & & $M \leftarrow \texttt{0xFFFF0000}$,
+        $S = [\{100, M_0, T\}]$ \\
+    \midrule
+    9 & Исполнение $\mathrm{bb\_D}$ ($M = \texttt{0xFFFF0000}$)
+      & $S$ без изменений \\
+    \midrule
+    10 & PC = 100 (CheckStack)
+       & Снимаем $\{100, M_0, T\}$: \\
+    & & $M \leftarrow \texttt{0xFFFFFFFF}$, $S = [\,]$ \\
+    \midrule
+    11 & Исполнение $\mathrm{bb\_E}$ ($M = \texttt{0xFFFFFFFF}$)
+       & Полная реконвергенция \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Трассировка подтверждает, что LIFO-порядок снятия фреймов восстанавливает
+маски в порядке «внутреннее-первым», затем «внешнее-первым», что
+обеспечивает корректное исполнение всех ветвей при произвольной
+глубине вложенности.

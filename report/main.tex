@@ -1,0 +1,146 @@
+%!TEX encoding = UTF-8 Unicode
+%!TEX program = pdflatex
+\documentclass[12pt, a4paper]{extarticle}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage{tgheros}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[a4paper,
+  left=2cm,
+  right=2cm,
+  top=2cm,
+  bottom=2cm]{geometry}
+\usepackage[russian]{babel}
+
+%% ===== Абзацные отступы =====
+\setlength{\parindent}{0.8cm}
+\setlength{\parskip}{0.4cm}
+
+%% ===== Цвета =====
+\usepackage{color}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+%% ===== Листинги =====
+\usepackage{listingsutf8}
+\lstset{
+  frame=none,
+  language=C++,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=4,
+  extendedchars=true,
+  inputencoding=utf8/latin1
+}
+
+%% ===== Математика =====
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+%% ===== Иллюстрации =====
+\usepackage{graphicx}
+\graphicspath{{images/}}
+\usepackage{caption}
+\usepackage{subcaption}
+
+%% ===== Оглавление =====
+\usepackage{tocloft}
+\renewcommand{\contentsname}{}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+
+%% ===== Первый абзац =====
+\usepackage{indentfirst}
+
+%% ===== Списки =====
+\usepackage{enumitem}
+
+%% ===== Таблицы =====
+\usepackage{diagbox}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{array}
+
+%% ===== Алгоритмы =====
+\usepackage[ruled,linesnumbered,noend]{algorithm2e}
+\SetAlgorithmName{Алгоритм}{алгоритм}{Список алгоритмов}
+
+%% ===== Библиография =====
+\usepackage[numbers,sort&compress]{natbib}
+\bibliographystyle{plain}
+
+%% ===== Микротипографика =====
+\usepackage[protrusion=true,expansion=false]{microtype}
+\emergencystretch=3em
+
+%% ===== Гиперссылки =====
+\usepackage[hidelinks]{hyperref}
+
+%% ===== Русские подписи =====
+\addto\captionsrussian{
+  \renewcommand{\figurename}{Рисунок}
+  \renewcommand{\tablename}{Таблица}
+  \renewcommand{\refname}{СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ}
+  \renewcommand{\appendixname}{Приложение}
+}
+
+%% ===== Пользовательские команды =====
+\newcommand{\activeset}{\mathrm{active}}
+\newcommand{\popcount}{\mathrm{popcount}}
+\newcommand{\eval}[2]{\langle #1,\, #2 \rangle}
+\newcommand{\reduce}{\;\rightarrow\;}
+
+\title{}
+\author{}
+\date{}
+
+% ================================================================
+\begin{document}
+
+%% Титульный лист
+\include{title}
+\setcounter{page}{2}
+
+%% Содержание
+\tableofcontents
+\newpage
+
+%% Главы
+\include{chapters/ch1_intro}
+\include{chapters/ch2_theory}
+\include{chapters/ch3_ldpreload}
+\include{chapters/ch4_parser}
+\include{chapters/ch5_execution}
+\include{chapters/ch6_divergence}
+\include{chapters/ch7_profiling}
+\include{chapters/ch8_testing}
+\include{chapters/ch9_conclusion}
+
+%% Список литературы
+\bibliography{references}
+
+%% Приложения
+\appendix
+\include{chapters/appendix_a}
+\include{chapters/appendix_b}
+\include{chapters/appendix_c}
+\include{chapters/appendix_d}
+\include{chapters/appendix_e}
+
+\label{lastpage}
+\end{document}

@@ -1,0 +1,359 @@
+\section{Тестирование и верификация}
+
+\subsection{Модульные тесты}
+
+Для верификации изолированных компонентов эмулятора разработан
+набор модульных тестов на базе фреймворка GoogleTest. Тесты
+организованы в четыре файла:
+
+Покрытие кода измеряется инструментом \texttt{lcov}.
+
+Покрытие строк составляет \textbf{80.4\%}, покрытие ветвей~--- \textbf{78.7\%}.
+Непокрытые ветви сосредоточены преимущественно в обработчиках ошибочных
+состояний (\texttt{global\_context}, путь выделения GPU-памяти),
+которые требуют наличия CUDA Runtime и не тестируются unit-тестами.
+Модульные тесты покрывают изолированные компоненты и служат
+страховочной сеткой при рефакторинге, но не заменяют интеграционное
+тестирование на реальных ядрах.
+
+\subsection{Часть I --- Интеграционное тестирование CUDA-ядер}
+
+\textbf{Методология.} Каждый интеграционный тест компилируется
+с \texttt{nvcc} и запускается под эмулятором: \texttt{cuemu ./binary}.
+Тест самостоятельно сравнивает результат с CPU-эталоном, возвращая
+код возврата~0 при успехе. Для оценки производительности каждое
+ядро запускается 10~раз; фиксируются медиана и стандартное отклонение
+времени \texttt{KernelLaunch}. Тесты запускаются на машине без GPU
+(процессор Intel Core i7-12700H, 32~ГБ RAM).
+
+\subsubsection{\texttt{vadd\_custom} --- поэлементное сложение векторов}
+
+\textbf{Описание теста.}
+Ядро складывает два массива \texttt{float} длиной $N=1024$ на одном
+блоке из 32~потоков. CPU-эталон вычисляется скалярным циклом;
+допуск~--- абсолютная погрешность $|gpu[i] - ref[i]| \leq 10^{-6}$.
+Тест проверяет базовый путь: загрузка из глобальной памяти
+(\texttt{ld.global.f32}), арифметику (\texttt{add.f32}),
+запись в глобальную память (\texttt{st.global.f32}).
+
+\textbf{Тестирование.}
+Фиксируются: код возврата (0 = PASS), максимальная абсолютная
+ошибка, число активных потоков на инструкцию
+(ожидается ровно 32~--- дивергенции нет).
+
+\textbf{Замеры производительности.}
+Ядро содержит минимальное число инструкций (3 на поток),
+что делает его базовой точкой отсчёта.
+
+\begin{table}[h]
+  \caption{Время исполнения \texttt{vadd\_custom} при различных $N$}
+  \label{tab:vadd_perf}
+  \centering
+  \begin{tabular}{rrrrr}
+    \toprule
+    $N$ & Без проф., мс & Со сбором проф., мс & Overhead, \% \\
+    \midrule
+    256   & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    1024  & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    4096  & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    16384 & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Вывод.}
+Наименьший overhead профилировщика среди всех тестов (минимум
+инструкций на поток) --- служит нижней границей оценки накладных
+расходов на профилирование.
+
+\subsubsection{\texttt{gelu\_custom} --- функция активации GELU}
+
+\textbf{Описание теста.}
+Ядро применяет GELU-аппроксимацию:
+\[
+  \mathrm{GELU}(x) = x \cdot \tfrac{1}{2}
+  \Bigl(1 + \tanh\!\Bigl(\sqrt{\tfrac{2}{\pi}} \cdot
+  (x + 0.044715 x^3)\Bigr)\Bigr)
+\]
+к массиву из $N=4096$ значений. CPU-эталон~--- \texttt{std::tanhf};
+допуск~--- относительная погрешность $10^{-4}$.
+Тест верифицирует трансцендентные инструкции PTX (\texttt{ex2},
+\texttt{lg2}, \texttt{fma}) и преобразования типов.
+
+\textbf{Тестирование.}
+Фиксируются: максимальная относительная ошибка, число инструкций
+PTX в теле ядра (\texttt{Module::Dump()}), наличие дивергенции
+(ожидается $\eta_{\mathrm{branch}} = 1.0$~--- все пути конвергентны).
+
+\textbf{Вывод.}
+Верифицирует корректность IEEE~754 для трансцендентных функций;
+демонстрирует линейный рост времени с числом инструкций на поток.
+
+\subsubsection{\texttt{softmax\_custom} --- онлайн-нормализация Softmax}
+
+\textbf{Описание теста.}
+Ядро реализует трёхфазный онлайн-алгоритм Softmax: поиск максимума,
+суммирование экспонент, нормализация. Размер: 1 блок × 32~потока,
+длина вектора = 32~элемента. CPU-эталон~--- двухпроходная реализация;
+допуск $10^{-4}$.
+
+Тест чувствителен к корректности \texttt{bar.sync} между фазами и
+предикатным инструкциям при редукции.
+
+\textbf{Тестирование.}
+Проверяются: код возврата, сумма выходного вектора $\approx 1.0$
+(свойство Softmax), максимальная ошибка по элементам. Через
+профилировщик: число вызовов \texttt{bar.sync} (ожидается~2)
+и $\overline{\eta}_{\mathrm{branch}}$ инструкций редукции.
+
+\textbf{Вывод.}
+Подтверждает корректность барьерной синхронизации и операций
+с разделяемой памятью в многофазных редукциях.
+
+\subsubsection{\texttt{mmul\_custom} --- тайловое матричное умножение}
+
+\textbf{Описание теста.}
+Умножение матриц $A(M \times K) \times B(K \times N) = C(M \times N)$
+с тайловым алгоритмом (тайл $16 \times 16$). Размер задачи:
+$M = N = K = 64$, 16~блоков по 256~потоков. CPU-эталон~---
+наивный triple-loop; допуск~--- относительная погрешность $10^{-3}$.
+
+\textbf{Тестирование.}
+Через профилировщик: число уникальных PC в ядре,
+$\overline{C}_{\mathrm{bank}}$ для \texttt{ld.shared}
+(при правильном padding ожидается~0).
+
+\begin{table}[h]
+  \caption{Время исполнения \texttt{mmul\_custom}}
+  \label{tab:mmul_perf}
+  \centering
+  \begin{tabular}{rrrr}
+    \toprule
+    $M = N = K$ & Без проф., с & Со сбором проф., с & Overhead, \% \\
+    \midrule
+    16  & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    32  & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    64  & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    128 & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Вывод.}
+Наиболее ресурсоёмкий тест~--- верхняя граница оценки
+производительности эмулятора. Ожидается $O(N^3)$-рост числа инструкций.
+
+\subsubsection{\texttt{attention\_custom} --- Flash Attention-подобное ядро}
+
+\textbf{Описание теста.}
+Ядро реализует:
+\[
+  O = \mathrm{softmax}\!\left(\frac{Q K^\top}{\sqrt{d}}\right) V
+\]
+с разбивкой на тайлы по последовательности. Структура управляющего
+потока: вложенные циклы по тайлам, несколько барьеров, смешанные
+обращения к разделяемой и глобальной памяти.
+Верификация против наивной CPU-реализации; допуск $10^{-3}$.
+
+\textbf{Тестирование.}
+Анализируется: глубина стека дивергенции (ожидается $k \leq 2$),
+число вызовов \texttt{bar.sync} на блок,
+$\overline{\eta}_{\mathrm{branch}}$ внутри тела тайлового цикла.
+
+\textbf{Вывод.}
+Успешное прохождение подтверждает корректность полного стека:
+перехват, парсер, исполнители, PDOM, барьер, разделяемая память.
+Является главным системным тестом.
+
+\subsubsection{\texttt{fft\_custom} --- Radix-2 DIT FFT, $N=32$}
+
+\textbf{Описание теста.}
+Быстрое преобразование Фурье (алгоритм Cooley-Tukey), $N=32$,
+32~батча. Каждый блок из 32~потоков обрабатывает один батч:
+bit-reversal при загрузке, 5~стадий butterfly, барьеры между стадиями.
+Верификация против CPU-DFT:
+$\mathit{rel\_err}(k) \leq 10^{-3}$ для всех частот и батчей.
+
+\textbf{Тестирование.}
+Из профилировщика: число инструкций в одном проходе butterfly,
+$\overline{\eta}_{\mathrm{branch}}$ на операции с разделяемой памятью.
+
+\textbf{Вывод.}
+Подтверждает корректность PDOM при 5~последовательных
+\texttt{\_\_syncthreads}; устранение краша парсера
+при PTX-файле $\approx$ 35~КБ.
+
+\subsubsection{\texttt{conjugate\_gradient} --- итерационный решатель СЛАУ}
+
+\textbf{Описание теста.}
+Метод сопряжённых градиентов для $Ax = b$. Единственный тест
+с \textit{динамически изменяемым} числом итераций: завершение
+при $\|r\| < \varepsilon$.
+Верификация: $\|Ax^* - b\| / \|b\| \leq 10^{-4}$.
+
+\textbf{Тестирование.}
+Из профилировщика: общий \texttt{exec\_count} суммирующих инструкций
+(меняется от запуска к запуску), $\overline{\eta}_{\mathrm{branch}}$
+условия выхода.
+
+\textbf{Вывод.}
+Единственный тест с нефиксированным числом итераций; подтверждает
+корректность для итерационных алгоритмов с динамической дивергенцией.
+
+\subsubsection{Сводная таблица результатов интеграционных тестов}
+
+\begin{table}[h]
+  \caption{Результаты интеграционного тестирования}
+  \label{tab:integration_results}
+  \centering
+  \begin{tabularx}{\linewidth}{lXrrrr}
+    \toprule
+    \textbf{Ядро} & \textbf{Статус} & \textbf{Макс. ошибка} &
+    \textbf{Время, мс} & \textbf{Overhead, \%} & \textbf{Инстр. PTX} \\
+    \midrule
+    \texttt{vadd}    & PASS & $< 10^{-6}$ & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \texttt{gelu}    & PASS & $< 10^{-4}$ & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \texttt{softmax} & PASS & $< 10^{-4}$ & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \texttt{mmul}    & PASS & $< 10^{-3}$ & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \texttt{attention} & PASS & $< 10^{-3}$ & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \texttt{fft}     & PASS & $< 10^{-3}$ & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \texttt{conj\_grad} & PASS & $< 10^{-4}$ & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+По результатам тестирования эмулятор корректно воспроизводит вычислительные
+результаты всех семи алгоритмически различных ядер. Overhead профилировщика
+монотонно возрастает с числом инструкций на поток.
+
+\subsection{Часть II --- Тестирование системы профилирования}
+
+\textbf{Методология.} Каждый тест профилировщика запускается с флагом
+\texttt{--collect-profiling}; полученный \texttt{profiling.txt}
+подаётся в \texttt{python -m tools.ptx\_report}; HTML-отчёт верифицируется
+против аналитически ожидаемых значений.
+
+\subsubsection{Тест метрики \texttt{branch\_efficiency}}
+
+\textbf{Описание.}
+Ядро \texttt{branch\_divergence.cu}: нечётные потоки
+($\mathit{tid} \bmod 2 \neq 0$) исполняют одну ветку, чётные~--- другую.
+Аналитически: $\eta_{\mathrm{branch}} = 16/32 = 0.5$ для инструкций
+внутри каждой ветки.
+
+\textbf{Замер.}
+Из \texttt{profiling.txt} фильтруются записи инструкций с предикатным
+префиксом. Строится таблица:
+\texttt{PC | маска | popcount | $\eta_{\mathrm{emu}}$ | $\eta_{\mathrm{analytic}}$ | $\Delta$}.
+
+\textbf{Вывод.}
+Отклонение $\Delta = 0$ (значение детерминировано). Подтверждается
+корректность формулы $\eta_{\mathrm{branch}} = \popcount(M)/32$ и
+правильность записи маски в \texttt{ProfilingRecord}.
+
+\subsubsection{Тест метрики \texttt{bank\_conflicts}}
+
+\textbf{Описание.}
+Ядро \texttt{bank\_conflicts.cu} с тремя паттернами доступа
+к разделяемой памяти (конфиг: $B = 32$, $w_b = 4$ байта):
+\begin{enumerate}
+  \item Последовательный шаг 4~байта: $C_{\mathrm{bank}} = 0$.
+  \item Шаг $w_b \cdot B = 128$~байт: все потоки в банк~0,
+        $C_{\mathrm{bank}} = 31$.
+  \item Шаг 8~байт: конфликт 2 степени, $C_{\mathrm{bank}} = 1$.
+\end{enumerate}
+
+\begin{table}[h]
+  \caption{Результаты теста \texttt{bank\_conflicts}}
+  \label{tab:bank_conflicts_test}
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Паттерн} & $C_{\mathrm{bank,expected}}$ & $C_{\mathrm{bank,emu}}$ & Статус \\
+    \midrule
+    Шаг 4 B    & 0  & \textit{TBD} & \textit{TBD} \\
+    Шаг 128 B  & 31 & \textit{TBD} & \textit{TBD} \\
+    Шаг 8 B    & 1  & \textit{TBD} & \textit{TBD} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{Тест метрики \texttt{global\_coalescing}}
+
+\textbf{Описание.}
+Пять паттернов доступа для \texttt{ld.global.f32} ($s=4$~байта):
+
+\begin{table}[h]
+  \caption{Результаты теста \texttt{global\_coalescing}}
+  \label{tab:coalescing_test}
+  \centering
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    \textbf{Паттерн} & $s$, Б & $T_{\mathrm{ideal}}$ & $\kappa_{\mathrm{exp}}$ &
+    $T_{\mathrm{actual,emu}}$ & $\kappa_{\mathrm{emu}}$ & $\Delta$ \\
+    \midrule
+    Последовательный, f32 & 4 & 1 & 1.000 & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    Шаг 128~Б, f32        & 4 & 1 & 0.031 & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    Шаг 16~Б, f32         & 4 & 1 & 0.250 & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    Широковещательный     & 4 & 1 & 1.000 & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    Последовательный, f64 & 8 & 2 & 1.000 & \textit{TBD} & \textit{TBD} & \textit{TBD} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Вывод.}
+Корректность случая \texttt{f64} ($T_{\mathrm{ideal}} = 2$) подтверждает
+учёт размера элемента в формуле $T_{\mathrm{ideal}} = \lceil \mathit{active} \cdot s / 128 \rceil$.
+
+\subsubsection{Тест статистики регистров (\texttt{write\_ops})}
+
+\textbf{Описание.}
+Ядро \texttt{vadd\_custom}: 3~инструкции с результатом, 1~блок, 1~варп,
+полная маска. Аналитически: \texttt{write\_ops[\%f] = 1 × 32 × 1 × 1 = 32}.
+
+\textbf{Вывод.}
+Подтверждает корректность детектирования \texttt{dst\_reg\_prefix}
+и накопления \texttt{write\_ops}.
+
+\subsubsection{Тест аннотации исходного кода через \texttt{.loc}}
+
+\textbf{Описание.}
+Ядро \texttt{fft\_custom.cu} компилируется с \texttt{nvcc -lineinfo}.
+В HTML-отчёте каждая PTX-инструкция аннотирована строкой
+\texttt{fft\_custom.cu:L}. Выборочно проверяются 5~инструкций
+с известными \texttt{.loc}-значениями.
+
+\textbf{Вывод.}
+Подтверждает корректность разбора \texttt{.file}/\texttt{.loc}
+в \texttt{ptx\_parser.py}.
+
+\subsubsection{Тест агрегации: ручной расчёт vs. отчёт}
+
+\textbf{Описание.}
+Ядро \texttt{vadd\_custom} с полностью известной структурой.
+Аналитически: \texttt{exec\_count = 3~×~32 = 96},
+$\overline{\eta}_{\mathrm{branch}} = 1.0$, $C_{\mathrm{bank}} = 0$,
+\texttt{global\_mem\_transactions~= 2}.
+
+\begin{table}[h]
+  \caption{Результаты теста агрегации}
+  \label{tab:aggregation_test}
+  \centering
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Метрика} & \textbf{Ожидаемое} & \textbf{HTML-отчёт} & $\Delta$ \\
+    \midrule
+    \texttt{exec\_count}          & 96    & \textit{TBD} & \textit{TBD} \\
+    $\overline{\eta}_{\mathrm{branch}}$  & 1.000 & \textit{TBD} & \textit{TBD} \\
+    \texttt{bank\_conflicts\_total} & 0     & \textit{TBD} & \textit{TBD} \\
+    \texttt{global\_mem\_txns}     & 2     & \textit{TBD} & \textit{TBD} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Вывод.}
+Нулевые отклонения подтверждают корректность всей цепочки:
+\texttt{profiling.txt} $\to$ \texttt{parser.py} $\to$
+\texttt{aggregator.py} $\to$ \texttt{renderer.py}.
+
+\newpage

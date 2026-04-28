@@ -1,0 +1,99 @@
+\section{Формальная операционная семантика (полный список правил Structural Operational Semantics)}
+\label{app:sos}
+
+В данном приложении приведён полный справочный список правил SOS(Structural Operational Semantics)
+для всех реализованных инструкций. Используются обозначения:
+$M$~--- маска исполнения, $R[t][\tau][k]$~--- значение регистра $k$
+типа $\tau$ потока $t$, $\activeset(M) = \{i : M[i]=1\}$.
+
+\subsection*{Арифметические инструкции}
+
+\textbf{\texttt{add.s32 \%d, \%a, \%b}:}
+\[
+  R'[t][\mathtt{s32}][d] =
+  (R[t][\mathtt{s32}][a] + R[t][\mathtt{s32}][b]) \bmod 2^{32},
+  \quad \forall t \in \activeset(M).
+\]
+
+\textbf{\texttt{sub.u64 \%d, \%a, \%b}:}
+\[
+  R'[t][\mathtt{u64}][d] =
+  (R[t][\mathtt{u64}][a] - R[t][\mathtt{u64}][b]) \bmod 2^{64}.
+\]
+
+\textbf{\texttt{mul.lo.s32 \%d, \%a, \%b}:}
+\[
+  R'[t][\mathtt{s32}][d] =
+  (R[t][\mathtt{s32}][a] \cdot R[t][\mathtt{s32}][b]) \bmod 2^{32}.
+\]
+
+\textbf{\texttt{mul.hi.u32 \%d, \%a, \%b}:}
+\[
+  R'[t][\mathtt{u32}][d] =
+  \left\lfloor \frac{R[t][\mathtt{u32}][a] \cdot R[t][\mathtt{u32}][b]}{2^{32}} \right\rfloor.
+\]
+
+\textbf{\texttt{fma.rn.f32 \%d, \%a, \%b, \%c}:}
+\[
+  R'[t][\mathtt{f32}][d] =
+  \mathrm{round}_n\!\bigl(R[t][\mathtt{f32}][a]
+    \cdot R[t][\mathtt{f32}][b]
+    + R[t][\mathtt{f32}][c]\bigr).
+\]
+
+\textbf{\texttt{rcp.rn.f32 \%d, \%a}:}
+\[
+  R'[t][\mathtt{f32}][d] =
+  \mathrm{round}_n\!\left(\frac{1}{R[t][\mathtt{f32}][a]}\right).
+\]
+
+\subsection*{Инструкции сравнения}
+
+\textbf{\texttt{setp.lt.s32 \%p, \%a, \%b}:}
+\[
+  P'[t] = \bigl(R[t][\mathtt{s32}][a] < R[t][\mathtt{s32}][b]\bigr),
+  \quad \forall t \in \activeset(M).
+\]
+
+\textbf{\texttt{setp.gt.f32 \%p|\%q, \%a, \%b}:}
+\[
+  P'[t] = \bigl(R[t][\mathtt{f32}][a] > R[t][\mathtt{f32}][b]\bigr),
+  \quad Q'[t] = \neg P'[t].
+\]
+
+\textbf{\texttt{selp.f32 \%d, \%a, \%b, \%p}:}
+\[
+  R'[t][\mathtt{f32}][d] =
+  \begin{cases}
+    R[t][\mathtt{f32}][a] & \text{если } P[t] = 1, \\
+    R[t][\mathtt{f32}][b] & \text{если } P[t] = 0.
+  \end{cases}
+\]
+
+\subsection*{Инструкции памяти}
+
+\textbf{\texttt{ld.global.f32 \%d, [\%a]}:}
+\[
+  R'[t][\mathtt{f32}][d] = \mathit{Mem}_{\mathrm{global}}[R[t][\mathtt{u64}][a]].
+\]
+
+\textbf{\texttt{st.shared.f32 [\%a], \%b}:}
+\[
+  \mathit{Mem}_{\mathrm{shared}}'[R[t][\mathtt{u64}][a]] = R[t][\mathtt{f32}][b],
+  \quad \forall t \in \activeset(M).
+\]
+
+\subsection*{Инструкции управления потоком}
+
+\textbf{\texttt{bra.uni \$L}:}
+\[
+  \eval{\mathtt{bra.uni}\;\$L}{\sigma}
+  \reduce \sigma[\mathrm{PC} \leftarrow \mathit{offset}(\$L)].
+\]
+
+\textbf{\texttt{ret}:}
+\[
+  \eval{\mathtt{ret}}{\sigma}
+  \reduce \sigma[\mathrm{PC} \leftarrow \mathit{pc\_return},\;
+                  \mathit{cur\_func} \leftarrow \mathit{caller\_func}].
+\]
