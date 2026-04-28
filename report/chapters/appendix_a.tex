@@ -1,0 +1,72 @@
+\section{Таблица поддерживаемых инструкций PTX}
+\label{app:instructions}
+
+\begin{longtable}{p{4cm} p{5cm} p{2cm} p{3.5cm}}
+  \caption{Полная таблица поддерживаемых инструкций PTX}
+  \label{tab:supported_instructions} \\
+  \toprule
+  \textbf{Мнемоника} & \textbf{Поддерживаемые типы} & \textbf{Режимы округления} & \textbf{Модульный тест} \\
+  \midrule
+  \endfirsthead
+  \multicolumn{4}{c}{\tablename\ \ref{tab:supported_instructions}~--- продолжение} \\
+  \toprule
+  \textbf{Мнемоника} & \textbf{Поддерживаемые типы} & \textbf{Режимы округления} & \textbf{Модульный тест} \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
+
+  \multicolumn{4}{l}{\textbf{Арифметические}} \\
+  \texttt{add}  & s16/s32/s64, u16/u32/u64, f32/f64 & --- & \texttt{test\_executors} \\
+  \texttt{sub}  & s16/s32/s64, u16/u32/u64, f32/f64 & --- & \texttt{test\_executors} \\
+  \texttt{mul}  & s16/s32, u16/u32, f32/f64          & rn/rz/ru/rd (f) & \texttt{test\_executors} \\
+  \texttt{div}  & s32/u32/s64/u64, f32/f64           & rn/rz/ru/rd (f) & \texttt{test\_executors} \\
+  \texttt{rem}  & s32/u32/s64/u64                    & ---             & \texttt{test\_executors} \\
+  \texttt{abs}  & s16/s32/s64, f32/f64               & ---             & \texttt{test\_executors} \\
+  \texttt{neg}  & s16/s32/s64, f32/f64               & ---             & \texttt{test\_executors} \\
+  \texttt{min}  & s32/u32/s64/u64, f32/f64           & ---             & \texttt{test\_executors} \\
+  \texttt{max}  & s32/u32/s64/u64, f32/f64           & ---             & \texttt{test\_executors} \\
+  \texttt{fma}  & f32/f64                            & rn/rz/ru/rd     & \texttt{test\_executors} \\
+  \texttt{mad}  & s32/u32                            & ---             & \texttt{test\_executors} \\
+  \midrule
+  \multicolumn{4}{l}{\textbf{Логические и битовые}} \\
+  \texttt{and}  & b32/b64, pred                      & ---  & \texttt{test\_executors} \\
+  \texttt{or}   & b32/b64, pred                      & ---  & \texttt{test\_executors} \\
+  \texttt{xor}  & b32/b64, pred                      & ---  & \texttt{test\_executors} \\
+  \texttt{not}  & b32/b64, pred                      & ---  & \texttt{test\_executors} \\
+  \texttt{shl}  & b32/b64                            & ---  & \texttt{test\_executors} \\
+  \texttt{shr}  & b32/b64, s32/u32/s64/u64           & ---  & \texttt{test\_executors} \\
+  \texttt{popc} & b32/b64                            & ---  & \texttt{test\_executors} \\
+  \texttt{bfe}  & u32/s32/u64/s64                    & ---  & \texttt{test\_executors} \\
+  \texttt{bfi}  & b32/b64                            & ---  & \texttt{test\_executors} \\
+  \midrule
+  \multicolumn{4}{l}{\textbf{Сравнения и предикаты}} \\
+  \texttt{setp} & s32/u32/s64/u64, f32/f64           & ---  & \texttt{test\_executors} \\
+  \texttt{selp} & s32/f32/s64/f64                    & ---  & \texttt{test\_executors} \\
+  \texttt{slct} & s32/f32                            & ---  & \texttt{test\_executors} \\
+  \midrule
+  \multicolumn{4}{l}{\textbf{Пересылки и память}} \\
+  \texttt{mov}  & b32/b64, u32/u64, f32/f64, pred    & ---  & \texttt{test\_executors} \\
+  \texttt{ld}   & b8--b128, f32/f64 / all spaces     & ---  & \texttt{test\_executors} \\
+  \texttt{st}   & b8--b128, f32/f64 / all spaces     & ---  & \texttt{test\_executors} \\
+  \texttt{cvta} & u64 (to/from generic)              & ---  & \texttt{test\_executors} \\
+  \midrule
+  \multicolumn{4}{l}{\textbf{Преобразования типов}} \\
+  \texttt{cvt}  & все пары $\{s8..f64\}$             & rn/rz/ru/rd/rni & \texttt{test\_executors} \\
+  \midrule
+  \multicolumn{4}{l}{\textbf{Управление потоком}} \\
+  \texttt{bra}  & ---                                & ---  & \texttt{test\_barrier} \\
+  \texttt{call} & ---                                & ---  & \texttt{test\_barrier} \\
+  \texttt{ret}  & ---                                & ---  & \texttt{test\_barrier} \\
+  \texttt{exit} & ---                                & ---  & \texttt{test\_barrier} \\
+  \midrule
+  \multicolumn{4}{l}{\textbf{Синхронизация и специальные}} \\
+  \texttt{bar.sync}  & ---             & ---  & \texttt{test\_barrier} \\
+  \texttt{membar}    & cta/gl/sys      & ---  & \texttt{test\_barrier} \\
+  \texttt{ex2}       & f32             & ---  & \texttt{test\_executors} \\
+  \texttt{lg2}       & f32             & ---  & \texttt{test\_executors} \\
+  \texttt{rcp}       & f32/f64         & rn/rz/ru/rd & \texttt{test\_executors} \\
+  \texttt{sqrt}      & f32/f64         & rn/rz       & \texttt{test\_executors} \\
+  \texttt{sin}       & f32             & ---         & \texttt{test\_executors} \\
+  \texttt{cos}       & f32             & ---         & \texttt{test\_executors} \\
+\end{longtable}

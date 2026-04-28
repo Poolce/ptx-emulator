@@ -1,0 +1,267 @@
+\section{Система профилирования}
+
+\subsection{Архитектура профилировщика}
+
+\subsubsection{Кодогенерируемые профилировочные хуки}
+
+Ключевым архитектурным решением системы профилирования является
+принцип разделения метаданных метрик и их реализации. JSON-манифест
+\texttt{profiling\_metrics.json} определяет, \textit{какие} метрики
+собирать для каких инструкций, а скрипт \texttt{autogen.py} генерирует
+C++-код хуков:
+
+\begin{lstlisting}[ caption={Фрагмент profiling\_metrics.json}]
+{
+  "instructions": {
+    "*":  { "metrics": ["branch_efficiency"] },
+    "ld": { "metrics": ["branch_efficiency",
+                        "bank_conflicts",
+                        "global_mem_transactions",
+                        "global_coalescing"] },
+    "st": { "metrics": ["branch_efficiency",
+                        "global_mem_transactions",
+                        "global_coalescing"] }
+  }
+}
+\end{lstlisting}
+
+Ключ \texttt{"*"} задаёт метрики для всех инструкций;
+специализированные ключи добавляют метрики для конкретных мнемоник.
+Добавление новой метрики~--- изменение JSON и перезапуск
+\texttt{autogen.py}~--- без правки C++-кода.
+
+Файл \texttt{profilers.tpp} содержит \texttt{inline}-функции
+вычисления метрик и подключается один раз в начале
+\texttt{instructions.cpp}. Для каждой инструкции \texttt{autogen.py}
+генерирует два метода: \texttt{Execute()} и \texttt{Profile()}.
+В конце \texttt{Execute()} под атрибутом \texttt{[[unlikely]]}
+добавляется вызов \texttt{Profile()}:
+
+\begin{lstlisting}[language=C++, caption={Автогенерируемые Execute() и Profile() для ld}]
+void ldInstruction::Execute(std::shared_ptr<WarpContext>& wc) {
+    // dispatch ExecuteThread<Data> for each active lane
+    if (wc->profiling_buf) [[unlikely]]
+        Profile(wc, wc->pc, wc->execution_mask, *wc->profiling_buf);
+    wc->pc++;
+}
+
+void ldInstruction::Profile(std::shared_ptr<WarpContext>& wc,
+        uint64_t pc, uint32_t orig_mask, WarpProfilingBuffer& buf) {
+    ProfilingRecord rec;
+    rec.pc = pc;  rec.instr_name = "ld";
+    rec.metrics.emplace_back("branch_efficiency",
+        FormatFloat(ComputeBranchEfficiency(*this, orig_mask, wc)));
+    rec.metrics.emplace_back("bank_conflicts",
+        std::to_string(ComputeBankConflicts(*this, orig_mask, wc)));
+    rec.metrics.emplace_back("global_coalescing",
+        FormatFloat(ComputeGlobalCoalescing(*this, orig_mask, wc)));
+    buf.push_back(std::move(rec));
+}
+\end{lstlisting}
+
+Атрибут \texttt{[[unlikely]]} обеспечивает нулевые накладные расходы
+на горячем пути: при выключенном профилировании предсказатель ветвлений
+не входит в \texttt{Profile()}.
+
+\subsubsection{Структура \texttt{ProfilingRecord} и буферизация}
+
+Каждый момент исполнения инструкции порождает запись:
+
+\begin{lstlisting}[language=C++, caption={Структура ProfilingRecord}]
+struct ProfilingRecord {
+    uint64_t    timestamp_ns;
+    uint64_t    pc;
+    uint32_t    block_id;
+    uint32_t    warp_id;
+    uint32_t    execution_mask;
+    std::string function_name;
+    std::string basic_block;
+    std::string instr_name;
+    std::vector<std::pair<std::string, std::string>> metrics;
+};
+\end{lstlisting}
+
+Стратегия буферизации: каждый варп накапливает записи локально в
+\texttt{WarpProfilingBuffer} без синхронизации. Сброс в общий
+\texttt{Profiler} под мьютексом выполняется \textit{один раз} по
+завершении блока. Число синхронизаций:
+$N_{\mathrm{sync}} = N_{\mathrm{blocks}} \ll N_{\mathrm{records}}$,
+что минимизирует накладные расходы.
+
+\subsubsection{Метка времени: \texttt{steady\_clock}}
+
+\begin{lstlisting}[language=C++, caption={Получение временной метки}]
+auto ts = std::chrono::steady_clock::now();
+uint64_t timestamp_ns = std::chrono::duration_cast<
+    std::chrono::nanoseconds>(ts - epoch_).count();
+\end{lstlisting}
+
+Использование \texttt{steady\_clock} (монотонные часы) вместо
+\texttt{system\_clock} гарантирует монотонное возрастание меток времени
+независимо от корректировок NTP, что обеспечивает корректную сортировку
+записей при многоблочном исполнении.
+
+\subsection{Формальные определения метрик}
+
+\subsubsection{\texttt{branch\_efficiency}: эффективность выдачи}
+
+Пусть $M_k$~--- маска исполнения варпа при $k$-й выдаче инструкции,
+$W$~--- размер варпа (32). Для инструкций без явного предикатного
+операнда эффективность выдачи:
+\begin{equation}
+  \label{eq:branch_eff}
+  \eta_k = \frac{\popcount(M_k)}{W}.
+\end{equation}
+
+Для инструкций с явным предикатом \texttt{@\%p} дополнительно
+учитывается расхождение путей «исполняется» / «пропускается»
+внутри активной маски:
+\begin{equation}
+  \eta_k = \frac{\max\bigl(\popcount(M_k \wedge P),\;
+                           \popcount(M_k \wedge \neg P)\bigr)}
+                {\popcount(M_k)}.
+\end{equation}
+
+Среднее по всем выдачам ядра:
+\begin{equation}
+  \overline{\eta} = \frac{1}{K}\sum_{k=1}^{K} \eta_k,
+  \quad K = \mathit{issue\_count}.
+\end{equation}
+
+\subsubsection{\texttt{bank\_conflicts}: конфликты банков разделяемой памяти}
+
+Разделяемая память организована в $B = 32$ банка шириной
+$w = 4$~байта. Номер банка для адреса $a$:
+\begin{equation}
+  \mathrm{bank}(a) = \left\lfloor \frac{a}{w} \right\rfloor \bmod B.
+\end{equation}
+
+Число конфликтов при одной выдаче \texttt{ld.shared}/\texttt{st.shared}:
+\begin{equation}
+  \label{eq:bank_conflicts}
+  C = \max_{b \in [0,B)}\bigl|\{t \in \activeset(M) \mid \mathrm{bank}(ea(t)) = b\}\bigr| - 1.
+\end{equation}
+
+$C = 0$ означает отсутствие конфликтов (все потоки обращаются в разные
+банки); $C = k$ означает $k$-кратный конфликт. Вычисление имеет
+сложность $O(|\activeset(M)| + B) = O(1)$ на выдачу.
+
+\subsubsection{\texttt{global\_coalescing}: коэффициент слияния транзакций}
+
+Кэш-строка глобальной памяти занимает 128~байт. Число фактических
+транзакций при одной выдаче:
+\begin{equation}
+  \label{eq:t_actual}
+  T_{\mathrm{actual}} =
+    \left|\left\{\left\lfloor\frac{ea(t)}{128}\right\rfloor
+    \;\middle|\; t \in \activeset(M)\right\}\right|.
+\end{equation}
+
+Теоретический минимум транзакций при последовательном расположении
+$|\activeset(M)|$ элементов размером $s$~байт:
+\begin{equation}
+  T_{\mathrm{ideal}} =
+    \left\lceil \frac{|\activeset(M)| \cdot s}{128} \right\rceil.
+\end{equation}
+
+Коэффициент слияния:
+\begin{equation}
+  \label{eq:coalescing}
+  \kappa = \min\!\left(1,\;\frac{T_{\mathrm{ideal}}}{T_{\mathrm{actual}}}\right)
+  \in (0, 1].
+\end{equation}
+
+$\kappa = 1$ соответствует идеально слитному доступу; $\kappa \ll 1$~---
+сильно разрозненному (stride-доступ, scatter/gather).
+
+\subsubsection{\texttt{write\_ops}: давление на регистровый файл}
+
+Для каждого типа регистров (префикс \texttt{\%r}, \texttt{\%f},
+\texttt{\%rd}, \ldots) накапливается суммарное число записей:
+\begin{equation}
+  W[\tau] = \sum_{\substack{k:\;\text{инструкция }k\\\text{пишет в регистр типа }\tau}}
+  \popcount(M_k).
+\end{equation}
+
+Инструкции без регистра-назначения (\texttt{st}, \texttt{bar},
+\texttt{bra}, \texttt{ret}) в сумму не входят.
+
+\subsection{Инструмент генерации отчётов}
+
+\subsubsection{Парсер текстового вывода (\texttt{parser.py})}
+
+Файл \texttt{profiling.txt} имеет иерархическую структуру:
+«запуск ядра → блок → варп → инструкция». Парсер реализует конечный
+автомат:
+
+\begin{enumerate}
+  \item \texttt{await\_launch}: ожидание строки
+        \texttt{"[LAUNCH] kernel\_name grid(…) block(…)"}.
+  \item \texttt{await\_block}: ожидание строки
+        \texttt{"[BLOCK] block\_id=…"}.
+  \item \texttt{in\_block}: разбор строк записей регулярным
+        выражением \texttt{\_RECORD\_RE} за O(1) на строку.
+\end{enumerate}
+
+Результат: \texttt{list[ProfilingRecord]} для передачи в агрегатор.
+
+\subsubsection{PTX-парсер для отчёта (\texttt{ptx\_parser.py})}
+
+Python-реализация PTX-парсера решает задачу построения индекса:
+\begin{equation}
+  \mathit{by\_func\_pc} : (\mathit{fn},\, \mathit{pc})
+  \to \mathit{PtxInstr},
+\end{equation}
+обеспечивающего O(1)-соответствие между профилировочной записью
+и PTX-строкой для аннотации исходного кода.
+
+\subsubsection{Агрегатор (\texttt{aggregator.py}): формулы накопления}
+
+Для каждого уникального PC:
+\begin{align}
+  \mathit{exec\_count} &\mathrel{+}= \popcount(M_k), \\
+  \mathit{issue\_count} &\mathrel{+}= 1, \\
+  \mathit{be\_sum} &\mathrel{+}= \eta_k, \\
+  \mathit{bc\_total} &\mathrel{+}= C_{\mathrm{bank},k}, \\
+  \mathit{kappa\_sum} &\mathrel{+}= \kappa_k.
+\end{align}
+
+Средние значения:
+\begin{equation}
+  \overline{\eta}_{\mathrm{branch}} = \frac{\mathit{be\_sum}}{\mathit{issue\_count}},
+  \qquad
+  \bar{\kappa} = \frac{\mathit{kappa\_sum}}{\mathit{issue\_count}}.
+\end{equation}
+
+\subsubsection{Рендерер HTML-отчёта (\texttt{renderer.py})}
+
+Самодостаточный HTML-файл содержит пять секций:
+
+\begin{enumerate}
+  \item \textbf{Панель «пилюль»}: сводные метрики ядра~---
+        число инструкций, потоков, среднее $\overline{\eta}_{\mathrm{branch}}$,
+        общие банковые конфликты, средний $\bar{\kappa}$.
+  \item \textbf{Таблица инструкций}: все уникальные PC с тепловой
+        подсветкой по \texttt{exec\_count}.
+  \item \textbf{Горячие точки}: топ-10 инструкций по дивергенции,
+        конфликтам банков, коэффициенту слияния.
+  \item \textbf{Таблица регистров}: для каждого префикса~---
+        тип, объявлено слотов, накопленный \texttt{write\_ops}.
+  \item \textbf{Аннотированный исходный код}: строки исходного
+        \texttt{.cu}-файла с метриками инструкций, привязанных
+        через \texttt{.loc}.
+\end{enumerate}
+
+Все CSS и JS встроены в HTML~--- один файл без внешних зависимостей.
+
+\begin{figure}[h]
+  \centering
+  \fbox{\parbox{12cm}{\centering\vspace{2cm}
+    \textit{[Рисунок: скриншот HTML-отчёта, секция панели «пилюль».\\
+    Источник: скриншот \#10 из plan\_screenshots.md]}
+  \vspace{2cm}}}
+  \caption{HTML-отчёт профилировщика: панель сводных метрик для ядра \texttt{fft\_custom}.}
+  \label{fig:profiler_html}
+\end{figure}
+
+\newpage

@@ -1,0 +1,55 @@
+\section{Формат файла \texttt{profiling.txt}: аннотированный пример}
+\label{app:profiling_format}
+
+Файл \texttt{profiling.txt} имеет иерархическую структуру:
+«запуск ядра → блок → варп → записи инструкций».
+Ниже приведён аннотированный фрагмент для ядра \texttt{fft\_custom}.
+
+\begin{lstlisting}[caption={Пример profiling.txt для fft\_custom}]
+# ===== Kernel launch =====
+[LAUNCH] kernel=_Z10fft_kernelPcfi grid=(32,1,1) block=(32,1,1)
+
+# ===== Block (0,0,0) =====
+[BLOCK] block_id=(0,0,0)
+
+# ===== Warp 0 =====
+[WARP] warp_id=0
+
+# --- Instruction records ---
+# Format: timestamp_ns | pc | func | bb | instr | mask | metrics...
+1234567890 | 42 | fft_kernel | $BB0_1 | ld.global.f32 | FFFFFFFF |
+    branch_efficiency=1.000000
+    global_mem_transactions=1
+    global_coalescing=1.000000
+
+1234567910 | 43 | fft_kernel | $BB0_1 | fma.rn.f32 | FFFFFFFF |
+    branch_efficiency=1.000000
+
+# --- Divergent instruction (bit-reversal stage) ---
+1234568100 | 61 | fft_kernel | $BB0_3 | @%p0 bra $BB0_5 | 0000FFFF |
+    branch_efficiency=0.500000
+
+# Branch "taken" (threads 0-15)
+1234568150 | 62 | fft_kernel | $BB0_5 | st.shared.f32 | 0000FFFF |
+    branch_efficiency=0.500000
+    bank_conflicts=0
+
+# Reconvergence
+1234568200 | 75 | fft_kernel | $BB0_7 | bar.sync | FFFFFFFF |
+    branch_efficiency=1.000000
+
+[END_WARP]
+[END_BLOCK]
+[END_LAUNCH]
+\end{lstlisting}
+
+\textbf{Описание полей:}
+\begin{itemize}
+  \item \texttt{timestamp\_ns}~--- монотонная временная метка в наносекундах.
+  \item \texttt{pc}~--- монотонный PC инструкции (индекс в таблице).
+  \item \texttt{func}~--- имя PTX-функции.
+  \item \texttt{bb}~--- имя базового блока.
+  \item \texttt{instr}~--- мнемоника с предикатом (если есть).
+  \item \texttt{mask}~--- маска исполнения в шестнадцатеричном формате.
+  \item \texttt{metrics}~--- список пар \texttt{name=value}.
+\end{itemize}
