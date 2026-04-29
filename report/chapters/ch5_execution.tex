@@ -5,17 +5,7 @@
 \subsubsection{Структура: фабрика и виртуальный вызов}
 
 Каждая PTX-инструкция представлена отдельным C++-классом,
-наследующим абстрактный базовый класс \texttt{Instruction}:
-
-\begin{lstlisting}[language=C++, caption={Базовый класс инструкции}]
-class Instruction {
-public:
-    virtual void Execute(std::shared_ptr<WarpContext>& wc) = 0;
-    virtual std::string_view Name() const = 0;
-    virtual bool HasExplicitPredicate() const { return false; }
-};
-\end{lstlisting}
-
+наследующим абстрактный базовый класс \texttt{Instruction}.
 Создание объекта нужного подкласса выполняется фабричной функцией \\
 \texttt{makeInstruction(name, line)}, которую генерирует
 \texttt{autogen.py} из \\\texttt{instructions.json}:
@@ -43,7 +33,7 @@ std::shared_ptr<Instruction> makeInstruction(
 в JSON предотвращает рассинхронизацию между парсером, фабрикой
 и тестами.
 
-Принцип открытости/закрытости (OCP)~\cite{GoF1994}: добавление
+Принцип открытости/закрытости: добавление
 поддержки новой инструкции сводится к добавлению записи
 в \texttt{instructions.json} и реализации метода \texttt{Execute()}~---
 \texttt{autogen.py} вставит нужную ветку в фабрику автоматически.

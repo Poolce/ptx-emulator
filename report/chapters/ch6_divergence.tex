@@ -29,7 +29,7 @@ $N \neq \mathit{exit}$.
 
 \textit{Доказательство} строится по индукции по структуре CFG:
 сначала для ациклических CFG, затем обобщается на произвольные CFG
-методом фиксированной точки~\cite{Cytron1991}.
+методом фиксированной точки.
 
 \subsubsection{Теорема о корректности PDOM-реконвергенции}
 
@@ -63,10 +63,12 @@ $M_{\mathrm{not}}$~--- только внутри ветки продолжени
 Ни один поток не получает нулевую маску пока его ветка активна,
 поэтому ни одна инструкция активного пути не пропускается.
 
-\textbf{Утверждение~3} (восстановление маски). В стек дивергенции
-помещается фрейм реконвергенции с исходной маской $M$ и
-$\mathrm{PC} = \mathrm{IPDOM}(N)$. Когда счётчик команд достигает этой
-точки, алгоритм CheckStack извлекает фрейм и восстанавливает $M$.
+\textbf{Утверждение~3} (восстановление маски). Когда ветка перехода
+завершает исполнение безусловным прыжком к точке слияния $\mathrm{IPDOM}(N)$,
+в стек помещается фрейм реконвергенции с исходной маской $M$ и
+$\mathrm{PC} = \mathrm{IPDOM}(N)$. Встроенный цикл диспетчера
+(\texttt{rt\_stream.cpp}) перед каждой инструкцией снимает фрейм
+и восстанавливает $M$, когда текущий PC совпадает с \texttt{frame.pc}.
 
 Поскольку выбирается \textit{непосредственный} постдоминатор~---
 ближайший к $N$~--- последовательное исполнение двух ветвей
@@ -113,68 +115,112 @@ struct StackFrame {
 \subsubsection{Алгоритм PDOM\_Diverge}
 
 \begin{algorithm}[H]
-  \caption{PDOM\_Diverge($M$, $P$, $\$L$, $\mathit{pc\_ipdom}$)}
+  \caption{PDOM\_Diverge($M$, $P$, $\$L$) --- условный переход \texttt{bra @\%pN \$L}}
   \label{alg:pdom_diverge}
-  \KwIn{маска исполнения $M$, предикат $P$, метка перехода $\$L$,
-        PC точки реконвергенции $\mathit{pc\_ipdom}$}
+  \KwIn{маска исполнения $M$, предикатная маска $P$, метка перехода $\$L$}
   \KwOut{обновлённые $M$, $\mathrm{PC}$, стек $S$}
 
   $M_{\mathrm{taken}} \leftarrow M \wedge P$\;
   $M_{\mathrm{not}} \leftarrow M \wedge \neg P$\;
-  \textbf{push}$(S,\;\{\mathit{pc\_ipdom},\; M,\; \mathit{is\_conv} = \texttt{true}\})$\;
+  \lIf{$M_{\mathrm{taken}} = 0$}{$\mathrm{PC} \leftarrow \mathrm{PC}+1$; \textbf{return}}
+  \lIf{$M_{\mathrm{not}} = 0$}{$\mathrm{PC} \leftarrow \mathit{offset}(\$L)$; \textbf{return}}
+  \tcp{дивергенция: отложить ветку продолжения, исполнить ветку перехода}
   \textbf{push}$(S,\;\{\mathrm{PC}+1,\; M_{\mathrm{not}},\; \mathit{is\_conv} = \texttt{false}\})$\;
   $M \leftarrow M_{\mathrm{taken}}$\;
   $\mathrm{PC} \leftarrow \mathit{offset}(\$L)$\;
 \end{algorithm}
 
-\textbf{Пояснение к шагам:}
-\begin{itemize}
-  \item Шаг~3 фиксирует точку воссоединения $\mathit{pc\_ipdom}$
-        с исходной полной маской $M$.
-  \item Шаг~4 откладывает ветку продолжения: при PC~$=\mathrm{PC}+1$
-        она будет исполняться с маской $M_{\mathrm{not}}$.
-  \item Шаги~5--6 немедленно переходят к исполнению ветки перехода.
-\end{itemize}
+\textbf{Пояснение к шагам.}
+Точка реконвергенции (IPDOM) на момент условного перехода неизвестна:
+NVCC не кодирует её в инструкции.
+Шаг~5 откладывает ветку продолжения как фрейм ожидания
+$\{\mathrm{PC}+1,\;M_{\mathrm{not}},\;\texttt{false}\}$.
+Шаги~6--7 немедленно переходят к ветке перехода с маской $M_{\mathrm{taken}}$.
+IPDOM обнаруживается позже, когда ветка перехода заканчивается
+безусловным прыжком вперёд (алгоритм PDOM\_Merge ниже).
 
-\subsubsection{Цикл проверки вершины стека}
+\subsubsection{Обнаружение IPDOM и цикл реконвергенции}
+
+\textbf{Обнаружение точки слияния (PDOM\_Merge).}
+NVCC всегда завершает ветку перехода безусловным прыжком вперёд к точке
+слияния. Исполнитель \texttt{braInstruction::ExecuteBranch} обрабатывает
+этот прыжок следующим образом:
 
 \begin{algorithm}[H]
-  \caption{CheckStack($S$, $\mathrm{PC}$, $M$)}
-  \label{alg:check_stack}
-  \While{\textbf{not} $S.\mathit{empty}()$ \textbf{and} $S.\mathit{top}().pc = \mathrm{PC}$}{
-    \eIf{$S.\mathit{top}().\mathit{is\_conv}$}{
-      $M \leftarrow S.\mathit{top}().\mathit{mask}$\;
+  \caption{PDOM\_Merge --- безусловный \texttt{bra \$L} при непустом стеке}
+  \label{alg:pdom_merge}
+  $t \leftarrow \mathit{target\_pc}$\;
+  \If{\textbf{not} $S.\mathit{empty}()$ \textbf{and} $t > \mathrm{PC}$}{
+    \eIf{$\neg S.\mathit{top}().\mathit{is\_conv}$ \textbf{and} $t > S.\mathit{top}().pc$}{
+      \tcp{Case A: ветка перехода завершена; $t$ --- IPDOM}
+      $M_{\mathrm{ft}} \leftarrow S.\mathit{top}().\mathit{mask}$;
+      $\mathit{pc\_ft} \leftarrow S.\mathit{top}().pc$\;
+      $M_{\mathrm{full}} \leftarrow M \vee M_{\mathrm{ft}}$\;
       $S.\mathit{pop}()$\;
+      \textbf{push}$(S,\;\{t,\; M_{\mathrm{full}},\; \mathit{is\_conv}=\texttt{true}\})$\;
+      $M \leftarrow M_{\mathrm{ft}}$; $\mathrm{PC} \leftarrow \mathit{pc\_ft}$\;
+      \textbf{return}\;
     }{
-      $M \leftarrow S.\mathit{top}().\mathit{mask}$\;
-      $S.\mathit{pop}()$\;
-      \textbf{break}\tcp*{начало дивергентного пути}
+      \If{$S.\mathit{top}().\mathit{is\_conv}$ \textbf{and} $S.\mathit{top}().pc = t$}{
+        \tcp{Case B: ветка продолжения пришла к IPDOM}
+        $M \leftarrow S.\mathit{top}().\mathit{mask}$; $S.\mathit{pop}()$\;
+        $\mathrm{PC} \leftarrow t$; \textbf{return}\;
+      }
     }
+  }
+  $\mathrm{PC} \leftarrow t$\tcp*{обычный прыжок}
+\end{algorithm}
+
+\textbf{Встроенный цикл реконвергенции.}
+Перед каждой инструкцией диспетчер (\texttt{rt\_stream.cpp}) выполняет
+цикл, который снимает фреймы реконвергенции (\texttt{is\_conv = true}),
+чей PC совпадает с текущим:
+
+\begin{algorithm}[H]
+  \caption{Встроенный цикл реконвергенции (rt\_stream.cpp)}
+  \label{alg:conv_check}
+  \While{\textbf{not} $S.\mathit{empty}()$
+         \textbf{and} $S.\mathit{top}().\mathit{is\_conv}$
+         \textbf{and} $S.\mathit{top}().pc = \mathrm{PC}$}{
+    $M \leftarrow S.\mathit{top}().\mathit{mask}$\;
+    $S.\mathit{pop}()$\;
   }
 \end{algorithm}
 
-Алгоритм CheckStack вызывается \textit{до} исполнения каждой инструкции.
-Сложность: O($k$) за одну проверку $\Rightarrow$ общая сложность
-O($k \cdot N_{\mathrm{instrs}}$) за исполнение ядра с $k$ уровнями дивергенции.
+Фреймы ожидания (\texttt{is\_conv = false}) цикл не трогает:
+они активируются только внутри \texttt{PDOM\_Merge} (Case~A).
+Сложность: O($k$) за одну проверку, O($k \cdot N_{\mathrm{instrs}}$)
+суммарно для ядра с $k$ уровнями дивергенции.
 
-\subsection{Угловые случаи}
+\subsection{Граничные случаи}
 
 \subsubsection{Вложенные дивергенции: корректность при $k \geq 2$}
 
 Рассмотрим пример: внешний дивергентный \texttt{if} и внутренний
-дивергентный \texttt{if}. Пусть начальная маска $M_0 = \texttt{0xFFFFFFFF}$:
+дивергентный \texttt{if}. Пусть начальная маска $M_0 = \texttt{0xFFFFFFFF}$,
+внешний переход на $\mathrm{pc}_B$, внутренний~--- на $\mathrm{pc}_C$:
 
 \begin{enumerate}
-  \item Внешний \texttt{if}: PDOM\_Diverge создаёт $f_2$
-        (реконвергенция, $M_0$) и $f_1$ (ветка «не взята», $M_{\mathrm{not\_outer}}$).
-        Стек: $[f_2, f_1]$.
-  \item Внутренний \texttt{if}: PDOM\_Diverge создаёт $f_4$
-        (внутренняя реконвергенция) и $f_3$ (внутренняя ветка).
-        Стек: $[f_2, f_1, f_4, f_3]$.
-  \item Достижение внутренней реконвергенции: CheckStack снимает
-        $f_4$ и $f_3$, стек: $[f_2, f_1]$.
-  \item Достижение внешней реконвергенции: CheckStack снимает
-        $f_2$ и $f_1$, стек: $[\,]$.
+  \item Внешний \texttt{if} ($\mathrm{pc}_B$): PDOM\_Diverge пушит
+        $f_1 = \{\mathrm{pc}_B{+}1,\; M_{\mathrm{not\_out}},\;\texttt{false}\}$.
+        Стек: $[f_1]$. Исполняется ветка перехода с маской $M_{\mathrm{taken\_out}}$.
+  \item Внутренний \texttt{if} ($\mathrm{pc}_C$): PDOM\_Diverge пушит
+        $f_2 = \{\mathrm{pc}_C{+}1,\; M_{\mathrm{not\_in}},\;\texttt{false}\}$.
+        Стек: $[f_1, f_2]$. Исполняется внутренняя ветка перехода.
+  \item Конец внутренней взятой ветки (безусловный \texttt{bra} к $\mathrm{pc\_ipdom\_in}$):
+        PDOM\_Merge Case~A снимает $f_2$, пушит
+        $f_3 = \{\mathrm{pc\_ipdom\_in},\; M_{\mathrm{taken\_out}},\;\texttt{true}\}$.
+        Стек: $[f_1, f_3]$. PC переходит к $\mathrm{pc}_C{+}1$.
+  \item Достижение $\mathrm{pc\_ipdom\_in}$: цикл реконвергенции снимает
+        $f_3$, восстанавливает $M = M_{\mathrm{taken\_out}}$.
+        Стек: $[f_1]$.
+  \item Конец внешней взятой ветки (безусловный \texttt{bra} к $\mathrm{pc\_ipdom\_out}$):
+        PDOM\_Merge Case~A снимает $f_1$, пушит
+        $f_4 = \{\mathrm{pc\_ipdom\_out},\; M_0,\;\texttt{true}\}$.
+        Стек: $[f_4]$. PC переходит к $\mathrm{pc}_B{+}1$.
+  \item Достижение $\mathrm{pc\_ipdom\_out}$: цикл реконвергенции снимает
+        $f_4$, восстанавливает $M = M_0$.
+        Стек: $[\,]$.
 \end{enumerate}
 
 LIFO-порядок снятия фреймов гарантирует восстановление масок

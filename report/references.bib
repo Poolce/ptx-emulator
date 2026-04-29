@@ -96,16 +96,6 @@
   language  = {english}
 }
 
-@inproceedings{Khairy2020,
-  author    = {Khairy, Mahmoud and Shen, Zhesheng and Aamodt, Tor M. and Rogers, Timothy G.},
-  title     = {Accel-Sim: An Extensible Simulation Framework for Validated {GPU} Modeling},
-  booktitle = {2020 ACM/IEEE 47th Annual International Symposium on Computer Architecture (ISCA)},
-  year      = {2020},
-  pages     = {473--486},
-  doi       = {10.1109/ISCA45697.2020.00047},
-  language  = {english}
-}
-
 @inproceedings{Diamos2010,
   author    = {Diamos, Gregory F. and Kerr, Andrew R. and Yalamanchili, Sudhakar},
   title     = {Translating GPU binaries to tiered {SIMD} architectures with {Ocelot}},
@@ -232,4 +222,120 @@
   organization = {NVIDIA Corporation},
   url          = {https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/},
   language     = {english}
+}
+
+% ===== Архитектура GPU и CUDA =====
+
+@article{Lindholm2008,
+  author    = {Lindholm, Erik and Nickolls, John and Oberman, Stuart and Montrym, John},
+  title     = {{NVIDIA Tesla}: A Unified Graphics and Computing Architecture},
+  journal   = {IEEE Micro},
+  year      = {2008},
+  volume    = {28},
+  number    = {2},
+  pages     = {39--55},
+  doi       = {10.1109/MM.2008.31},
+  language  = {english}
+}
+
+@article{Nickolls2008,
+  author    = {Nickolls, John and Buck, Ian and Garland, Michael and Skadron, Kevin},
+  title     = {Scalable Parallel Programming with {CUDA}},
+  journal   = {ACM Queue},
+  year      = {2008},
+  volume    = {6},
+  number    = {2},
+  pages     = {40--53},
+  doi       = {10.1145/1365490.1365500},
+  language  = {english}
+}
+
+@manual{VoltaWhitepaper,
+  author       = {{NVIDIA Corporation}},
+  title        = {{NVIDIA Tesla V100 GPU Architecture}},
+  year         = {2017},
+  organization = {NVIDIA Corporation},
+  url          = {https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf},
+  language     = {english}
+}
+
+% ===== JIT-компиляция и динамическая инструментация =====
+
+@inproceedings{Lattner2004,
+  author    = {Lattner, Chris and Adve, Vikram},
+  title     = {{LLVM}: A Compilation Framework for Lifelong Program Analysis and Transformation},
+  booktitle = {Proceedings of the International Symposium on Code Generation and Optimization (CGO)},
+  year      = {2004},
+  pages     = {75--86},
+  doi       = {10.1109/CGO.2004.1281665},
+  language  = {english}
+}
+
+@inproceedings{Luk2005,
+  author    = {Luk, Chi-Keung and Cohn, Robert and Muth, Robert and Patil, Harish and
+               Klauser, Artur and Lowney, Geoff and Wallace, Steven and
+               Reddi, Vijay Janapa and Hazelwood, Kim},
+  title     = {{Pin}: Building Customized Program Analysis Tools with Dynamic Instrumentation},
+  booktitle = {Proceedings of the ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI)},
+  year      = {2005},
+  pages     = {190--200},
+  doi       = {10.1145/1065010.1065034},
+  language  = {english}
+}
+
+% ===== Алгоритмы и теория =====
+
+@article{Thompson1968,
+  author    = {Thompson, Ken},
+  title     = {Regular Expression Search Algorithm},
+  journal   = {Communications of the ACM},
+  year      = {1968},
+  volume    = {11},
+  number    = {6},
+  pages     = {419--422},
+  doi       = {10.1145/363347.363387},
+  language  = {english}
+}
+
+@inproceedings{Graham1982,
+  author    = {Graham, Susan L. and Kessler, Peter B. and McKusick, Marshall K.},
+  title     = {gprof: A Call Graph Execution Profiler},
+  booktitle = {Proceedings of the SIGPLAN Symposium on Compiler Construction},
+  year      = {1982},
+  pages     = {120--126},
+  doi       = {10.1145/800230.806987},
+  language  = {english}
+}
+
+@article{Lengauer1979,
+  author    = {Lengauer, Thomas and Tarjan, Robert Endre},
+  title     = {A Fast Algorithm for Finding Dominators in a Flowgraph},
+  journal   = {ACM Transactions on Programming Languages and Systems},
+  year      = {1979},
+  volume    = {1},
+  number    = {1},
+  pages     = {121--141},
+  doi       = {10.1145/357062.357071},
+  language  = {english}
+}
+
+@inproceedings{Narasiman2011,
+  author    = {Narasiman, Veynu and Shebanow, Michael and Lee, Chang Joo and
+               Miftakhutdinov, Rustam and Mutlu, Onur and Patt, Yale N.},
+  title     = {Improving {GPU} Performance via Large Warps and Two-Level Warp Scheduling},
+  booktitle = {Proceedings of the 44th Annual IEEE/ACM International Symposium on Microarchitecture (MICRO)},
+  year      = {2011},
+  pages     = {308--317},
+  doi       = {10.1145/2155620.2155656},
+  language  = {english}
+}
+
+@inproceedings{Kerr2009,
+  author    = {Kerr, Andrew and Diamos, Gregory and Yalamanchili, Sudhakar},
+  title     = {A Characterization and Analysis of {PTX} Kernels},
+  booktitle = {2009 IEEE International Symposium on Workload Characterization (IISWC)},
+  year      = {2009},
+  pages     = {3--12},
+  doi       = {10.1109/IISWC.2009.5306783},
+  language  = {english}
 }
