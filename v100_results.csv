@@ -1,0 +1,8 @@
+kernel,size,time_ms,gflops_achieved,bw_gb_achieved,roofline_gflops,efficiency_pct,gpu
+vadd,"N=8192",0.0072,2.28,13.65,150.0,1.5,"Tesla V100-PCIE-16GB"
+gelu,"N=16384",0.0080,20.48,16.38,1125.0,1.8,"Tesla V100-PCIE-16GB"
+softmax,"512×32",0.0078,6.30,16.80,337.5,1.9,"Tesla V100-PCIE-16GB"
+mmul,"128×128",0.0178,235.64,11.05,15700.0,1.5,"Tesla V100-PCIE-16GB"
+attention,"S=D=128",0.1319,63.97,2.48,15700.0,0.4,"Tesla V100-PCIE-16GB"
+fft,"N=32,B=256",0.0089,23.01,14.73,1406.2,1.6,"Tesla V100-PCIE-16GB"
+cg,"N=4096,it=10",0.4763,1.46,3.10,425.0,0.3,"Tesla V100-PCIE-16GB"
