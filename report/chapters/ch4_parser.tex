@@ -33,8 +33,7 @@ $Q = \{q_{\mathrm{init}}, q_{\mathrm{func}}, q_{\mathrm{block}}\}$
 \end{itemize}
 
 На каждом шаге поддерживается контекст: текущая функция, текущий
-базовый блок, таблица файлов \texttt{source\_file}/\texttt{source\_line},
-монотонный счётчик PC.
+базовый блок, и монотонный счётчик PC.
 
 Таким образом, однопроходный инкрементный разбор обеспечивает
 линейную сложность $O(N)$ по числу строк PTX-текста и полное
@@ -47,22 +46,19 @@ PC-адресами, граф базовых блоков и таблицу си
 
 \subsubsection{Разбор объявлений функций и параметров}
 
-Заголовок функции разбирается регулярным выражением:
+Заголовок функции разбирается регулярным выражением (файл \texttt{module.cpp}):
 
-\begin{lstlisting}[language=C++, caption={Регулярное выражение для заголовка функции}]
-static const std::regex kFuncRe{
-    R"(\.(?:entry|func)\s+)"          // kind
-    R"((?:\(.*?\)\s*)?)"              // optional return type
-    R"((\w+))"                         // name
-    R"(\s*\(([^)]*)\))",              // params
-    std::regex::optimize
-};
+\begin{lstlisting}[language=C++, caption={Регулярное выражение для заголовка функции (module.cpp)}]
+constexpr std::string_view Pattern =
+    R"((.*)\s\.(entry|func)\s([A-Za-z0-9_]+)\(([^)]+)\)\n?\{([^}]+)\})";
+static const std::regex Re(Pattern.data(),
+    std::regex::ECMAScript | std::regex::optimize);
 \end{lstlisting}
 
 Результат~--- объект \texttt{Function} с таблицей параметров
 \texttt{params\_} и флагом \texttt{isEntry()}, по которому диспетчер
 различает точки входа ядра и вспомогательные функции. Параметры
-функции разбираются рекурсивно: каждый элемент вида
+функции разбираются последовательно: каждый элемент вида
 \texttt{.param .align~N .bM name} порождает запись
 \texttt{ParamSlot\{offset, size\}}, используемую исполнителем
 при копировании аргументов вызова в регистровый файл.
@@ -96,30 +92,55 @@ static const std::regex kFuncRe{
 
 \subsubsection{Разбор отдельной инструкции}
 
-Каждая строка-инструкция разбирается в пять последовательных этапов,
-полностью определяющих данные, необходимые исполнителю во время
-выполнения:
+Разбор каждой строки-инструкции выполняется в два последовательных
+регулярных прохода.
 
-\begin{enumerate}
-  \item \textbf{Предикатный префикс.} Опциональный \texttt{@\%pN}
-        или \texttt{@!\%pN} извлекается первым и сохраняется
-        в поле \texttt{predicate}. Исполнитель проверяет его перед
-        выполнением: если предикатный регистр ложен, инструкция
-        пропускается без изменения состояния регистрового файла.
-  \item \textbf{Нормализация мнемоники.} \texttt{fma.rn.f32}
-        разбивается на ключ поиска в таблице диспетчеризации (\texttt{fma})
-        и список модификаторов \texttt{["rn", "f32"]}, которые передаются
-        исполнителю для выбора режима округления и ширины типа.
-  \item \textbf{Список операндов.} Строка разбивается по запятой
-        с учётом скобок \texttt{[...]}, порождая упорядоченный вектор
-        \texttt{Operand}. Порядок критичен: первый операнд~--- регистр
-        назначения для большинства инструкций.
-  \item \textbf{Классификация и разрешение операндов}
-        (подробно~--- в следующем разделе).
-  \item \textbf{Присвоение монотонного PC.} Счётчик инкрементируется
-        для каждой исполняемой инструкции и используется как ключ
-        в \texttt{instruction\_table\_} и в записях \texttt{profiling.txt}.
-\end{enumerate}
+\textbf{Фаза~1: идентификация мнемоники.}
+Функция \texttt{parseInstructions} (файл \texttt{function.cpp}) применяет
+к каждой строке одно регулярное выражение:
+
+\begin{lstlisting}[language=C++, caption={Внешнее регулярное выражение идентификации мнемоники (function.cpp)}]
+constexpr std::string_view Pattern = "^\\.?(@%p[0-9]+\\s)?([a-z]+2?).*$";
+\end{lstlisting}
+
+Первая группа захватывает опциональный предикатный префикс \texttt{@\%pN},
+вторая~--- голую мнемонику (например, \texttt{fma}).
+По имени мнемоники функция \texttt{makeInstruction} диспетчеризует
+управление в соответствующий автогенерированный класс.
+
+\textbf{Фаза~2: Специальное регулярное выражение.}
+Каждый класс \texttt{\{name\}Instruction} порождается скриптом
+\texttt{autogen.py} из описания в \texttt{instructions.json}
+и компилируется в файл \texttt{instructions.cpp}.
+Статический метод \texttt{Make(line)} применяет единственный
+скомпилированное выражение, охватывающее всю строку,
+и одним вызовом \texttt{std::regex\_match} извлекает
+все поля~--- предикат, модификаторы и операнды. Например, для \texttt{fma}:
+
+\begin{lstlisting}[language=C++, caption={Фрагмент автогенерированного instructions.cpp для fma}]
+// regexp_template (instructions.json):
+// "fma\.($mode)\.($data)\s*($dst),\s*($src1),\s*($src2)?($imm1)?,\s*($src3)?($imm2)?;"
+constexpr std::string_view Pattern = R"ptx(...)ptx";
+static std::regex re(Pattern.data(),
+                     std::regex::ECMAScript | std::regex::optimize);
+std::smatch match;
+if (std::regex_match(line, match, re)) {
+    instr->mode_ = FromString<fmamodeQl>(match[1].str());  // rn/rz/rm/rp
+    instr->data_ = FromString<localFmaDataType>(match[2].str()); // f32/f64
+    instr->dst_  = FromString<registerOperand>(match[3].str());
+    // ... src1, src2, imm1, src3, imm2
+}
+\end{lstlisting}
+
+Каждая группа захвата непосредственно соответствует одному типизированному
+полю класса; преобразование выполняется функцией \texttt{FromString<T>()}.
+Это исключает ручной разбор строки в горячем цикле исполнителя: все данные
+уже находятся в типизированных полях к моменту первого вызова
+\texttt{Execute}.
+
+\textbf{Присвоение монотонного PC.} После успешного создания объекта
+инструкции счётчик инкрементируется; значение используется как индекс
+в \texttt{instruction\_table\_} и как ключ в записях \texttt{profiling.txt}.
 
 \subsubsection{Разрешение операндов}
 

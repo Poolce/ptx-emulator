@@ -14,20 +14,7 @@
 
 \begin{figure}[h]
   \centering
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-  % TODO: диаграмма компонентов
-  \fbox{\parbox{12cm}{\centering\vspace{2cm}
-    \textit{[Рисунок: схема перехвата.\\
-    CUDA App $\to$ PLT $\to$ libemuruntime.so $\to$ \{PTX-parser, Executor, Profiler\}.\\
-    Источник: скриншот \#2 из plan\_screenshots.md]}
-  \vspace{2cm}}}
-=======
   \includegraphics[width=16cm]{ldpreload_arch.png}
->>>>>>> Stashed changes
-=======
-  \includegraphics[width=16cm]{ldpreload_arch.png}
->>>>>>> Stashed changes
   \caption{Схема перехвата CUDA Runtime через \texttt{LD\_PRELOAD}.}
   \label{fig:ldpreload_arch}
 \end{figure}
@@ -115,9 +102,9 @@ CUDA Runtime ABI определяет, что при вызове \texttt{cudaLa
 без демангла~--- PTX-имя уже является декорированным символом,
 которым \texttt{cuobjdump} подписывает каждую точку входа.
 
-\subsubsection{Запуск \texttt{cuemu}: CLI-лончер и переменные окружения}
+\subsubsection{Запуск \texttt{cuemu}: CLI-инструмент и переменные окружения}
 
-CLI-инструмент \texttt{cuemu} является тонким лончером: он подготавливает
+CLI-инструмент \texttt{cuemu} является точкой входа в программу: он подготавливает
 окружение и повторно запускает целевой бинарный файл:
 
 \begin{lstlisting}[language=sh, caption={Логика запуска cuemu}]
