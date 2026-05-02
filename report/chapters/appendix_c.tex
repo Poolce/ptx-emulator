@@ -55,7 +55,7 @@ $\mathrm{PC}_C = 50$~--- PC метки \texttt{C}.
     3 & Исполнение $\mathrm{bb\_A}$ ($M = \texttt{0x000000FF}$)
       & $S$ без изменений \\
     \midrule
-    4 & PC = $PC_B$ (CheckStack)
+    4 & PC = $PC_B$ (цикл реконвергенции)
       & Снимаем $\{PC_B, \texttt{0x0000FF00}, F\}$: \\
     & & $M \leftarrow \texttt{0x0000FF00}$,
         $S = [\{100,M_0,T\},\{PC_D,M_{\mathrm{not}},F\},\{PC_C,\texttt{0x0000FFFF},T\}]$ \\
@@ -63,7 +63,7 @@ $\mathrm{PC}_C = 50$~--- PC метки \texttt{C}.
     5 & Исполнение $\mathrm{bb\_B}$ ($M = \texttt{0x0000FF00}$)
       & $S$ без изменений \\
     \midrule
-    6 & PC = $PC_C$ (CheckStack)
+    6 & PC = $PC_C$ (цикл реконвергенции)
       & Снимаем $\{PC_C, \texttt{0x0000FFFF}, T\}$: \\
     & & $M \leftarrow \texttt{0x0000FFFF}$,
         $S = [\{100, M_0, T\},\; \{PC_D, M_{\mathrm{not}}, F\}]$ \\
@@ -71,7 +71,7 @@ $\mathrm{PC}_C = 50$~--- PC метки \texttt{C}.
     7 & Исполнение $\mathrm{bb\_C}$ ($M = \texttt{0x0000FFFF}$)
       & $S$ без изменений \\
     \midrule
-    8 & PC = $PC_D$ (CheckStack)
+    8 & PC = $PC_D$ (цикл реконвергенции)
       & Снимаем $\{PC_D, M_{\mathrm{not}}, F\}$: \\
     & & $M \leftarrow \texttt{0xFFFF0000}$,
         $S = [\{100, M_0, T\}]$ \\
@@ -79,7 +79,7 @@ $\mathrm{PC}_C = 50$~--- PC метки \texttt{C}.
     9 & Исполнение $\mathrm{bb\_D}$ ($M = \texttt{0xFFFF0000}$)
       & $S$ без изменений \\
     \midrule
-    10 & PC = 100 (CheckStack)
+    10 & PC = 100 (цикл реконвергенции)
        & Снимаем $\{100, M_0, T\}$: \\
     & & $M \leftarrow \texttt{0xFFFFFFFF}$, $S = [\,]$ \\
     \midrule
