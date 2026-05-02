@@ -209,10 +209,10 @@ $\kappa = 1$ соответствует идеально слитному дос
 
 \subsection{Инструмент генерации отчётов}
 
-\subsubsection{Парсер текстового вывода (\texttt{parser.py})}
+\subsubsection{Анализатор текстового вывода (\texttt{parser.py})}
 
 Файл \texttt{profiling.txt} имеет иерархическую структуру:
-«запуск ядра → блок → варп → инструкция». Парсер реализует конечный
+«запуск ядра → блок → варп → инструкция». Анализатор реализует конечный
 автомат:
 
 \begin{enumerate}
@@ -226,9 +226,9 @@ $\kappa = 1$ соответствует идеально слитному дос
 
 Результат: \texttt{list[ProfilingRecord]} для передачи в агрегатор.
 
-\subsubsection{PTX-парсер для отчёта (\texttt{ptx\_parser.py})}
+\subsubsection{PTX-анализатор для отчёта (\texttt{ptx\_parser.py})}
 
-Python-реализация PTX-парсера решает задачу построения индекса:
+Python-реализация анализатора решает задачу построения индекса:
 \begin{equation}
   \mathit{by\_func\_pc} : (\mathit{fn},\, \mathit{pc})
   \to \mathit{PtxInstr},
