@@ -1,0 +1,161 @@
+\section{Механизм перехвата CUDA Runtime}
+
+\subsection{Архитектура перехвата через \texttt{LD\_PRELOAD}}
+
+\subsubsection{Схема взаимодействия компонентов}
+
+Центральная идея механизма перехвата состоит в том, что CUDA-приложение
+вызывает функции из \texttt{libcudart.so} через PLT, а динамический
+загрузчик \texttt{ld.so}~\cite{LinuxManLdso, Drepper2011} разрешает эти символы в реализации из
+\texttt{libemuruntime.so}, заблаговременно помещённой в переменную
+\texttt{LD\_PRELOAD}.
+
+Полная схема взаимодействия компонентов:
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm]{ldpreload_arch.png}
+  \caption{Схема перехвата CUDA Runtime через \texttt{LD\_PRELOAD}.}
+  \label{fig:ldpreload_arch}
+\end{figure}
+
+Библиотека \texttt{libemuruntime.so} реализует полный публичный интерфейс CUDA Runtime API
+\texttt{libcudart.so}, необходимый для работы типичного CUDA-приложения.
+Каждая функция-заглушка либо делегирует работу компонентам эмулятора
+(синтаксическому анализатору, исполнителю, профилировщику), либо возвращает \texttt{cudaSuccess}
+для функций, не требующих реализации в рамках эмулятора
+(например, управление событиями, профили потоков).
+
+Стратегия возврата \texttt{cudaSuccess} для нереализованных функций
+является намеренным компромиссом: большинство ядер не проверяют статус
+возврата от управляющих вызовов (таких как \texttt{cudaEventCreate}),
+и молчаливый успех позволяет исполнять вычислительное ядро без реализации
+полного API, необходимого лишь для измерения времени или профилирования на GPU.
+
+\subsubsection{Реализованные точки перехвата CUDA Runtime API}
+
+В таблице~\ref{tab:intercept_points} перечислены перехватываемые функции
+CUDA Runtime API с указанием ответственного компонента.
+
+\begin{table}[h]
+  \caption{Реализованные точки перехвата CUDA Runtime API}
+  \label{tab:intercept_points}
+  \centering
+  \begin{tabularx}{\linewidth}{lXl}
+    \toprule
+    \textbf{Функция} & \textbf{Назначение} & \textbf{Компонент} \\
+    \midrule
+    \texttt{\_\_cudaRegisterFatBinary}  & Регистрация модуля; вызов \texttt{cuobjdump} для извлечения PTX & модуль исполнения варпа \\
+    \texttt{\_\_cudaRegisterFunction}   & Отображение дескриптор $\to$ имя ядра & модуль исполнения варпа \\
+    \texttt{cudaLaunchKernel}           & Запуск ядра через диспетчер & диспетчер блока \\
+    \texttt{cudaMalloc}                 & Выделение памяти устройства & диспетчер блока \\
+    \texttt{cudaFree}                   & Освобождение памяти устройства & диспетчер блока \\
+    \texttt{cudaMemcpy}                 & Копирование памяти хост$\leftrightarrow$устройство & диспетчер блока \\
+    \texttt{cudaMemset}                 & Инициализация памяти & диспетчер блока \\
+    \texttt{cudaDeviceSynchronize}      & Синхронизация (no-op в эмуляторе) & диспетчер блока \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsubsection{Извлечение PTX-текста через \texttt{cuobjdump}}
+
+При перехвате \texttt{\_\_cudaRegisterFatBinary(handle)} эмулятор
+не разбирает fatbinary напрямую. Вместо этого он определяет путь
+к исполняемому файлу приложения из переменной окружения
+\texttt{CUEMU\_TARGET\_EXEC} и передаёт его утилите
+\texttt{cuobjdump}:
+
+\begin{lstlisting}[language=sh, caption={Извлечение PTX через cuobjdump}]
+cuobjdump --dump-ptx <binary> > ptx_text.txt
+\end{lstlisting}
+
+\texttt{cuobjdump} извлекает PTX-текст из секции \texttt{.nv\_fatbin}
+ELF-файла и выводит его в стандартный вывод. Эмулятор читает этот
+вывод и передаёт PTX-текст в \texttt{PtxModule::Make()},
+которая создаёт модуль и строит таблицу инструкций. Полученный \texttt{Module}
+сохраняется в \texttt{GlobalContext} под ключом-дескриптором.
+
+Алгоритм извлечения PTX:
+\begin{enumerate}
+  \item Прочитать путь к бинарному файлу из \texttt{CUEMU\_TARGET\_EXEC}.
+  \item Выполнить \texttt{cuobjdump --dump-ptx <binary>},
+        захватить stdout через \texttt{popen()}.
+  \item Передать полученный текст в \texttt{PtxModule::Make()},
+        получить объект \texttt{Module} с таблицей инструкций.
+  \item Сохранить \texttt{Module} в \texttt{GlobalContext}
+        под ключом-дескриптором.
+\end{enumerate}
+
+Делегирование задачи извлечения PTX утилите \texttt{cuobjdump} избавляет
+эмулятор от необходимости разбирать внутренний бинарный формат fatbinary,
+который не документирован публично и может изменяться между версиями
+инструментального набора CUDA. Такое решение обеспечивает долгосрочную
+совместимость эмулятора ценой зависимости от наличия \texttt{cuobjdump} в системе.
+
+\subsubsection{Регистрация функций: отображение дескриптор~$\to$~имя ядра}
+
+CUDA Runtime API определяет, что при вызове \texttt{cudaLaunchKernel}
+ядро идентифицируется \textit{указателем на функцию-заглушку}
+в сегменте кода, а не строковым именем. Это обусловлено тем, что
+в C++ ядра компилируются в обычные функции, и CUDA не гарантирует
+сохранение символьных имён после компоновки.
+
+При перехвате \texttt{\_\_cudaRegisterFunction} эмулятор создаёт
+отображение:
+\begin{equation}
+  \mathit{functions\_}[\mathtt{ptr}] = \mathit{name},
+\end{equation}
+где \texttt{ptr}~--- числовое представление указателя на заглушку,
+\texttt{name}~--- строка вида \texttt{"\_Z11vadd\_kernelPfS\_S\_i"}.
+
+При последующем вызове \texttt{cudaLaunchKernel(ptr, ...)} эмулятор
+извлекает строковое имя из отображения по ключу \texttt{ptr}
+и напрямую ищет функцию в \texttt{PtxModule::GetEntryFunction(name)}
+без демангла~--- PTX-имя уже является декорированным символом,
+которым \texttt{cuobjdump} подписывает каждую точку входа.
+
+Косвенная идентификация ядра через указатель~--- а не через строку~---
+~--- особенность CUDA Runtime API, обусловленная требованием совместимости
+с механизмами компоновки C++. Эмулятор воспроизводит эту семантику точно,
+что гарантирует корректное связывание при наличии нескольких ядер
+с одинаковым «удобочитаемым» именем в разных пространствах имён.
+
+\subsubsection{Запуск \texttt{cuemu}: утилита командной строки и переменные окружения}
+
+Утилита командной строки \texttt{cuemu} является точкой входа в программу: она подготавливает
+окружение и повторно запускает целевой бинарный файл:
+
+\begin{lstlisting}[language=sh, caption={Логика запуска cuemu}]
+export LD_PRELOAD=$CUEMU_LIB_DIR/libemuruntime.so
+export LD_LIBRARY_PATH=$CUEMU_LIB_DIR:$LD_LIBRARY_PATH
+export CUEMU_TARGET_EXEC="$1"
+export CUEMU_COLLECT_PROFILING="${CUEMU_COLLECT_PROFILING:-0}"
+export CUEMU_PROFILING_OUTPUT="${CUEMU_PROFILING_OUTPUT:-profiling.txt}"
+exec "$@"
+\end{lstlisting}
+
+Поддерживаемые переменные окружения перечислены в таблице~\ref{tab:env_vars}.
+
+Использование переменных окружения в качестве механизма конфигурации
+позволяет управлять поведением эмулятора без перекомпиляции и без изменения
+командной строки целевого приложения~--- последнее особенно важно при
+интеграции в системы CI, где командная строка фиксирована
+в конфигурационном файле системы сборки.
+
+\begin{table}[h]
+  \caption{Переменные окружения эмулятора}
+  \label{tab:env_vars}
+  \centering
+  \begin{tabularx}{\linewidth}{lXl}
+    \toprule
+    \textbf{Переменная} & \textbf{Назначение} & \textbf{По умолчанию} \\
+    \midrule
+    \texttt{CUEMU\_COLLECT\_PROFILING} & Включить сбор метрик & \texttt{0} \\
+    \texttt{CUEMU\_PROFILING\_OUTPUT}  & Путь к файлу вывода   & \texttt{profiling.txt} \\
+    \texttt{CUEMU\_GPU\_CONFIG}        & Путь к TOML-конфигу GPU & встроенный \\
+    \texttt{CUEMU\_TARGET\_EXEC}       & Имя целевого бинарного файла & обязателен \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\newpage

@@ -1,0 +1,471 @@
+\section{Теоретические основы}
+
+\subsection{PTX как промежуточное представление CUDA}
+
+\subsubsection{Место PTX в стеке компиляции CUDA}
+
+Компиляция CUDA-программы проходит через многоуровневый конвейер.
+На входе компилятор \texttt{nvcc}~\cite{NVCC} принимает файл \texttt{.cu},
+содержащий смешанный код: C++-код хоста и тела ядер устройства.
+Внешний интерфейс компилятора выделяет код устройства и передаёт его в NVVM~--- LLVM-based IR~\cite{Lattner2004}
+для GPU~--- который транслируется в PTX.
+
+PTX (Parallel Thread Execution)~--- аппаратно-независимое промежуточное
+представление, описывающее программу в терминах виртуального RISC-процессора
+с бесконечным регистровым файлом и явной параллельностью потоков.
+На следующем шаге \texttt{ptxas} транслирует PTX в SASS~---
+бинарный машинный код конкретной архитектуры (Volta, Turing, Ampere,
+Hopper), который помещается в fatbinary-архив вместе с исходным PTX-текстом.
+При запуске CUDA Runtime JIT-компилирует PTX для установленного GPU
+при отсутствии подходящего SASS.
+
+Fatbinary является ELF-совместимым архивом, встраиваемым компоновщиком
+в секцию \texttt{.nv\_fatbin} результирующего ELF-файла приложения.
+Эмулятор извлекает PTX-текст из этой секции при перехвате
+\texttt{\_\_cudaRegisterFatBinary}, вызывая утилиту
+\texttt{cuobjdump --dump-ptx} (подробно~--- в Главе~3).
+
+Хранение PTX внутри бинарного файла приложения~--- ключевое архитектурное
+свойство экосистемы CUDA: оно позволяет эмулятору получить текст программы
+без доступа к исходным \texttt{.cu}-файлам и без перекомпиляции, что
+обеспечивает прозрачность инструмента для конечного пользователя.
+
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm]{cuda_stackbw.png}
+  \caption{Стек компиляции CUDA. PTX занимает уровень между платформно-независимым IR и машинным кодом SASS.}
+  \label{fig:cuda_stack}
+\end{figure}
+
+
+\subsubsection{Cистема типов PTX}
+
+PTX определяет следующие базовые типы данных, каждый из которых однозначно
+задаётся суффиксом инструкции:
+
+\begin{itemize}
+  \item \textbf{Целочисленные знаковые:} \texttt{s8}, \texttt{s16},
+        \texttt{s32}, \texttt{s64}~--- арифметика в дополнительном коде.
+  \item \textbf{Целочисленные беззнаковые:} \texttt{u8}, \texttt{u16},
+        \texttt{u32}, \texttt{u64}.
+  \item \textbf{Битовые:} \texttt{b8}, \texttt{b16}, \texttt{b32},
+        \texttt{b64}, \texttt{b128}~--- интерпретация не задана,
+        используются для пересылок и упаковки.
+  \item \textbf{Вещественные:} \texttt{f16}, \texttt{f32}, \texttt{f64}~---
+        форматы IEEE 754-2008~\cite{IEEE754-2008} половинной, одинарной и двойной точности.
+  \item \textbf{Предикат:} \texttt{pred}~--- однобитное логическое значение,
+        хранимое в регистрах \texttt{\%p0}--\texttt{\%pN}.
+\end{itemize}
+
+Суффикс типа однозначно задаёт битовую ширину $w \in \{8, 16, 32, 64, 128\}$
+и способ интерпретации битового шаблона, что обеспечивает
+однозначность семантики каждой инструкции.
+
+Разделение типов на знаковые, беззнаковые и битовые варианты одной ширины
+принципиально важно для корректной реализации исполнителей: например, операция
+\texttt{shr.u32} выполняет логический сдвиг, тогда как \texttt{shr.s32}~---
+арифметический (с распространением знакового бита), и одна и та же
+реализация не может быть использована для обоих случаев.
+
+\subsubsection{Классификация инструкций PTX}
+
+Для целей проектирования таблицы диспетчеризации все инструкции PTX
+разбиты на семь классов:
+
+\begin{enumerate}
+  \item \textbf{Арифметические} (\texttt{add}, \texttt{sub}, \texttt{mul},
+        \texttt{div}, \texttt{fma}, \texttt{mad}, \texttt{rem}, \texttt{abs},
+        \texttt{neg}, \texttt{min}, \texttt{max})~--- 25~мнемоник.
+  \item \textbf{Логические и сдвиги} (\texttt{and}, \texttt{or},
+        \texttt{xor}, \texttt{not}, \texttt{shl}, \texttt{shr},
+        \texttt{bfe}, \texttt{bfi}, \texttt{popc})~--- 14~мнемоник.
+  \item \textbf{Сравнения и предикаты} (\texttt{setp}, \texttt{selp},
+        \texttt{slct}, \texttt{vote})~--- 4~мнемоники.
+  \item \textbf{Работа с памятью} (\texttt{ld}, \texttt{st},
+        \texttt{mov}, \texttt{cvta}, \texttt{prefetch})~--- 5~мнемоник.
+  \item \textbf{Преобразование типов} (\texttt{cvt})~--- 1~мнемоника
+        с матрицей суффиксов $5 \times 5$.
+  \item \textbf{Управление потоком} (\texttt{bra}, \texttt{call},
+        \texttt{ret}, \texttt{exit}, \texttt{trap})~--- 5~мнемоник.
+  \item \textbf{Синхронизация и специальные} (\texttt{bar}, \texttt{membar},
+        \texttt{mov.special}, \texttt{ex2}, \texttt{lg2},
+        \texttt{rcp}, \texttt{sqrt}, \texttt{sin}, \texttt{cos})~--- 9~мнемоник.
+\end{enumerate}
+
+Классификация инструкций по классам служит основой как для структуры
+таблицы диспетчеризации (Глава~5), так и для стратегии покрытия
+тестами: каждый класс тестируется независимо, что позволяет локализовать
+ошибки в пределах одной группы исполнителей.
+
+\subsubsection{Директивы PTX и их роль в эмуляторе}
+
+В PTX-тексте директивы не являются исполняемыми инструкциями,
+но несут информацию, критически необходимую для анализатора:
+
+\begin{itemize}
+  \item \texttt{.entry} / \texttt{.func}~--- задают тип функции
+        (ядро устройства или вспомогательная функция) и её границы.
+  \item \texttt{.param}~--- описывают сигнатуру: имя, тип и выравнивание
+        каждого параметра ядра.
+  \item \texttt{.reg .type \%prefix<N>}~--- объявляют регистровый файл:
+        например, \texttt{.reg .f32 \%f<115>} резервирует 115~регистров
+        типа \texttt{f32} с именами \texttt{\%f0}--\texttt{\%f114}.
+  \item \texttt{.shared .align A .b8 name[S]}~--- резервирует $S$~байт
+        разделяемой памяти с выравниванием $A$~байт.
+  \item \texttt{.file ID "path"} и \texttt{.loc ID L C}~--- формируют
+        таблицу, привязывающую PTX-инструкции к строкам исходного кода,
+        используемую профилировщиком для аннотации отчёта.
+\end{itemize}
+
+\subsubsection{Пространства адресов и их семантика}
+
+PTX определяет шесть пространств адресов, отличающихся по видимости
+и времени жизни:
+
+\begin{itemize}
+  \item \texttt{.reg}~--- регистровый файл, приватный для каждого потока.
+  \item \texttt{.global}~--- глобальная память, разделяемая всеми блоками.
+  \item \texttt{.shared}~--- разделяемая память, видимая всем потокам
+        одного блока; время жизни~--- время жизни блока.
+  \item \texttt{.local}~--- приватная память стека потока (спилл регистров).
+  \item \texttt{.param}~--- область передачи параметров ядра с хоста.
+  \item \texttt{.const}~--- константная память, только для чтения.
+\end{itemize}
+
+Формально вводится функция пространства:
+$\mathit{space} : \mathit{Addr} \to \{\mathit{global}, \mathit{shared},
+\mathit{local}, \mathit{param}, \mathit{const}\}$,
+используемая исполнителями \texttt{ld} и \texttt{st} для выбора
+соответствующего обработчика обращения к памяти.
+
+Разграничение пространств памяти принципиально важно для корректной
+реализации: смешение, например, глобальной и разделяемой памяти привело бы
+к некорректному вычислению метрик слияния и конфликтов банков, поскольку
+каждое из этих пространств обслуживается отдельными аппаратными блоками
+с различными правилами доступа.
+
+\newpage
+\subsection{Математическая модель SIMT-исполнения}
+
+\subsubsection{Варп как алгебраическая структура}
+
+Базовой единицей исполнения на GPU является \textit{варп}~---
+группа из 32 потоков, всегда исполняющих одну и ту же инструкцию~\cite{Lindholm2008}.
+Формально варп определяется как кортеж:
+\begin{equation}
+  W = \langle T,\, M,\, \mathrm{PC},\, R,\, S \rangle,
+\end{equation}
+где:
+\begin{itemize}
+  \item $T = \{0, 1, \ldots, 31\}$~--- множество идентификаторов потоков варпа;
+  \item $M \in \mathbb{B}^{32}$~--- маска исполнения (execution mask):
+        $M[i] = 1$ означает, что поток $i$ исполняет целевую инструкцию;
+  \item $\mathrm{PC} \in \mathbb{N}$~--- программный счётчик;
+  \item $R$~--- регистровый файл (функция $T \times \mathit{Types} \times \mathbb{N} \to \mathit{Val}$);
+  \item $S$~--- стек дивергенции (подробно в Главе~6).
+\end{itemize}
+
+Операция исполнения одной инструкции определяется как функция перехода
+состояния:
+$\delta : W \times \mathit{Instr} \to W'$.
+
+\subsubsection{Маска исполнения: операции и инварианты}
+
+Маска $M \in \mathbb{B}^{32}$ формально задаёт, какие потоки исполняют
+следующую инструкцию. Определим вспомогательные операции:
+\begin{align}
+  \activeset(M) &= \{i \in T \mid M[i] = 1\}, \\
+  \popcount(M) &= |\activeset(M)|, \\
+  \mathit{apply}(M, M') &= M \mathbin{\wedge} M'
+    \quad\text{(маскирование по предикату)}.
+\end{align}
+
+Фундаментальный инвариант исполнения: \textit{исполнитель инструкции
+обязан игнорировать потоки с $M[i]=0$ при записи результата.}
+Нарушение данного инварианта порождает логические ошибки
+в реализации исполнителей и строго контролируется в тестах.
+
+Этот инвариант отличает PTX-эмулятор от наивного однопоточного
+исполнителя: потоки с нулевым битом маски должны не просто «не исполнять
+следующую инструкцию», но и гарантированно не изменять состояние регистрового
+файла и памяти, что обеспечивает семантическую эквивалентность
+с аппаратным SIMT-исполнением.
+
+\subsubsection{Предикатные регистры и составная маска}
+
+Предикатный регистр $P \in \mathbb{B}^{32}$ хранит по одному биту
+на каждый поток варпа. Инструкция \texttt{@\%p instr} выполняется
+с эффективной маской:
+\begin{equation}
+  M_{\mathrm{eff}} = M \mathbin{\wedge} P,
+\end{equation}
+а инструкция \texttt{@!\%p instr}~--- с:
+\begin{equation}
+  M_{\mathrm{eff}} = M \mathbin{\wedge} \neg P.
+\end{equation}
+
+Инструкция \texttt{setp.op.type \%p, a, b} вычисляет:
+\begin{equation}
+  P[i] = \mathit{op}(a_i, b_i), \quad \forall i \in \activeset(M),
+\end{equation}
+что при следующем условном переходе \texttt{@\%p bra} может привести
+к расщеплению варпа, если $M \wedge P \neq 0$ и $M \wedge \neg P \neq 0$.
+
+\subsection{Математическая модель метрик производительности}
+
+\subsubsection{Метрика \texttt{branch\_efficiency}}
+
+Метрика эффективности ветвления определяется как доля активных потоков
+в момент исполнения инструкции:
+\begin{equation}
+  \eta_{\mathrm{branch}}(M) = \frac{\popcount(M)}{|T|},
+  \label{eq:branch_eff}
+\end{equation}
+где $|T| = 32$~--- размер варпа. Диапазон значений:
+$\eta_{\mathrm{branch}} \in [1/32,\, 1]$, где $\eta_{\mathrm{branch}} = 1.0$
+означает отсутствие дивергенции (все потоки активны), а
+$\eta_{\mathrm{branch}} = 1/32$ соответствует максимальной дивергенции
+(один активный поток).
+
+Средняя эффективность по $N$ исполнениям инструкции:
+\begin{equation}
+  \bar{\eta}_{\mathrm{branch}} = \frac{1}{N} \sum_{k=1}^{N} \eta_{\mathrm{branch}}(M_k).
+\end{equation}
+
+\subsubsection{Метрика \texttt{bank\_conflicts}}
+
+Разделяемая память GPU организована в $B$ банков шириной $w_b$~байт каждый~\cite{CUDAProgrammingGuide}.
+Для обращения по адресу $a$ функция принадлежности банку:
+\begin{equation}
+  f(a) = \left\lfloor \frac{a}{w_b} \right\rfloor \bmod B.
+\end{equation}
+
+Для множества активных потоков формируем мультимножество попаданий
+по банкам:
+$\mathcal{G} = \{f(a_i) \mid i \in \activeset(M)\}$.
+
+Число конфликтов:
+\begin{equation}
+  C_{\mathrm{bank}} = \max_{b \in \{0,\ldots,B-1\}} \bigl|\{i \in \activeset(M)
+    : f(a_i) = b\}\bigr| - 1.
+  \label{eq:bank_conflicts}
+\end{equation}
+
+$C_{\mathrm{bank}} = 0$ означает отсутствие конфликтов (каждый поток
+обращается к отдельному банку или к одному адресу~--- broadcast-режим).
+$C_{\mathrm{bank}} = 31$ соответствует конфликту 32~степени: все потоки
+обращаются к одному банку, что требует 32 последовательных транзакций.
+
+\subsubsection{Метрики \texttt{global\_mem\_transactions} и \texttt{global\_coalescing}}
+
+Глобальная память обслуживается через кэш L1 с размером строки $L = 128$~байт~\cite{CUDAProgrammingGuide, AmpereWhitepaper}.
+Функция принадлежности кэш-линии:
+\begin{equation}
+  \ell(a) = \left\lfloor \frac{a}{L} \right\rfloor.
+\end{equation}
+
+\textbf{Фактическое число транзакций} равно числу уникальных кэш-линий,
+к которым обращаются активные потоки:
+\begin{equation}
+  T_{\mathrm{actual}} = \bigl|\{ \ell(a_i) \mid i \in \activeset(M) \}\bigr|.
+  \label{eq:t_actual}
+\end{equation}
+
+\textbf{Идеальное число транзакций} при оптимальной упаковке:
+\begin{equation}
+  T_{\mathrm{ideal}} = \left\lceil \frac{\popcount(M) \cdot s}{L} \right\rceil,
+  \label{eq:t_ideal}
+\end{equation}
+где $s$~--- размер элемента в байтах (например, $s=4$ для \texttt{f32},
+$s=8$ для \texttt{f64}).
+
+\textbf{Коэффициент слияния}:
+\begin{equation}
+  \kappa = \min\!\left(1,\, \frac{T_{\mathrm{ideal}}}{T_{\mathrm{actual}}}\right) \in (0, 1].
+  \label{eq:coalescing}
+\end{equation}
+
+$\kappa = 1.0$~--- идеальное слияние (все обращения покрываются минимальным
+числом транзакций); $\kappa \approx 1/32$~--- наихудший случай (каждый поток
+обращается к отдельной кэш-линии).
+
+Коэффициент слияния $\kappa$ коррелирует с реальной
+производительностью ядер, ограниченных пропускной способностью памяти:
+при $\kappa = 1.0$ варп использует шину памяти оптимально,
+тогда как при $\kappa \ll 1$ фактическое потребление шины превышает
+необходимое в $1/\kappa$ раз, что становится основным узким местом.
+Таким образом, метрика $\kappa$ позволяет количественно оценить потенциал
+оптимизации шаблонов доступа к памяти без запуска ядра на реальном GPU.
+
+\subsection{Операционная семантика PTX (структурный подход)}
+
+\subsubsection{Нотация малых шагов (small-step semantics)}
+
+Для формального описания семантики инструкций PTX используется нотация
+структурной операционной семантики~\cite{Plotkin1981}.
+Правило вида:
+\begin{equation}
+  \eval{\mathit{instr}}{\sigma} \reduce \sigma'
+\end{equation}
+означает, что инструкция $\mathit{instr}$ в состоянии
+$\sigma = \langle M, R, \mathrm{PC}, \ldots \rangle$ выполняет
+переход в состояние $\sigma'$ за один шаг.
+
+Компоненты состояния:
+\begin{itemize}
+  \item $R[t][\tau][k]$~--- значение регистра номер $k$ типа $\tau$
+        потока $t$;
+  \item $M \in \mathbb{B}^{32}$~--- текущая маска исполнения;
+  \item $\mathrm{PC} \in \mathbb{N}$~--- программный счётчик.
+\end{itemize}
+
+\subsubsection{Семантика арифметических инструкций}
+
+Для инструкции \texttt{add.s32 \%rd, \%ra, \%rb}:
+\begin{equation}
+  R'[t][\mathtt{s32}][d] =
+  \bigl(R[t][\mathtt{s32}][a] + R[t][\mathtt{s32}][b]\bigr) \bmod 2^{32},
+  \quad \forall t \in \activeset(M).
+\end{equation}
+
+Для инструкции \texttt{fma.rn.f32 \%fd, \%fa, \%fb, \%fc}:
+\begin{equation}
+  R'[t][\mathtt{f32}][d] =
+  \mathrm{round}_{n}\!\bigl(R[t][\mathtt{f32}][a]
+    \cdot R[t][\mathtt{f32}][b]
+    + R[t][\mathtt{f32}][c]\bigr),
+  \quad \forall t \in \activeset(M),
+\end{equation}
+где $\mathrm{round}_n$~--- округление к ближайшему чётному
+(IEEE 754-2008, roundTiesToEven). Согласно стандарту, \texttt{fma}
+выполняет одно округление для всего выражения
+$a \cdot b + c$~\cite{IEEE754-2008}.
+
+Правила определены только для потоков из $\activeset(M)$;
+состояние регистров неактивных потоков не изменяется.
+
+\subsubsection{Семантика инструкций сравнения и выбора}
+
+Для \texttt{setp.lt.s32 \%p, \%ra, \%rb}:
+\begin{equation}
+  P'[t] = \bigl(R[t][\mathtt{s32}][a] < R[t][\mathtt{s32}][b]\bigr),
+  \quad \forall t \in \activeset(M).
+\end{equation}
+
+Для \texttt{selp.f32 \%fd, \%fa, \%fb, \%p}:
+\begin{equation}
+  R'[t][\mathtt{f32}][d] =
+  \begin{cases}
+    R[t][\mathtt{f32}][a] & \text{если } P[t] = 1, \\
+    R[t][\mathtt{f32}][b] & \text{если } P[t] = 0,
+  \end{cases}
+  \quad \forall t \in \activeset(M).
+\end{equation}
+
+Инструкция \texttt{selp} не вызывает дивергенцию:
+оба операнда вычисляются внутри каждого потока без расщепления маски.
+
+\subsubsection{Семантика инструкций управления потоком}
+
+Для безусловного перехода \texttt{bra.uni \$L}:
+\begin{equation}
+  \eval{\mathtt{bra.uni}\;\$L}{\sigma}
+  \reduce \sigma[\mathrm{PC} \leftarrow \mathit{offset}(\$L)],
+\end{equation}
+где $\mathit{offset}(\$L)$~--- PC первой инструкции метки \$L
+из таблицы базовых блоков; маска $M$ не изменяется.
+
+Для условного перехода \texttt{@\%p bra \$L} определим:
+$M_{\mathrm{taken}} = M \wedge P$, $M_{\mathrm{not}} = M \wedge \neg P$.
+
+\begin{itemize}
+  \item \textbf{Случай 1} ($M_{\mathrm{not}} = 0$): все активные потоки
+        берут переход.
+        $\mathrm{PC}' = \mathit{offset}(\$L)$, $M' = M$.
+  \item \textbf{Случай 2} ($M_{\mathrm{taken}} = 0$): ни один активный
+        поток не берёт переход.
+        $\mathrm{PC}' = \mathrm{PC} + 1$, $M' = M$.
+  \item \textbf{Случай 3} ($M_{\mathrm{taken}} \neq 0 \wedge
+        M_{\mathrm{not}} \neq 0$): дивергенция. Применяется алгоритм
+        PDOM\_Diverge (подробно в Главе~6).
+\end{itemize}
+
+\subsubsection{Семантика инструкций памяти}
+
+Для \texttt{ld.global.f32 \%fd, [\%ra]}:
+\begin{equation}
+  R'[t][\mathtt{f32}][d] = \mathit{Mem}_{\mathrm{global}}[R[t][\mathtt{u64}][a]],
+  \quad \forall t \in \activeset(M),
+\end{equation}
+где $\mathit{Mem}_{\mathrm{global}}$~--- функция чтения глобальной памяти,
+реализованная компонентами контекста исполнения (диспетчер блока (\texttt{rt\_stream.cpp})).
+
+После исполнения \texttt{ld.global} / \texttt{st.global} вычисляются
+$T_{\mathrm{actual}}$ и $\kappa$ по формулам~\eqref{eq:t_actual}--\eqref{eq:coalescing}.
+
+\subsection{Механизм динамической подстановки библиотек в Linux}
+
+\subsubsection{Загрузчик ELF и таблица динамических символов}
+
+При запуске ELF-бинарного файла в Linux ядро передаёт управление
+динамическому загрузчику \texttt{ld.so}. Загрузчик строит
+\textit{список разрешения символов}~--- упорядоченную цепочку библиотек,
+в которой он ищет адрес каждого используемого символа~\cite{LinuxManLdso}.
+
+При помещении \texttt{libemuruntime.so} на позицию $l_1$
+(через \texttt{LD\_PRELOAD=libemuruntime.so}) все вызовы
+\texttt{cudaMalloc}, \texttt{cudaLaunchKernel} и прочих
+функций CUDA Runtime разрешаются в реализации эмулятора
+согласно правилу первого совпадения в цепочке разрешения символов, не достигая оригинальной
+\texttt{libcudart.so}. При этом сам бинарный файл приложения
+остаётся немодифицированным.
+
+Это свойство~--- ненужность модификации приложения~--- принципиально важно для промышленного применения: пользователю не нужно перекомпилировать или перекомпоновать целевой бинарный файл, что упрощает внедрение.
+
+\subsection{Обзор смежных работ}
+
+\subsubsection{Функциональные эмуляторы: Ocelot, CUDAsim}
+
+Проект Ocelot~\cite{Diamos2010} разработан в Технологическом институте
+Джорджии в 2009--2013~гг. Он реализует функциональную эмуляцию PTX
+с поддержкой перехвата CUDA~4.x API через механизм, аналогичный
+\texttt{LD\_PRELOAD}. Ocelot не поддерживает PTX~ISA~7.x+ (инструкции
+\texttt{ldmatrix}, \texttt{wmma}, \texttt{async.bulk.copy})
+и не компилируется с современными версиями GCC/Clang. Возможности
+профилирования ограничены счётчиком выполненных инструкций.
+
+CUDAsim (CUDA Device Emulation, устаревший режим)~--- встроенный в CUDA~4.x
+режим эмуляции CPU, удалённый в CUDA~5.0 из-за расхождений в поведении
+атомарных операций и барьеров.
+
+\subsubsection{Микроархитектурный симулятор GPGPU-Sim}
+
+GPGPU-Sim~\cite{Bakhoda2009}~--- timing-accurate симулятор, воспроизводящий
+конвейер SM с точностью до цикла: внешний интерфейс, исполнение инструкций,
+исполнительные блоки, кэши, DRAM. Его цель принципиально отличается:
+оценка латентностей и пропускной способности, а не функциональная
+корректность в контексте непрерывной интеграции. Один запуск \texttt{mmul\_custom} (64×64×64)
+в GPGPU-Sim занимает порядка 10~часов машинного времени.
+
+\textit{Сравнение подходов} приведено в таблице~\ref{tab:related_work}.
+
+\begin{table}[h]
+  \caption{Сравнение инструментов эмуляции/симуляции CUDA}
+  \label{tab:related_work}
+  \centering
+  \begin{tabularx}{\linewidth}{lXXXX}
+    \toprule
+    \textbf{Инструмент} & \textbf{PTX ISA} & \textbf{Перехват} &
+    \textbf{Профилировщик} & \textbf{Тип} \\
+    \midrule
+    Ocelot           & 1.x--2.x  & LD\_PRELOAD  & Счётчики & Функциональный \\
+    GPGPU-Sim        & <~7.x     & Не требуется & Timing   & Архитектурный \\
+    Compute Sanitizer & —         & Требует GPU  & Нет      & Аппаратный \\
+    \textbf{Данная работа} & \textbf{7.x} & \textbf{LD\_PRELOAD} &
+    \textbf{4 метрики} & \textbf{Функциональный} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\newpage

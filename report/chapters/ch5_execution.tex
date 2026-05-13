@@ -1,0 +1,349 @@
+\section{Система исполнения инструкций}
+
+\subsection{Таблица диспетчеризации}
+
+\subsubsection{Структура: фабрика и виртуальный вызов}
+
+Каждая PTX-инструкция представлена отдельным C++-классом,
+наследующим абстрактный базовый класс \texttt{Instruction}.
+Создание объекта нужного подкласса выполняется фабричной функцией \\
+\texttt{makeInstruction(name, line)}, которую генерирует
+\texttt{autogen.py} из \\\texttt{instructions.json}:
+
+\begin{lstlisting}[language=C++, caption={Фрагмент автогенерируемой фабрики}]
+std::shared_ptr<Instruction> makeInstruction(
+        const std::string& name, const std::string& line) {
+    if (name == "add")  return addInstruction::Make(line);
+    if (name == "fma")  return fmaInstruction::Make(line);
+    if (name == "ld")   return ldInstruction::Make(line);
+    // ... all supported instructions ...
+}
+\end{lstlisting}
+
+Фабрика вызывается один раз при разборе PTX-текста. В горячем цикле
+исполнения варпа производится единственный виртуальный вызов:
+\texttt{instr->Execute(warp\_ctx)}.
+Накладные расходы~--- одна косвенная адресация через таблицу виртуальных методов (vtable).
+
+Разделение фазы создания объектов (при разборе) и фазы исполнения (в цикле
+диспетчера) обеспечивает строгое разделение ответственности: синтаксический анализатор отвечает
+за синтаксическую корректность, а исполнитель~--- исключительно за
+семантику вычислений. Такое разделение облегчает как тестирование компонентов,
+так и расширение набора поддерживаемых инструкций.
+
+\subsubsection{Генерация кода классов инструкций}
+
+Скрипт \texttt{autogen.py} читает \texttt{instructions.json}
+и генерирует файлы \texttt{instructions.h}/\texttt{.cpp}
+с классом для каждой мнемоники.
+
+Принцип открытости/закрытости: добавление поддержки новой инструкции
+сводится к добавлению записи
+в \texttt{instructions.json} и реализации метода \texttt{Execute()}~---
+\texttt{autogen.py} вставит нужную ветку в фабрику автоматически.
+
+Аналогичный принцип применяется в системе метрик профилировщика (Глава~7):
+единый JSON-манифест управляет генерацией кода сразу нескольких компонентов,
+что исключает рассинхронизацию между синтаксическим анализатором, фабрикой и профилировочными
+хуками при добавлении новых инструкций.
+
+\subsection{Регистровый файл и разрешение операндов}
+
+\subsubsection{Структура регистрового файла}
+
+Регистровый файл варпа организован как вектор на поток,
+где для каждого потока хранится отображение типа регистра
+на вектор значений:
+
+\begin{lstlisting}[language=C++, caption={Структура регистрового файла}]
+using RegisterContext = std::vector<uint64_t>;
+using ThreadContext   = std::unordered_map<Ptx::registerType,
+                                           RegisterContext>;
+// thread_regs[thread_id][registerType][slot]
+std::vector<ThreadContext> thread_regs;
+\end{lstlisting}
+
+Ключ \texttt{registerType}~--- перечисление \texttt{\{R, Rd, F, Fd, P, ...\}};
+вектор значений индексируется номером регистра из PTX-операнда.
+Все значения хранятся в \texttt{uint64\_t}: покрывает \texttt{f64}
+без потерь; значения \texttt{f32} занимают младшие 32~бита.
+Преобразование выполняется через \texttt{std::bit\_cast} без нарушения
+правила strict aliasing (C++20).
+
+Размер внутренних векторов определяется директивами \texttt{.reg}
+в PTX: исполнитель выделяет ровно столько слотов, сколько объявлено,
+без избыточного выделения памяти.
+
+\subsubsection{Вспомогательные шаблоны \texttt{reg\_cast<T>} и \texttt{to\_u64<T>}}
+
+Все исполнители инструкций работают с регистровым файлом через два
+шаблонных примитива, определённых в \texttt{executors.tpp}:
+
+\begin{lstlisting}[language=C++, caption={Примитивы доступа к регистрам}]
+template<typename T>
+T reg_cast(uint64_t raw) {
+    if constexpr (std::is_integral_v<T>)
+        return static_cast<T>(raw);
+    else {
+        T val;
+        std::memcpy(&val, &raw, sizeof(T));
+        return val;
+    }
+}
+
+template<typename T>
+uint64_t to_u64(T val) {
+    if constexpr (std::is_integral_v<T>)
+        return static_cast<uint64_t>(
+                   static_cast<std::make_unsigned_t<T>>(val));
+    else {
+        uint64_t raw = 0;
+        std::memcpy(&raw, &val, sizeof(T));
+        return raw;
+    }
+}
+\end{lstlisting}
+
+Целые числа преобразуются посредством \texttt{static\_cast} через беззнаковый
+промежуточный тип~--- бит-паттерн знаковых значений в \texttt{uint64\_t}
+сохраняется. Числа с плавающей запятой сериализуются через
+\texttt{memcpy}~--- это единственный способ избежать неопределённого поведения
+по правилу строгого псевдонимирования (strict aliasing) в C++.
+
+Унификация типов хранения в \texttt{uint64\_t} сокращает объём кода
+регистрового файла и исключает шаблонный параметр по типу хранения
+из структуры \texttt{ThreadContext}. Альтернативный подход с раздельными
+векторами для каждого типа потребовал бы отдельных специализаций
+для \texttt{float}, \texttt{double}, \texttt{int32\_t} и прочих,
+что привело бы к значительному увеличению объёма кода без функциональных преимуществ.
+
+\subsubsection{Вычисление эффективного адреса}
+
+Эффективный адрес потока $t$ для операнда \texttt{[\%rd5+8]}:
+\begin{equation}
+  ea(t) = R[t][\mathtt{u64}][5] + 8,
+\end{equation}
+где \texttt{imm\_offset~= 8} извлекается синтаксическим анализатором из адресного выражения.
+Вычисленный адрес $ea(t)$ передаётся в делегирующий метод
+\texttt{WarpContext}, который маршрутизирует обращение в нужное
+пространство памяти на основе функции $\mathit{space}(ea(t))$.
+
+\subsection{Исполнители арифметических инструкций}
+
+\subsubsection{Целочисленная арифметика: формальная операционная семантика}
+
+Правила структурной операционной семантики~\cite{Plotkin1981} для ключевых целочисленных инструкций:
+
+\textbf{\texttt{add.u32 \%rd, \%ra, \%rb}:}
+\begin{equation}
+  R'[t][\mathtt{u32}][d] =
+  \bigl(R[t][\mathtt{u32}][a] + R[t][\mathtt{u32}][b]\bigr) \bmod 2^{32},
+  \quad \forall t \in \activeset(M).
+\end{equation}
+
+\textbf{\texttt{mul.hi.u32 \%rd, \%ra, \%rb}:}
+\begin{equation}
+  R'[t][\mathtt{u32}][d] =
+  \left\lfloor \frac{R[t][\mathtt{u32}][a] \cdot R[t][\mathtt{u32}][b]}{2^{32}} \right\rfloor,
+  \quad \forall t \in \activeset(M).
+\end{equation}
+
+\textbf{\texttt{div.s32 \%rd, \%ra, \%rb}:}
+\begin{equation}
+  R'[t][\mathtt{s32}][d] =
+  \mathrm{trunc}\!\left(\frac{R[t][\mathtt{s32}][a]}{R[t][\mathtt{s32}][b]}\right),
+  \quad \forall t \in \activeset(M),\; R[t][\mathtt{s32}][b] \neq 0.
+\end{equation}
+
+Граничные случаи: деление на ноль~--- по спецификации PTX возвращает~0;
+переполнение \texttt{INT\_MIN / -1}~--- возвращает \texttt{INT\_MIN}
+(неопределённое поведение в стандарте C++, обрабатывается явно).
+
+Явная обработка этих граничных случаев критически важна для достоверности
+эмулятора: реальный GPU аппаратно следует семантике PTX-спецификации,
+и отклонение результата в пограничных сценариях привело бы к расхождению
+верифицируемых значений даже при корректной обработке типичных путей исполнения.
+
+\subsubsection{Арифметика с плавающей запятой: IEEE~754 и режимы округления}
+
+PTX определяет четыре модификатора округления, соответствующие
+режимам IEEE~754-2008~\cite{IEEE754-2008}:
+
+\begin{table}[h]
+  \caption{Режимы округления PTX и их соответствие IEEE~754}
+  \label{tab:rounding}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    \textbf{Суффикс PTX} & \textbf{Режим IEEE 754} & \textbf{Описание} \\
+    \midrule
+    \texttt{.rn} & roundTiesToEven  & к ближайшему чётному \\
+    \texttt{.rz} & roundTowardZero  & усечение \\
+    \texttt{.ru} & roundTowardPositive & к $+\infty$ \\
+    \texttt{.rd} & roundTowardNegative & к $-\infty$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Модификаторы округления (\texttt{.rn}, \texttt{.rz}, \texttt{.ru},
+\texttt{.rd}) разбираются синтаксическим анализатором и сохраняются в объекте инструкции.
+В текущей реализации эмулятор не переключает режим округления хост-CPU
+через \texttt{fesetround}: операции с плавающей запятой выполняются
+с режимом \texttt{FE\_TONEAREST} по умолчанию. Это известное
+ограничение, которое не влияет на корректность результата для
+инструкций, не чувствительных к последнему биту (\textit{faithful
+rounding}).
+
+\subsubsection{Инструкции преобразования типов}
+
+\textbf{\texttt{cvt.rni.s32.f32 \%rd, \%fa}:}
+преобразование \texttt{f32} $\to$ \texttt{s32} с округлением к ближайшему целому:
+\begin{equation}
+  R'[t][\mathtt{s32}][d] = \mathrm{round}_n(R[t][\mathtt{f32}][a]),
+  \quad \forall t \in \activeset(M),
+\end{equation}
+где $\mathrm{round}_n$~--- округление к ближайшему чётному (roundTiesToEven по IEEE~754).
+
+\textbf{\texttt{cvt.rz.f32.s64 \%fd, \%ra}:}
+преобразование \texttt{s64} $\to$ \texttt{f32} с усечением дробной части:
+\begin{equation}
+  R'[t][\mathtt{f32}][d] = \mathrm{round}_z\bigl(R[t][\mathtt{s64}][a]\bigr),
+  \quad \forall t \in \activeset(M).
+\end{equation}
+
+\subsection{Исполнители инструкций работы с памятью}
+
+\subsubsection{\texttt{ld.global} / \texttt{ld.shared}: чтение}
+
+Исполнитель \texttt{ld} реализован как шаблонный метод \\
+\texttt{ldInstruction::ExecuteThread<dataType~Data>}, параметризованный
+типом данных. Тип \texttt{ptx\_native\_t<Data>}~--- псевдоним,
+отображающий перечислитель \texttt{dataType} на соответствующий
+C++-тип (\texttt{F32}~$\to$~\texttt{float}, \texttt{S64}~$\to$~\texttt{int64\_t} и т.д.):
+
+\begin{lstlisting}[language=C++, caption={ldInstruction::ExecuteThread (executors.tpp)}]
+template<dataType Data>
+void ldInstruction::ExecuteThread(
+        uint32_t lid, std::shared_ptr<WarpContext>& wc)
+{
+    using T = ptx_native_t<Data>;
+    uintptr_t addr = 0;
+    if (addr_.reg.type != registerType::UNDEFINED) {
+        addr = static_cast<uintptr_t>(
+            wc->thread_regs[lid][addr_.reg.type][addr_.reg.reg_id]);
+        addr += static_cast<ptrdiff_t>(addr_.imm);
+    }
+    if (space_ == ldspaceQl::Shared) {
+        auto* base = static_cast<uint8_t*>(wc->getSharedBase());
+        addr = reinterpret_cast<uintptr_t>(base + addr);
+    }
+    T val = T{};
+    std::memcpy(&val, reinterpret_cast<const void*>(addr), sizeof(T));
+    wc->thread_regs[lid][dst_.type][dst_.reg_id] = to_u64<T>(val);
+}
+\end{lstlisting}
+
+Метод вызывается по одному разу для каждого активного потока варпа.
+Переключение между пространствами памяти (\texttt{global}/\texttt{shared})
+производится внутри метода по полю \texttt{space\_}, разобранному
+синтаксическим анализатором. Данные копируются через \texttt{memcpy}~---
+без нарушения strict aliasing и без промежуточного приведения указателей.
+
+\subsubsection{\texttt{st.global} / \texttt{st.shared}: запись с учётом маски}
+
+Для каждого потока $t \in \activeset(M)$:
+$*\mathit{ptr}(ea(t)) \leftarrow R[t][\tau][\mathit{src}]$.
+Потоки с $M[i]=0$ пропускают запись~--- это семантически обязательно:
+неактивные потоки не должны изменять состояние памяти даже при
+вычислении адреса.
+
+\subsubsection{\texttt{setp} / \texttt{selp}: операции с предикатами}
+
+Для \texttt{setp.lt.f32 \%p, \%fa, \%fb}:
+\begin{equation}
+  P'[t] = \bigl(R[t][\mathtt{f32}][a] < R[t][\mathtt{f32}][b]\bigr),
+  \quad \forall t \in \activeset(M).
+\end{equation}
+
+Результат сравнения (\texttt{true}/\texttt{false}) записывается в один
+предикатный регистр \texttt{dst\_} как значение \texttt{1}/\texttt{0}
+типа \texttt{uint64\_t}.
+
+\subsection{Исполнители инструкций управления потоком}
+
+\subsubsection{Безусловный переход \texttt{bra.uni \$L}}
+
+\begin{equation}
+  \eval{\mathtt{bra.uni}\;\$L}{\sigma}
+  \reduce \sigma[\mathrm{PC} \leftarrow \mathit{offset}(\$L)].
+\end{equation}
+
+Суффикс \texttt{.uni} (uniform) гарантирует конвергентность.
+В реализации: \texttt{warp.pc = warp.GetBasicBlockPc("\$L")}.
+Стек дивергенции не модифицируется.
+
+\subsubsection{Условный переход \texttt{@\%p bra \$L}}
+
+Полная семантика с разбором по случаям (подробно в Главе~6):
+
+$M_{\mathrm{taken}} = M \wedge P$, $M_{\mathrm{not}} = M \wedge \neg P$.
+
+\begin{itemize}
+  \item \textbf{Случай 1} ($M_{\mathrm{not}} = 0$):
+        $\mathrm{PC}' = \mathit{offset}(\$L)$.
+  \item \textbf{Случай 2} ($M_{\mathrm{taken}} = 0$):
+        $\mathrm{PC}' = \mathrm{PC} + 1$.
+  \item \textbf{Случай 3}: Вызов PDOM\_Diverge (см.~Главу~6).
+\end{itemize}
+
+Инструкция \texttt{ret} завершает исполнение варпа: она сбрасывает
+устаревшие фреймы PDOM-стека дивергенции и устанавливает
+\texttt{pc = EOC} (End-of-Code), сигнализируя циклу исполнения
+об окончании:
+
+\begin{lstlisting}[language=C++, caption={retInstruction::ExecuteBranch (executors.tpp)}]
+// Discard stale convergence frames from guard-clause paths.
+while (!wc->execution_stack.empty()
+       && wc->execution_stack.top().is_convergence)
+    wc->execution_stack.pop();
+
+if (wc->execution_stack.empty())
+    wc->pc = WarpContext::EOC;
+else {
+    const auto frame = wc->execution_stack.top();
+    wc->execution_stack.pop();
+    wc->pc             = frame.pc;
+    wc->execution_mask = frame.mask;
+}
+\end{lstlisting}
+
+\subsubsection{\texttt{bar.sync}: делегирование барьерной синхронизации}
+
+Исполнитель \texttt{bar.sync~N} вызывает
+\texttt{warp.syncBarrier()}, реализованный в компонентах управления
+блоком (диспетчер блока (\texttt{rt\_stream.cpp})).
+
+Математически: все записи \texttt{st.shared} до \texttt{bar.sync}
+гарантированно видимы всем потокам после него~---
+барьер обеспечивает полную видимость памяти
+(happens-before по отношению к записям разделяемой памяти).
+
+Реализация барьера в эмуляторе зависит от режима сборки.
+При компиляции с поддержкой OpenMP (\texttt{EMULATOR\_OPENMP\_ENABLED})
+каждый варп блока исполняется в отдельном потоке ОС
+(\texttt{\#pragma omp parallel for}), а \texttt{bar.sync} реализован
+через \texttt{BlockBarrier}~--- циклический барьер на базе
+\texttt{std::mutex} и \texttt{std::condition\_variable}.
+Варп, достигший барьера, блокируется до тех пор, пока все активные
+варпы блока не придут к той же точке; последний варп вызывает
+\texttt{WarpDone()}, снимая блокировку остальных.
+
+При сборке без OpenMP применяется кооперативный планировщик
+(\textit{round-robin}): на каждой итерации каждый варп исполняет
+инструкции до ближайшего \texttt{bar.sync} включительно, после чего
+управление передаётся следующему варпу.
+Когда все варпы достигли барьера, они продолжают исполнение совместно.
+Эта схема корректно воспроизводит семантику барьерной синхронизации
+без параллелизма на уровне ОС.
+
+\newpage

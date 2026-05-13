@@ -1,0 +1,38 @@
+\section{Формат файла \texttt{profiling.txt}: аннотированный пример}
+\label{app:profiling_format}
+
+Файл \texttt{profiling.txt} имеет иерархическую структуру:
+«запуск ядра \textrightarrow{} функция \textrightarrow{} базовый блок \textrightarrow{} записи инструкций».
+Ниже приведён аннотированный фрагмент для ядра \texttt{fft\_custom}.
+
+\begin{lstlisting}[caption={Пример profiling.txt для fft\_custom}]
+Launch 0 _Z10fft_kernelPcfi
+Function _Z10fft_kernelPcfi
+Basic Block $BB0_1
+[00:01:23.456] [PC: 0x000000000000002a]  Block: [0, 0, 0] WarpId: 0 Execution Mask 0xffffffff ld.global.f32 branch_efficiency: 1.000000, global_mem_transactions: 1, global_coalescing: 1.000000
+[00:01:23.456] [PC: 0x000000000000002b]  Block: [0, 0, 0] WarpId: 0 Execution Mask 0xffffffff fma.rn.f32 branch_efficiency: 1.000000
+Basic Block $BB0_3
+[00:01:23.457] [PC: 0x000000000000003d]  Block: [0, 0, 0] WarpId: 0 Execution Mask 0x0000ffff bra branch_efficiency: 0.500000
+Basic Block $BB0_5
+[00:01:23.457] [PC: 0x000000000000003e]  Block: [0, 0, 0] WarpId: 0 Execution Mask 0x0000ffff st.shared.f32 branch_efficiency: 0.500000, bank_conflicts: 0
+Basic Block $BB0_7
+[00:01:23.458] [PC: 0x000000000000004b]  Block: [0, 0, 0] WarpId: 0 Execution Mask 0xffffffff bar branch_efficiency: 1.000000
+\end{lstlisting}
+
+\textbf{Описание полей записи:}
+\begin{itemize}
+  \item \texttt{[HH:MM:SS.mmm]}~--- монотонная временная метка (формируется \texttt{Profiler::FormatTimestamp}).
+  \item \texttt{[PC: 0xHHHH...]}~--- шестнадцатеричный монотонный PC инструкции (16 символов, дополненных нулями).
+  \item \texttt{Block: [x, y, z]}~--- трёхмерный идентификатор блока.
+  \item \texttt{WarpId: N}~--- идентификатор варпа внутри блока.
+  \item \texttt{Execution Mask 0xHHHHHHHH}~--- маска активных потоков (32 бита, 8 шестнадцатеричных символов).
+  \item \texttt{instr\_name}~--- мнемоника инструкции.
+  \item \texttt{metric: value, ...}~--- список метрик в формате \texttt{имя: значение}, разделённых запятой.
+\end{itemize}
+
+\textbf{Описание заголовочных строк:}
+\begin{itemize}
+  \item \texttt{Launch N func\_name}~--- начало нового запуска ядра (\texttt{N}~--- монотонный счётчик).
+  \item \texttt{Function func\_name}~--- начало записей для новой PTX-функции.
+  \item \texttt{Basic Block \$BBx\_y}~--- начало записей для нового базового блока.
+\end{itemize}

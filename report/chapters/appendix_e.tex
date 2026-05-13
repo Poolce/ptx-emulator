@@ -1,0 +1,55 @@
+\section{Структура HTML-отчёта: описание секций}
+\label{app:html_report}
+
+HTML-отчёт генерируется командой:
+\begin{lstlisting}[language=sh]
+python -m tools.ptx_report \
+    --profiling profiling.txt \
+    --ptx fft_kernel.ptx \
+    --output report_fft.html
+\end{lstlisting}
+
+Отчёт содержит пять секций:
+
+\textbf{Секция 1 --- Панель «пилюль»} (рисунок~\ref{fig:html_pills}):
+сводные метрики ядра~--- общее число инструкций, число исполненных
+потоко-операций, среднее $\overline{\eta}_{\mathrm{branch}}$,
+суммарные $C_{\mathrm{bank}}$, средний $\bar{\kappa}$.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm]{html_pills.png}
+  \caption{Панель «пилюль» HTML-отчёта.}
+  \label{fig:html_pills}
+\end{figure}
+
+\textbf{Секция 2 --- Таблица инструкций} (рисунок~\ref{fig:html_table}):
+все уникальные PC с тепловой подсветкой по \texttt{exec\_count};
+столбцы: PC, мнемоника, блок, метрики.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm]{html_table.png}
+  \caption{Таблица инструкций с тепловой подсветкой.}
+  \label{fig:html_table}
+\end{figure}
+
+\textbf{Секция 3 --- Горячие точки}:
+топ-10 инструкций по дивергенции (минимальный $\eta_{\mathrm{branch}}$),
+по конфликтам банков (максимальный $C_{\mathrm{bank}}$),
+по слиянию (минимальный $\kappa$).
+
+\textbf{Секция 4 --- Таблица регистров}:
+для каждого префикса регистров~--- тип, объявлено слотов,
+накопленный \texttt{write\_ops}.
+
+\textbf{Секция 5 --- Аннотированный исходный код}:
+строки исходного \texttt{.cu}-файла с вложенными метриками
+инструкций, привязанных через \texttt{.loc}-директивы.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm]{html_source.png}
+  \caption{Аннотированный исходный код в HTML-отчёте.}
+  \label{fig:html_source}
+\end{figure}

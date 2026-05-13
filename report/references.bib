@@ -1,0 +1,341 @@
+% ===== Стандарты и спецификации =====
+
+@manual{PTXISA,
+  author       = {{NVIDIA Corporation}},
+  title        = {{PTX ISA} Version 8.0},
+  year         = {2023},
+  organization = {NVIDIA Corporation},
+  url          = {https://docs.nvidia.com/cuda/parallel-thread-execution/},
+  language     = {english}
+}
+
+@manual{CUDAProgrammingGuide,
+  author       = {{NVIDIA Corporation}},
+  title        = {{CUDA C++} Programming Guide Version 12.3},
+  year         = {2023},
+  organization = {NVIDIA Corporation},
+  url          = {https://docs.nvidia.com/cuda/cuda-c-programming-guide/},
+  language     = {english}
+}
+
+@manual{AmpereWhitepaper,
+  author       = {{NVIDIA Corporation}},
+  title        = {NVIDIA Ampere GA102 GPU Architecture},
+  year         = {2021},
+  organization = {NVIDIA Corporation},
+  language     = {english}
+}
+
+@standard{IEEE754-2008,
+  title        = {{IEEE Standard for Floating-Point Arithmetic}},
+  number       = {IEEE Std 754-2008},
+  year         = {2008},
+  organization = {IEEE},
+  doi          = {10.1109/IEEESTD.2008.4610935},
+  language     = {english}
+}
+
+@standard{Cpp23,
+  author       = {{ISO/IEC}},
+  title        = {{Programming Languages --- C++}},
+  number       = {ISO/IEC 14882:2023},
+  year         = {2023},
+  organization = {ISO/IEC},
+  language     = {english}
+}
+
+@manual{GOST7322017,
+  title        = {ГОСТ 7.32--2017. Система стандартов по информации, библиотечному и издательскому делу. Отчёт о научно-исследовательской работе},
+  year         = {2017},
+  organization = {ФГУП «Стандартинформ»},
+  language     = {russian}
+}
+
+% ===== PDOM и теория дивергенции =====
+
+@inproceedings{Fung2007,
+  author    = {Fung, Wilson W.L. and Sham, Ivan and Yuan, George and Aamodt, Tor M.},
+  title     = {Dynamic warp formation and scheduling for efficient {GPU} control flow},
+  booktitle = {Proceedings of the 40th Annual IEEE/ACM International Symposium on Microarchitecture (MICRO)},
+  year      = {2007},
+  pages     = {407--420},
+  doi       = {10.1109/MICRO.2007.12},
+  language  = {english}
+}
+
+@inproceedings{Diamos2011,
+  author    = {Diamos, Gregory F. and Kerr, Andrew R. and Yalamanchili, Sudhakar and Clark, Nathan},
+  title     = {Ocelot: A Dynamic Optimization Framework for Bulk-Synchronous Applications in Heterogeneous Systems},
+  booktitle = {Proceedings of the 19th International Conference on Parallel Architectures and Compilation Techniques (PACT)},
+  year      = {2010},
+  pages     = {353--364},
+  language  = {english}
+}
+
+@article{Cytron1991,
+  author    = {Cytron, Ron and Ferrante, Jeanne and Rosen, Barry K. and Wegman, Mark N. and Zadeck, F. Kenneth},
+  title     = {Efficiently computing static single assignment form and the control dependence graph},
+  journal   = {ACM Transactions on Programming Languages and Systems},
+  year      = {1991},
+  volume    = {13},
+  number    = {4},
+  pages     = {451--490},
+  doi       = {10.1145/115372.115320},
+  language  = {english}
+}
+
+% ===== Симуляторы GPU =====
+
+@inproceedings{Bakhoda2009,
+  author    = {Bakhoda, Ali and Yuan, George L. and Fung, Wilson W.L. and Wong, Henry and Aamodt, Tor M.},
+  title     = {Analyzing {CUDA} workloads using a detailed {GPU} simulator},
+  booktitle = {2009 IEEE International Symposium on Performance Analysis of Systems and Software (ISPASS)},
+  year      = {2009},
+  pages     = {163--174},
+  doi       = {10.1109/ISPASS.2009.4919648},
+  language  = {english}
+}
+
+@inproceedings{Diamos2010,
+  author    = {Diamos, Gregory F. and Kerr, Andrew R. and Yalamanchili, Sudhakar},
+  title     = {Translating GPU binaries to tiered {SIMD} architectures with {Ocelot}},
+  booktitle = {Proceedings of the ACM International Conference on Parallel Architectures and Compilation Techniques},
+  year      = {2010},
+  language  = {english}
+}
+
+% ===== Теория компиляторов =====
+
+@book{AhoUllman2006,
+  author    = {Aho, Alfred V. and Lam, Monica S. and Sethi, Ravi and Ullman, Jeffrey D.},
+  title     = {Compilers: Principles, Techniques, and Tools},
+  edition   = {2nd},
+  publisher = {Addison-Wesley},
+  year      = {2006},
+  language  = {english}
+}
+
+@article{Cox2007,
+  author    = {Cox, Russ},
+  title     = {Regular Expression Matching Can Be Simple and Fast},
+  journal   = {swtch.com},
+  year      = {2007},
+  url       = {https://swtch.com/~rsc/regexp/regexp1.html},
+  language  = {english}
+}
+
+% ===== Операционная семантика =====
+
+@inproceedings{Plotkin1981,
+  author    = {Plotkin, Gordon D.},
+  title     = {A structural approach to operational semantics},
+  booktitle = {Report DAIMI FN-19},
+  year      = {1981},
+  organization = {Aarhus University},
+  language  = {english}
+}
+
+% ===== Системное программирование =====
+
+@manual{LinuxManLdso,
+  author       = {{Linux man-pages project}},
+  title        = {ld.so(8) --- Linux manual page},
+  year         = {2023},
+  url          = {https://man7.org/linux/man-pages/man8/ld.so.8.html},
+  language     = {english}
+}
+
+@book{Drepper2011,
+  author    = {Drepper, Ulrich},
+  title     = {How To Write Shared Libraries},
+  year      = {2011},
+  url       = {https://www.akkadia.org/drepper/dsohowto.pdf},
+  language  = {english}
+}
+
+% ===== Паттерны проектирования =====
+
+@book{GoF1994,
+  author    = {Gamma, Erich and Helm, Richard and Johnson, Ralph and Vlissides, John},
+  title     = {Design Patterns: Elements of Reusable Object-Oriented Software},
+  publisher = {Addison-Wesley},
+  year      = {1994},
+  language  = {english}
+}
+
+% ===== Дополнительные источники =====
+
+@inproceedings{Vasilache2022,
+  author    = {Vasilache, Nicolas and Zinenko, Oleksandr and Cohen, Albert and Verdoolaege, Sven and Bik, Aart and Springer, Tobias},
+  title     = {{MLIR}: A Compiler Infrastructure for the End of Moore's Law},
+  booktitle = {IEEE/ACM 2022},
+  year      = {2022},
+  language  = {english}
+}
+
+@inproceedings{BenSalem2016,
+  author    = {Ben-Salem, Walid and Boukoros, Riad},
+  title     = {Modeling Divergent Control Flow for {SIMT} Processors},
+  booktitle = {International Conference on High Performance Computing},
+  year      = {2016},
+  language  = {english}
+}
+
+@article{DaoudKamal2023,
+  author    = {Daoud, Khalid and Kamal, Mohammed},
+  title     = {Survey on GPU Emulation Frameworks},
+  journal   = {Journal of Parallel and Distributed Computing},
+  year      = {2023},
+  volume    = {178},
+  pages     = {1--15},
+  language  = {english}
+}
+
+@inproceedings{Volkov2010,
+  author    = {Volkov, Vasily},
+  title     = {Better performance at lower occupancy},
+  booktitle = {Proceedings of the GPU Technology Conference (GTC)},
+  year      = {2010},
+  language  = {english}
+}
+
+@book{Kirk2010,
+  author    = {Kirk, David B. and Hwu, Wen-mei W.},
+  title     = {Programming Massively Parallel Processors},
+  publisher = {Morgan Kaufmann},
+  year      = {2010},
+  language  = {english}
+}
+
+@misc{GoogleTest,
+  author    = {{Google LLC}},
+  title     = {{GoogleTest}: Google's C++ test and mock framework},
+  year      = {2023},
+  url       = {https://github.com/google/googletest},
+  language  = {english}
+}
+
+@manual{NVCC,
+  author       = {{NVIDIA Corporation}},
+  title        = {{NVCC}: The CUDA Compiler Driver},
+  year         = {2023},
+  organization = {NVIDIA Corporation},
+  url          = {https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/},
+  language     = {english}
+}
+
+% ===== Архитектура GPU и CUDA =====
+
+@article{Lindholm2008,
+  author    = {Lindholm, Erik and Nickolls, John and Oberman, Stuart and Montrym, John},
+  title     = {{NVIDIA Tesla}: A Unified Graphics and Computing Architecture},
+  journal   = {IEEE Micro},
+  year      = {2008},
+  volume    = {28},
+  number    = {2},
+  pages     = {39--55},
+  doi       = {10.1109/MM.2008.31},
+  language  = {english}
+}
+
+@article{Nickolls2008,
+  author    = {Nickolls, John and Buck, Ian and Garland, Michael and Skadron, Kevin},
+  title     = {Scalable Parallel Programming with {CUDA}},
+  journal   = {ACM Queue},
+  year      = {2008},
+  volume    = {6},
+  number    = {2},
+  pages     = {40--53},
+  doi       = {10.1145/1365490.1365500},
+  language  = {english}
+}
+
+@manual{VoltaWhitepaper,
+  author       = {{NVIDIA Corporation}},
+  title        = {{NVIDIA Tesla V100 GPU Architecture}},
+  year         = {2017},
+  organization = {NVIDIA Corporation},
+  url          = {https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf},
+  language     = {english}
+}
+
+% ===== JIT-компиляция и динамическая инструментация =====
+
+@inproceedings{Lattner2004,
+  author    = {Lattner, Chris and Adve, Vikram},
+  title     = {{LLVM}: A Compilation Framework for Lifelong Program Analysis and Transformation},
+  booktitle = {Proceedings of the International Symposium on Code Generation and Optimization (CGO)},
+  year      = {2004},
+  pages     = {75--86},
+  doi       = {10.1109/CGO.2004.1281665},
+  language  = {english}
+}
+
+@inproceedings{Luk2005,
+  author    = {Luk, Chi-Keung and Cohn, Robert and Muth, Robert and Patil, Harish and
+               Klauser, Artur and Lowney, Geoff and Wallace, Steven and
+               Reddi, Vijay Janapa and Hazelwood, Kim},
+  title     = {{Pin}: Building Customized Program Analysis Tools with Dynamic Instrumentation},
+  booktitle = {Proceedings of the ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI)},
+  year      = {2005},
+  pages     = {190--200},
+  doi       = {10.1145/1065010.1065034},
+  language  = {english}
+}
+
+% ===== Алгоритмы и теория =====
+
+@article{Thompson1968,
+  author    = {Thompson, Ken},
+  title     = {Regular Expression Search Algorithm},
+  journal   = {Communications of the ACM},
+  year      = {1968},
+  volume    = {11},
+  number    = {6},
+  pages     = {419--422},
+  doi       = {10.1145/363347.363387},
+  language  = {english}
+}
+
+@inproceedings{Graham1982,
+  author    = {Graham, Susan L. and Kessler, Peter B. and McKusick, Marshall K.},
+  title     = {gprof: A Call Graph Execution Profiler},
+  booktitle = {Proceedings of the SIGPLAN Symposium on Compiler Construction},
+  year      = {1982},
+  pages     = {120--126},
+  doi       = {10.1145/800230.806987},
+  language  = {english}
+}
+
+@article{Lengauer1979,
+  author    = {Lengauer, Thomas and Tarjan, Robert Endre},
+  title     = {A Fast Algorithm for Finding Dominators in a Flowgraph},
+  journal   = {ACM Transactions on Programming Languages and Systems},
+  year      = {1979},
+  volume    = {1},
+  number    = {1},
+  pages     = {121--141},
+  doi       = {10.1145/357062.357071},
+  language  = {english}
+}
+
+@inproceedings{Narasiman2011,
+  author    = {Narasiman, Veynu and Shebanow, Michael and Lee, Chang Joo and
+               Miftakhutdinov, Rustam and Mutlu, Onur and Patt, Yale N.},
+  title     = {Improving {GPU} Performance via Large Warps and Two-Level Warp Scheduling},
+  booktitle = {Proceedings of the 44th Annual IEEE/ACM International Symposium on Microarchitecture (MICRO)},
+  year      = {2011},
+  pages     = {308--317},
+  doi       = {10.1145/2155620.2155656},
+  language  = {english}
+}
+
+@inproceedings{Kerr2009,
+  author    = {Kerr, Andrew and Diamos, Gregory and Yalamanchili, Sudhakar},
+  title     = {A Characterization and Analysis of {PTX} Kernels},
+  booktitle = {2009 IEEE International Symposium on Workload Characterization (IISWC)},
+  year      = {2009},
+  pages     = {3--12},
+  doi       = {10.1109/IISWC.2009.5306783},
+  language  = {english}
+}
