@@ -7,18 +7,3 @@
 \begin{center}
   \url{https://github.com/Poolce/ptx-emulator}
 \end{center}
-
-Репозиторий содержит следующие основные компоненты:
-
-\begin{itemize}
-  \item \texttt{app/}~--- исходный код эмулятора (контекст исполнения,
-        синтаксический анализатор PTX, таблица диспетчеризации,
-        профилировщик, runtime).
-  \item \texttt{autogen/}~--- скрипт \texttt{autogen.py} и манифест
-        \texttt{instructions.json} для кодогенерации.
-  \item \texttt{test/}~--- интеграционные тесты (CUDA-ядра) и модульные
-        тесты на базе GoogleTest.
-  \item \texttt{report/}~--- исходные тексты настоящего отчёта в формате \LaTeX{}.
-  \item \texttt{CMakeLists.txt}~--- система сборки CMake с поддержкой
-        опциональной компиляции с OpenMP.
-\end{itemize}
