@@ -84,10 +84,6 @@
 \usepackage{multirow}
 \usepackage{array}
 
-%% ===== Алгоритмы =====
-\usepackage[ruled,linesnumbered,noend]{algorithm2e}
-\SetAlgorithmName{Алгоритм}{алгоритм}{Список алгоритмов}
-
 %% ===== Библиография =====
 \usepackage[numbers,sort&compress]{natbib}
 \bibliographystyle{plain}
@@ -129,28 +125,14 @@
 \newpage
 
 %% Главы
-\include{chapters/ch1_intro}
-\include{chapters/ch2_theory}
-\include{chapters/ch3_ldpreload}
-\include{chapters/ch4_parser}
-\include{chapters/ch5_execution}
-\include{chapters/ch6_divergence}
-\include{chapters/ch7_profiling}
-\include{chapters/ch8_testing}
-\include{chapters/ch9_conclusion}
+\include{chapters/ch_intro}
+\include{chapters/ch_profiling}
+\include{chapters/ch_testing}
+\include{chapters/ch_conclusion}
 
 %% Список литературы
-\nocite{Lattner2004,Lindholm2008,Nickolls2008,VoltaWhitepaper,Luk2005,Thompson1968,Graham1982,Lengauer1979,Narasiman2011,Kerr2009}
+\nocite{Lindholm2008,Nickolls2008,VoltaWhitepaper,Graham1982}
 \bibliography{references}
-
-%% Приложения
-\appendix
-\include{chapters/appendix_a}
-\include{chapters/appendix_b}
-\include{chapters/appendix_c}
-\include{chapters/appendix_d}
-\include{chapters/appendix_e}
-\include{chapters/appendix_f}
 
 \label{lastpage}
 \end{document}
