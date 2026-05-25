@@ -110,9 +110,9 @@
 \contentsline {subsubsection}{\numberline {8.3.2}Привязка инструкций к исходному коду}{45}{subsubsection.8.3.2}%
 \contentsline {subsubsection}{\numberline {8.3.3}Сквозная проверка цепочки профилировщика}{46}{subsubsection.8.3.3}%
 \contentsline {section}{\numberline {9}Заключение}{47}{section.9}%
-\contentsline {section}{\numberline {A}Таблица поддерживаемых инструкций PTX}{48}{appendix.A}%
-\contentsline {section}{\numberline {B}Поведение инструкций PTX: полный список правил}{50}{appendix.B}%
-\contentsline {section}{\numberline {C}Трассировка PDOM\_Diverge на примере вложенной дивергенции}{52}{appendix.C}%
-\contentsline {section}{\numberline {D}Формат файла \texttt {profiling.txt}: аннотированный пример}{54}{appendix.D}%
-\contentsline {section}{\numberline {E}Структура HTML-отчёта: описание секций}{55}{appendix.E}%
-\contentsline {section}{\numberline {F}Репозиторий с исходным кодом}{57}{appendix.F}%
+\contentsline {section}{\numberline {A}Таблица поддерживаемых инструкций PTX}{50}{appendix.A}%
+\contentsline {section}{\numberline {B}Поведение инструкций PTX: полный список правил}{52}{appendix.B}%
+\contentsline {section}{\numberline {C}Трассировка PDOM\_Diverge на примере вложенной дивергенции}{54}{appendix.C}%
+\contentsline {section}{\numberline {D}Формат файла \texttt {profiling.txt}: аннотированный пример}{56}{appendix.D}%
+\contentsline {section}{\numberline {E}Структура HTML-отчёта: описание секций}{57}{appendix.E}%
+\contentsline {section}{\numberline {F}Репозиторий с исходным кодом}{59}{appendix.F}%

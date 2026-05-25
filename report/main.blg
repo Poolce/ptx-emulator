@@ -1,0 +1,66 @@
+This is BibTeX, Version 0.99d (TeX Live 2023/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: plain.bst
+A level-1 auxiliary file: title.aux
+A level-1 auxiliary file: chapters/ch1_intro.aux
+A level-1 auxiliary file: chapters/ch2_theory.aux
+A level-1 auxiliary file: chapters/ch3_ldpreload.aux
+A level-1 auxiliary file: chapters/ch4_parser.aux
+A level-1 auxiliary file: chapters/ch5_execution.aux
+A level-1 auxiliary file: chapters/ch6_divergence.aux
+A level-1 auxiliary file: chapters/ch7_profiling.aux
+A level-1 auxiliary file: chapters/ch8_testing.aux
+A level-1 auxiliary file: chapters/ch9_conclusion.aux
+A level-1 auxiliary file: chapters/appendix_a.aux
+A level-1 auxiliary file: chapters/appendix_b.aux
+A level-1 auxiliary file: chapters/appendix_c.aux
+A level-1 auxiliary file: chapters/appendix_d.aux
+A level-1 auxiliary file: chapters/appendix_e.aux
+A level-1 auxiliary file: chapters/appendix_f.aux
+Database file #1: references.bib
+Warning--entry type for "IEEE754-2008" isn't style-file defined
+--line 29 of file references.bib
+Warning--to sort, need author or key in IEEE754-2008
+You've used 24 entries,
+            2118 wiz_defined-function locations,
+            651 strings with 8804 characters,
+and the built_in function-call counts, 7209 in all, are:
+= -- 684
+> -- 340
+< -- 4
++ -- 138
+- -- 112
+* -- 432
+:= -- 1190
+add.period$ -- 69
+call.type$ -- 24
+change.case$ -- 118
+chr.to.int$ -- 0
+cite$ -- 25
+duplicate$ -- 304
+empty$ -- 609
+format.name$ -- 112
+if$ -- 1528
+int.to.chr$ -- 0
+int.to.str$ -- 24
+missing$ -- 21
+newline$ -- 119
+num.names$ -- 46
+pop$ -- 176
+preamble$ -- 1
+purify$ -- 104
+quote$ -- 0
+skip$ -- 206
+stack$ -- 0
+substring$ -- 321
+swap$ -- 71
+text.length$ -- 4
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 86
+warning$ -- 1
+while$ -- 66
+width$ -- 26
+write$ -- 248
+(There were 2 warnings)

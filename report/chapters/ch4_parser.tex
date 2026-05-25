@@ -52,7 +52,7 @@ PTX-текст имеет строго линейную структуру: по
 
 \subsubsection{Разбор объявлений функций и параметров}
 
-Заголовок функции разбирается регулярным выражением~\cite{Thompson1968, Cox2007, Martynenko2004} (файл \texttt{module.cpp}):
+Заголовок функции разбирается регулярным выражением~\cite{Martynenko2004} (файл \texttt{module.cpp}):
 
 \begin{lstlisting}[language=C++, caption={Регулярное выражение для заголовка функции (module.cpp)}]
 constexpr std::string_view Pattern =
