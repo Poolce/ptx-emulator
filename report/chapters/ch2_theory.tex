@@ -35,8 +35,11 @@ Fatbinary является ELF-совместимым архивом, встра
 
 \subsubsection{Cистема типов PTX}
 
-PTX определяет следующие базовые типы данных, каждый из которых однозначно
-задаётся суффиксом инструкции:
+PTX определяет следующие базовые типы данных. Тип операнда определяется
+двумя способами: суффиксом инструкции (\texttt{.f32}, \texttt{.s32} и др.)
+и префиксом имени регистра (\texttt{\%f}~$\to$~\texttt{f32},
+\texttt{\%r}~$\to$~\texttt{s32}, \texttt{\%rd}~$\to$~\texttt{u64},
+\texttt{\%p}~$\to$~\texttt{pred}):
 
 \begin{itemize}
   \item \textbf{Целочисленные знаковые:} \texttt{s8}, \texttt{s16},
@@ -136,12 +139,13 @@ $\mathit{space} : \mathit{Addr} \to \{\mathit{global}, \mathit{shared},
 
 \subsubsection{Варп как алгебраическая структура}
 
-Модель SIMT является GPU-реализацией SIMD-параллелизма.
-Согласно систематике Флинна, «SIMD~--- системы c одиночным потоком команд
-и множественным потоком данных; подобный класс систем составляют МВС,
-в которых в каждый момент времени может выполняться одна и та же команда
-для обработки нескольких информационных элементов»~\cite[с.~29]{GergelStrongin2003}.
-В архитектуре NVIDIA этот принцип реализован на уровне варпа.
+В модели SIMT все потоки варпа в каждый момент времени исполняют
+одну и ту же инструкцию, однако каждый поток имеет \emph{собственный
+счётчик команд и регистровый файл}. Это допускает дивергенцию:
+при условном переходе потоки, для которых условие выполнено, и потоки,
+для которых оно не выполнено, временно расходятся по разным ветвям,
+а аппаратура отслеживает активность каждого потока через маску исполнения
+и стек реконвергенции.
 
 Базовой единицей исполнения на GPU является \textit{варп}~---
 группа из 32 потоков, всегда исполняющих одну и ту же инструкцию~\cite{Lindholm2008, Gergel2010}.
@@ -203,148 +207,52 @@ $\delta : W \times \mathit{Instr} \to W'$.
 что при следующем условном переходе \texttt{@\%p bra} может привести
 к расщеплению варпа, если $M \wedge P \neq 0$ и $M \wedge \neg P \neq 0$.
 
-\subsection{Математическая модель метрик производительности}
+\subsection{Поведение инструкций PTX}
 
-\subsubsection{Метрика \texttt{branch\_efficiency}}
+\subsubsection{Обозначения}
 
-Метрика эффективности ветвления определяется как доля активных потоков
-в момент исполнения инструкции:
-\begin{equation}
-  \eta_{\mathrm{branch}}(M) = \frac{\popcount(M)}{|T|},
-  \label{eq:branch_eff}
-\end{equation}
-где $|T| = 32$~--- размер варпа. Диапазон значений:
-$\eta_{\mathrm{branch}} \in [1/32,\, 1]$, где $\eta_{\mathrm{branch}} = 1.0$
-означает отсутствие дивергенции (все потоки активны), а
-$\eta_{\mathrm{branch}} = 1/32$ соответствует максимальной дивергенции
-(один активный поток).
-
-Средняя эффективность по $N$ исполнениям инструкции:
-\begin{equation}
-  \bar{\eta}_{\mathrm{branch}} = \frac{1}{N} \sum_{k=1}^{N} \eta_{\mathrm{branch}}(M_k).
-\end{equation}
-
-\subsubsection{Метрика \texttt{bank\_conflicts}}
-
-Разделяемая память GPU организована в $B$ банков шириной $w_b$~байт каждый~\cite{CUDAProgrammingGuide}.
-Для обращения по адресу $a$ функция принадлежности банку:
-\begin{equation}
-  f(a) = \left\lfloor \frac{a}{w_b} \right\rfloor \bmod B.
-\end{equation}
-
-Для множества активных потоков формируем мультимножество попаданий
-по банкам:
-$\mathcal{G} = \{f(a_i) \mid i \in \activeset(M)\}$.
-
-Число конфликтов:
-\begin{equation}
-  C_{\mathrm{bank}} = \max_{b \in \{0,\ldots,B-1\}} \bigl|\{i \in \activeset(M)
-    : f(a_i) = b\}\bigr| - 1.
-  \label{eq:bank_conflicts}
-\end{equation}
-
-$C_{\mathrm{bank}} = 0$ означает отсутствие конфликтов (каждый поток
-обращается к отдельному банку или к одному адресу~--- broadcast-режим).
-$C_{\mathrm{bank}} = 31$ соответствует конфликту 32~степени: все потоки
-обращаются к одному банку, что требует 32 последовательных транзакций~\cite{Meerov2009}.
-
-\subsubsection{Метрики \texttt{global\_mem\_transactions} и \texttt{global\_coalescing}}
-
-Глобальная память обслуживается через кэш L1 с размером строки $L = 128$~байт~\cite{CUDAProgrammingGuide, AmpereWhitepaper}.
-Функция принадлежности кэш-линии:
-\begin{equation}
-  \ell(a) = \left\lfloor \frac{a}{L} \right\rfloor.
-\end{equation}
-
-\textbf{Фактическое число транзакций} равно числу уникальных кэш-линий,
-к которым обращаются активные потоки:
-\begin{equation}
-  T_{\mathrm{actual}} = \bigl|\{ \ell(a_i) \mid i \in \activeset(M) \}\bigr|.
-  \label{eq:t_actual}
-\end{equation}
-
-\textbf{Идеальное число транзакций} при оптимальной упаковке:
-\begin{equation}
-  T_{\mathrm{ideal}} = \left\lceil \frac{\popcount(M) \cdot s}{L} \right\rceil,
-  \label{eq:t_ideal}
-\end{equation}
-где $s$~--- размер элемента в байтах (например, $s=4$ для \texttt{f32},
-$s=8$ для \texttt{f64}).
-
-\textbf{Коэффициент слияния}:
-\begin{equation}
-  \kappa = \min\!\left(1,\, \frac{T_{\mathrm{ideal}}}{T_{\mathrm{actual}}}\right) \in (0, 1].
-  \label{eq:coalescing}
-\end{equation}
-
-$\kappa = 1.0$~--- идеальное слияние (все обращения покрываются минимальным
-числом транзакций); $\kappa \approx 1/32$~--- наихудший случай (каждый поток
-обращается к отдельной кэш-линии).
-
-Коэффициент слияния $\kappa$ коррелирует с реальной
-производительностью ядер, ограниченных пропускной способностью памяти:
-при $\kappa = 1.0$ варп использует шину памяти оптимально,
-тогда как при $\kappa \ll 1$ фактическое потребление шины превышает
-необходимое в $1/\kappa$ раз, что становится основным узким местом.
-Метрика $\kappa$ даёт количественную оценку потенциала оптимизации
-шаблонов доступа к памяти без запуска ядра на реальном GPU.
-
-\subsection{Операционная семантика PTX (структурный подход)}
-
-\subsubsection{Нотация малых шагов (small-step semantics)}
-
-Для формального описания семантики инструкций PTX используется нотация
-структурной операционной семантики~\cite{Plotkin1981}.
-Правило вида:
-\begin{equation}
-  \eval{\mathit{instr}}{\sigma} \reduce \sigma'
-\end{equation}
-означает, что инструкция $\mathit{instr}$ в состоянии
-$\sigma = \langle M, R, \mathrm{PC}, \ldots \rangle$ выполняет
-переход в состояние $\sigma'$ за один шаг.
-
-Компоненты состояния:
+Состояние варпа описывается тремя компонентами:
 \begin{itemize}
-  \item $R[t][\tau][k]$~--- значение регистра номер $k$ типа $\tau$
-        потока $t$;
-  \item $M \in \mathbb{B}^{32}$~--- текущая маска исполнения;
-  \item $\mathrm{PC} \in \mathbb{N}$~--- программный счётчик.
+  \item $R[t][\tau][k]$~--- значение $k$-го регистра типа $\tau$ потока $t$;
+  \item $M$~--- 32-битная маска исполнения (бит~$t$ равен~1, если поток~$t$ активен);
+  \item $\mathrm{PC}$~--- номер текущей инструкции.
 \end{itemize}
 
-\subsubsection{Семантика арифметических инструкций}
+Запись $\forall t \in \activeset(M)$ означает, что правило применяется
+только к активным потокам; регистры неактивных потоков не изменяются.
 
-Для инструкции \texttt{add.s32 \%rd, \%ra, \%rb}:
+\subsubsection{Арифметические инструкции}
+
+\texttt{add.s32 \%rd, \%ra, \%rb} складывает два 32-битных целых
+и записывает результат в $\mathtt{\%rd}$, отбрасывая переполнение:
 \begin{equation}
   R'[t][\mathtt{s32}][d] =
   \bigl(R[t][\mathtt{s32}][a] + R[t][\mathtt{s32}][b]\bigr) \bmod 2^{32},
   \quad \forall t \in \activeset(M).
 \end{equation}
 
-Для инструкции \texttt{fma.rn.f32 \%fd, \%fa, \%fb, \%fc}:
+\texttt{fma.rn.f32 \%fd, \%fa, \%fb, \%fc} вычисляет $a \cdot b + c$
+за одну операцию с одним округлением по стандарту IEEE~754~\cite{IEEE754-2008}
+(режим «к ближайшему чётному»):
 \begin{equation}
   R'[t][\mathtt{f32}][d] =
   \mathrm{round}_{n}\!\bigl(R[t][\mathtt{f32}][a]
     \cdot R[t][\mathtt{f32}][b]
     + R[t][\mathtt{f32}][c]\bigr),
-  \quad \forall t \in \activeset(M),
+  \quad \forall t \in \activeset(M).
 \end{equation}
-где $\mathrm{round}_n$~--- округление к ближайшему чётному
-(IEEE 754-2008, roundTiesToEven). Согласно стандарту, \texttt{fma}
-выполняет одно округление для всего выражения
-$a \cdot b + c$~\cite{IEEE754-2008}.
 
-Правила определены только для потоков из $\activeset(M)$;
-состояние регистров неактивных потоков не изменяется.
+\subsubsection{Инструкции сравнения и выбора}
 
-\subsubsection{Семантика инструкций сравнения и выбора}
-
-Для \texttt{setp.lt.s32 \%p, \%ra, \%rb}:
+\texttt{setp.lt.s32 \%p, \%ra, \%rb} записывает результат сравнения
+в предикатный регистр $\mathtt{\%p}$:
 \begin{equation}
   P'[t] = \bigl(R[t][\mathtt{s32}][a] < R[t][\mathtt{s32}][b]\bigr),
   \quad \forall t \in \activeset(M).
 \end{equation}
 
-Для \texttt{selp.f32 \%fd, \%fa, \%fb, \%p}:
+\texttt{selp.f32 \%fd, \%fa, \%fb, \%p} выбирает одно из двух значений
+в зависимости от предиката, не вызывая дивергенцию:
 \begin{equation}
   R'[t][\mathtt{f32}][d] =
   \begin{cases}
@@ -354,46 +262,39 @@ $a \cdot b + c$~\cite{IEEE754-2008}.
   \quad \forall t \in \activeset(M).
 \end{equation}
 
-Инструкция \texttt{selp} не вызывает дивергенцию:
-оба операнда вычисляются внутри каждого потока без расщепления маски.
+\subsubsection{Инструкции управления потоком}
 
-\subsubsection{Семантика инструкций управления потоком}
-
-Для безусловного перехода \texttt{bra.uni \$L}:
+\texttt{bra.uni \$L} — безусловный переход: все потоки варпа
+переходят к метке \$L, маска~$M$ не меняется:
 \begin{equation}
-  \eval{\mathtt{bra.uni}\;\$L}{\sigma}
-  \reduce \sigma[\mathrm{PC} \leftarrow \mathit{offset}(\$L)],
+  \mathrm{PC}' = \mathit{offset}(\$L),
 \end{equation}
-где $\mathit{offset}(\$L)$~--- PC первой инструкции метки \$L
-из таблицы базовых блоков; маска $M$ не изменяется.
+где $\mathit{offset}(\$L)$~--- номер первой инструкции метки \$L
+из таблицы базовых блоков.
 
-Для условного перехода \texttt{@\%p bra \$L} определим:
-$M_{\mathrm{taken}} = M \wedge P$, $M_{\mathrm{not}} = M \wedge \neg P$.
+\texttt{@\%p bra \$L} — условный переход. Обозначим $M_{\mathrm{taken}} = M \wedge P$
+(потоки, берущие переход) и $M_{\mathrm{not}} = M \wedge \neg P$ (остальные):
 
 \begin{itemize}
-  \item \textbf{Случай 1} ($M_{\mathrm{not}} = 0$): все активные потоки
-        берут переход.
-        $\mathrm{PC}' = \mathit{offset}(\$L)$, $M' = M$.
-  \item \textbf{Случай 2} ($M_{\mathrm{taken}} = 0$): ни один активный
-        поток не берёт переход.
-        $\mathrm{PC}' = \mathrm{PC} + 1$, $M' = M$.
-  \item \textbf{Случай 3} ($M_{\mathrm{taken}} \neq 0 \wedge
-        M_{\mathrm{not}} \neq 0$): дивергенция. Применяется алгоритм
+  \item Если $M_{\mathrm{not}} = 0$: все активные потоки берут переход,
+        $\mathrm{PC}' = \mathit{offset}(\$L)$.
+  \item Если $M_{\mathrm{taken}} = 0$: ни один поток не берёт переход,
+        $\mathrm{PC}' = \mathrm{PC} + 1$.
+  \item Иначе: часть потоков расходится — применяется алгоритм
         PDOM\_Diverge (подробно в Главе~6).
 \end{itemize}
 
-\subsubsection{Семантика инструкций памяти}
+\subsubsection{Инструкции памяти}
 
-Для \texttt{ld.global.f32 \%fd, [\%ra]}:
+\texttt{ld.global.f32 \%fd, [\%ra]} читает 4-байтное значение
+из глобальной памяти по адресу в регистре \texttt{\%ra}:
 \begin{equation}
   R'[t][\mathtt{f32}][d] = \mathit{Mem}_{\mathrm{global}}[R[t][\mathtt{u64}][a]],
-  \quad \forall t \in \activeset(M),
+  \quad \forall t \in \activeset(M).
 \end{equation}
-где $\mathit{Mem}_{\mathrm{global}}$~--- функция чтения глобальной памяти,
-реализованная компонентами контекста исполнения (диспетчер блока (\texttt{rt\_stream.cpp})).
 
-После исполнения \texttt{ld.global} / \texttt{st.global} вычисляются
-$T_{\mathrm{actual}}$ и $\kappa$ по формулам~\eqref{eq:t_actual}--\eqref{eq:coalescing}.
+После исполнения \texttt{ld.global}/\texttt{st.global} вычисляются
+$T_{\mathrm{actual}}$ и $\kappa$ по формулам~\eqref{eq:t_actual_ch7}--\eqref{eq:coalescing_ch7}.
 
 \subsection{Механизм динамической подстановки библиотек в Linux}
 
@@ -432,7 +333,10 @@ CUDAsim (CUDA Device Emulation, устаревший режим)~--- встро�
 
 GPGPU-Sim~\cite{Bakhoda2009}~--- timing-accurate симулятор, воспроизводящий
 конвейер SM с точностью до цикла: внешний интерфейс, исполнение инструкций,
-исполнительные блоки, кэши, DRAM. Его цель принципиально отличается:
+исполнительные блоки, кэши, DRAM. Поддерживаемое подмножество PTX~ISA
+ограничено версиями до~4.x; инструкции PTX~7.x+
+(\texttt{ldmatrix}, \texttt{wmma}, атрибут \texttt{.address\_size~64})
+не поддерживаются. Его цель принципиально отличается от задачи данной работы:
 оценка латентностей и пропускной способности, а не функциональная
 корректность в контексте непрерывной интеграции. Один запуск \texttt{mmul\_custom} (64×64×64)
 в GPGPU-Sim занимает порядка 10~часов машинного времени.
@@ -449,7 +353,7 @@ GPGPU-Sim~\cite{Bakhoda2009}~--- timing-accurate симулятор, воспр�
     \textbf{Профилировщик} & \textbf{Тип} \\
     \midrule
     Ocelot           & 1.x--2.x  & LD\_PRELOAD  & Счётчики & Функциональный \\
-    GPGPU-Sim        & <~7.x     & Не требуется & Timing   & Архитектурный \\
+    GPGPU-Sim        & $\leq$~4.x & Не требуется & Timing   & Архитектурный \\
     Compute Sanitizer & —         & Требует GPU  & Нет      & Аппаратный \\
     \textbf{Данная работа} & \textbf{7.x} & \textbf{LD\_PRELOAD} &
     \textbf{4 метрики} & \textbf{Функциональный} \\

@@ -1,0 +1,71 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\citation{GoogleTest,Kornyakov2010}
+\citation{NVCC}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Тестирование и верификация}{41}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Модульные тесты}{41}{subsection.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Часть I --- Интеграционное тестирование CUDA-ядер}{41}{subsection.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.1}\texttt  {vadd\_custom} --- поэлементное сложение векторов}{41}{subsubsection.8.2.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Время исполнения \texttt  {vadd\_custom} при различных $N$ (медиана по 50 повторениям)}}{42}{table.caption.8}\protected@file@percent }
+\newlabel{tab:vadd_perf}{{5}{42}{Время исполнения \texttt {vadd\_custom} при различных $N$ (медиана по 50 повторениям)}{table.caption.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.2}\texttt  {gelu\_custom} --- функция активации GELU}{42}{subsubsection.8.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.3}\texttt  {softmax\_custom} --- онлайн-нормализация Softmax}{42}{subsubsection.8.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.4}\texttt  {mmul\_custom} --- тайловое матричное умножение}{43}{subsubsection.8.2.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Время исполнения \texttt  {mmul\_custom} (медиана по 5 повторениям, мс)}}{43}{table.caption.9}\protected@file@percent }
+\newlabel{tab:mmul_perf}{{6}{43}{Время исполнения \texttt {mmul\_custom} (медиана по 5 повторениям, мс)}{table.caption.9}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.5}\texttt  {attention\_custom} --- Flash Attention-подобное ядро}{43}{subsubsection.8.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.6}\texttt  {fft\_custom} --- Radix-2 DIT FFT, $N=32$}{44}{subsubsection.8.2.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.7}\texttt  {conjugate\_gradient} --- итерационное решение СЛАУ}{44}{subsubsection.8.2.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.8}Сводная таблица результатов интеграционных тестов}{44}{subsubsection.8.2.8}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Корректность интеграционных тестов}}{44}{table.caption.10}\protected@file@percent }
+\newlabel{tab:integration_correctness}{{7}{44}{Корректность интеграционных тестов}{table.caption.10}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Производительность на входных данных $\approx 64$~КБ. Сравнение с реальными GPU (V100-PCIE)}}{45}{table.caption.11}\protected@file@percent }
+\newlabel{tab:integration_results}{{8}{45}{Производительность на входных данных $\approx 64$~КБ. Сравнение с реальными GPU (V100-PCIE)}{table.caption.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Часть II --- Тестирование системы профилирования}{45}{subsection.8.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.3.1}Точность метрик}{45}{subsubsection.8.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.3.2}Привязка инструкций к исходному коду}{45}{subsubsection.8.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Результаты теста \texttt  {bank\_conflicts}}}{46}{table.caption.12}\protected@file@percent }
+\newlabel{tab:bank_conflicts_test}{{9}{46}{Результаты теста \texttt {bank\_conflicts}}{table.caption.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Результаты теста \texttt  {global\_coalescing}}}{46}{table.caption.13}\protected@file@percent }
+\newlabel{tab:coalescing_test}{{10}{46}{Результаты теста \texttt {global\_coalescing}}{table.caption.13}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.3.3}Сквозная проверка цепочки профилировщика}{46}{subsubsection.8.3.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Сквозная проверка цепочки профилировщика}}{46}{table.caption.14}\protected@file@percent }
+\newlabel{tab:aggregation_test}{{11}{46}{Сквозная проверка цепочки профилировщика}{table.caption.14}{}}
+\@setckpt{chapters/ch8_testing}{
+\setcounter{page}{47}
+\setcounter{equation}{40}
+\setcounter{enumi}{5}
+\setcounter{enumii}{0}
+\setcounter{enumiii}{0}
+\setcounter{enumiv}{0}
+\setcounter{footnote}{0}
+\setcounter{mpfootnote}{0}
+\setcounter{part}{0}
+\setcounter{section}{8}
+\setcounter{subsection}{3}
+\setcounter{subsubsection}{3}
+\setcounter{paragraph}{0}
+\setcounter{subparagraph}{0}
+\setcounter{figure}{3}
+\setcounter{table}{11}
+\setcounter{lstnumber}{4}
+\setcounter{parentequation}{0}
+\setcounter{caption@flags}{2}
+\setcounter{continuedfloat}{0}
+\setcounter{subfigure}{0}
+\setcounter{subtable}{0}
+\setcounter{lofdepth}{1}
+\setcounter{lotdepth}{1}
+\setcounter{LT@tables}{0}
+\setcounter{LT@chunks}{0}
+\setcounter{AlgoLine}{3}
+\setcounter{algocfline}{3}
+\setcounter{algocfproc}{3}
+\setcounter{algocf}{3}
+\setcounter{NAT@ctr}{0}
+\setcounter{section@level}{3}
+\setcounter{Item}{47}
+\setcounter{Hfootnote}{0}
+\setcounter{bookmark@seq@number}{110}
+\setcounter{lstlisting}{17}
+}

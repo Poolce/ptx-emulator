@@ -7,10 +7,8 @@
 организованы в четыре файла: \texttt{test\_executors.cpp}
 (исполнители инструкций), \texttt{test\_barrier.cpp} (барьерная синхронизация),
 \texttt{test\_coalescing.cpp} (объединение транзакций памяти)
-и \texttt{test\_ptx\_asm.cpp} (ассемблирование PTX-фрагментов).
-
-Разбивка тестов по файлам соответствует границам архитектурных компонентов:
-каждый файл тестирует ровно один субмодуль.
+и \texttt{test\_ptx\_asm.cpp} (разбор PTX-ассемблера).
+Каждый файл проверяет ровно один подмодуль.
 
 Покрытие кода измеряется инструментом \texttt{lcov}.
 
@@ -33,9 +31,10 @@
 \textbf{Методология.} Каждый интеграционный тест компилируется
 с \texttt{nvcc}~\cite{NVCC} и запускается под эмулятором: \texttt{cuemu ./binary}.
 Тест самостоятельно сравнивает результат с CPU-эталоном, возвращая
-код возврата~0 при успехе. Для оценки производительности~\cite{Meerov2009} каждое
-ядро запускается несколько раз (конкретное число повторений указано для каждого ядра в соответствующем разделе); фиксируются медиана и стандартное отклонение
-времени \texttt{KernelLaunch}. Тесты запускаются на машине без GPU
+код возврата~0 при успехе. Для оценки производительности~
+каждое ядро запускается несколько раз; конкретное число повторений
+указано в описании каждого ядра. Фиксируются медиана и стандартное
+отклонение времени \texttt{KernelLaunch}. Тесты запускаются на машине без GPU
 (процессор AMD Ryzen 7 3700U, 8~ГБ RAM).
 
 Семь ядер выбраны таким образом, чтобы перекрывать качественно различные
@@ -117,8 +116,8 @@ PTX в теле ядра (\texttt{Module::Dump()}), наличие диверг�
 (ожидается $\eta_{\mathrm{branch}} = 1.0$~--- все пути конвергентны).
 
 \textbf{Вывод.}
-Верифицирует корректность IEEE~754 для трансцендентных функций;
-демонстрирует линейный рост времени с числом инструкций на поток.
+Подтверждает корректность IEEE~754 для трансцендентных функций
+и демонстрирует линейный рост времени с числом инструкций на поток.
 
 \subsubsection{\texttt{softmax\_custom} --- онлайн-нормализация Softmax}
 
@@ -128,8 +127,8 @@ PTX в теле ядра (\texttt{Module::Dump()}), наличие диверг�
 длина вектора = 32~элемента. CPU-эталон~--- двухпроходная реализация;
 допуск $10^{-4}$.
 
-Тест чувствителен к корректности \texttt{bar.sync} между фазами и
-предикатным инструкциям при редукции.
+Тест чувствителен к корректности \texttt{bar.sync} между фазами
+и предикатным инструкциям в операциях редукции.
 
 \textbf{Тестирование.}
 Проверяются: код возврата, сумма выходного вектора $\approx 1.0$
@@ -170,7 +169,7 @@ $\overline{C}_{\mathrm{bank}}$ для \texttt{ld.shared}
   \end{tabular}
 \end{table}
 
-Высокие накладные расходы (565--836\%) объясняются инструкционной плотностью:
+Высокие накладные расходы (565--836\%) объясняются плотностью инструкций:
 каждый поток выполняет $K$ итераций скалярного произведения ($\Theta(K)$
 PTX-инструкций), профилировщик создаёт запись на каждое исполнение,
 а число записей растёт как $M^3/\texttt{WARP\_SIZE}$.
@@ -243,17 +242,17 @@ $\overline{\eta}_{\mathrm{branch}}$ на операции с разделяем�
   \caption{Корректность интеграционных тестов}
   \label{tab:integration_correctness}
   \centering
-  \begin{tabular}{lcrr}
+  \begin{tabular}{lrr}
     \toprule
-    \textbf{Ядро} & \textbf{Статус} & \textbf{Макс. ошибка} & \textbf{PTX инстр.} \\
+    \textbf{Ядро} & \textbf{Макс. ошибка} & \textbf{PTX инстр.} \\
     \midrule
-    \texttt{vadd}       & PASS & $< 10^{-6}$ & 21 \\
-    \texttt{gelu}       & PASS & $< 10^{-4}$ & 45 \\
-    \texttt{softmax}    & PASS & $< 10^{-4}$ & 54 \\
-    \texttt{mmul}       & PASS & $< 10^{-3}$ & 77 \\
-    \texttt{attention}  & PASS & $< 10^{-3}$ & 129 \\
-    \texttt{fft}        & PASS & $< 10^{-3}$ & 219 \\
-    \texttt{conj\_grad} & PASS & $< 10^{-4}$ & 187 \\
+    \texttt{vadd}       & $< 10^{-6}$ & 21 \\
+    \texttt{gelu}       & $< 10^{-4}$ & 45 \\
+    \texttt{softmax}    & $< 10^{-4}$ & 54 \\
+    \texttt{mmul}       & $< 10^{-3}$ & 77 \\
+    \texttt{attention}  & $< 10^{-3}$ & 129 \\
+    \texttt{fft}        & $< 10^{-3}$ & 219 \\
+    \texttt{conj\_grad} & $< 10^{-4}$ & 187 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -263,28 +262,26 @@ $\overline{\eta}_{\mathrm{branch}}$ на операции с разделяем�
   \label{tab:integration_results}
   \centering
   \footnotesize
-  \begin{tabular}{lrrrrrrr}
+  \begin{tabular}{lrrrrrr}
     \toprule
     \textbf{Ядро} &
     \textbf{Без проф.} & \textbf{Со сбором} & \textbf{НР} &
-    \textbf{AI} &
     \textbf{V100} &
     \textbf{Замедл.} \\
-    & \textbf{(мс)} & \textbf{(мс)} & \textbf{(\%)} & \textbf{(Ф/Б)} &
+    & \textbf{(мс)} & \textbf{(мс)} & \textbf{(\%)} &
     \textbf{(мкс)} & \textbf{(×)} \\
     \midrule
-    \texttt{vadd}~(N=8192)       &   20.5 &   34.8 &  70 & 0.17 &   7.2 &  $\approx 2\,800$ \\
-    \texttt{gelu}~(N=16384)      &   46.8 &  121.8 & 160 & 1.25 &   8.0 &  $\approx 5\,900$ \\
-    \texttt{softmax}~(512×32)    &   60.9 &  268.4 & 341 & 0.38 &   7.8 &  $\approx 7\,800$ \\
-    \texttt{mmul}~(128×128)      &  111.7 &  970.5 & 769 & 21.3 &  17.8 &  $\approx 6\,300$ \\
-    \texttt{attention}~(S=D=128) &  300.5 & 2074.1 & 590 & 25.8 & 131.9 &  $\approx 2\,300$ \\
-    \texttt{fft}~(N=32,B=256)    &   52.6 &  218.0 & 315 & 1.56 &   8.9 &  $\approx 5\,900$ \\
-    \texttt{conj\_grad}~(N=4096) &  890.6 & 1879.7 & 111 & 0.47 & 476.3 &  $\approx 1\,900$ \\
+    \texttt{vadd}~(N=8192)       &   20.5 &   34.8 &  70 &   7.2 &  $\approx 2\,800$ \\
+    \texttt{gelu}~(N=16384)      &   46.8 &  121.8 & 160 &   8.0 &  $\approx 5\,900$ \\
+    \texttt{softmax}~(512×32)    &   60.9 &  268.4 & 341 &   7.8 &  $\approx 7\,800$ \\
+    \texttt{mmul}~(128×128)      &  111.7 &  970.5 & 769 &  17.8 &  $\approx 6\,300$ \\
+    \texttt{attention}~(S=D=128) &  300.5 & 2074.1 & 590 & 131.9 &  $\approx 2\,300$ \\
+    \texttt{fft}~(N=32,B=256)    &   52.6 &  218.0 & 315 &   8.9 &  $\approx 5\,900$ \\
+    \texttt{conj\_grad}~(N=4096) &  890.6 & 1879.7 & 111 & 476.3 &  $\approx 1\,900$ \\
     \bottomrule
   \end{tabular}
   \begin{flushleft}
-  {\footnotesize НР~--- накладные расходы профилировщика (\%);
-  AI~--- арифметическая интенсивность (Флоп/Байт).}
+  {\footnotesize НР~--- накладные расходы профилировщика (\%).}
   \end{flushleft}
 \end{table}
 
@@ -305,102 +302,54 @@ $\overline{\eta}_{\mathrm{branch}}$ на операции с разделяем�
 
 \subsection{Часть II --- Тестирование системы профилирования}
 
-\textbf{Методология.} Каждый тест профилировщика запускается с флагом
-\texttt{--collect-profiling}; полученный \texttt{profiling.txt}
-подаётся в \texttt{python -m tools.ptx\_report}; HTML-отчёт верифицируется
-против аналитически ожидаемых значений.
+\textbf{Методология.} Каждый тест запускается с флагом \texttt{--collect-profiling};
+полученный \texttt{profiling.txt} передаётся в \texttt{python -m tools.ptx\_report};
+значения HTML-отчёта сравниваются с аналитически ожидаемыми.
 
-Верификация профилировщика производится отдельно от функциональных
-интеграционных тестов: ядро может выдавать численно корректный результат
-при одновременно ошибочном подсчёте метрик. Раздельные тесты
-исключают эту возможность, проверяя каждую метрику независимо
-на простых ядрах с заранее известными аналитическими значениями.
+Тесты профилировщика намеренно отделены от функциональных: ядро может давать
+численно верный результат при ошибочном подсчёте метрик. Каждая метрика
+проверяется независимо на простом ядре с заранее известным аналитическим значением.
 
-\subsubsection{Тест метрики \texttt{branch\_efficiency}}
+\subsubsection{Точность метрик}
 
-\textbf{Описание.}
-Ядро \texttt{branch\_divergence.cu}: нечётные потоки
-($\mathit{tid} \bmod 2 \neq 0$) исполняют одну ветку, чётные~--- другую.
-Аналитически: $\eta_{\mathrm{branch}} = 16/32 = 0.5$ для инструкций
-внутри каждой ветки.
-
-\textbf{Замер.}
-Из \texttt{profiling.txt} фильтруются записи инструкций с предикатным
-префиксом. Строится таблица:
-\texttt{PC | маска | popcount | $\eta_{\mathrm{emu}}$ | $\eta_{\mathrm{analytic}}$ | $\Delta$}.
-
-\textbf{Вывод.}
-Отклонение $\Delta = 0$ (значение детерминировано). Подтверждается
-корректность формулы $\eta_{\mathrm{branch}} = \popcount(M)/32$ и
-правильность записи маски в \texttt{ProfilingRecord}.
-
-\subsubsection{Тест метрики \texttt{bank\_conflicts}}
-
-\textbf{Описание.}
-Ядро \texttt{bank\_conflicts.cu} с тремя шаблонами доступа
-к разделяемой памяти (конфиг: $B = 32$, $w_b = 4$ байта):
-\begin{enumerate}
-  \item Последовательный шаг 4~байта: $C_{\mathrm{bank}} = 0$.
-  \item Шаг $w_b \cdot B = 128$~байт: все потоки в банк~0,
-        $C_{\mathrm{bank}} = 31$.
-  \item Шаг 8~байт: конфликт 2~степени, $C_{\mathrm{bank}} = 1$.
-\end{enumerate}
+\texttt{branch\_efficiency}: ядро \texttt{branch\_divergence.cu} (нечётные потоки в одной ветке, чётные~--- в другой) даёт $\eta = 16/32 = 0.5$; отклонение нулевое, что подтверждает формулу $\eta = \popcount(M)/32$ и запись маски в \texttt{ProfilingRecord}.
+\texttt{write\_ops}: ядро \texttt{vadd\_custom} (3~инструкции с результатом, 1~варп, полная маска) даёт \texttt{write\_ops[\%f] = 32}, что подтверждает детектирование \texttt{dst\_reg\_prefix}.
+Результаты для \texttt{bank\_conflicts} и \texttt{global\_coalescing} сведены в таблицах~\ref{tab:bank_conflicts_test} и~\ref{tab:coalescing_test}; строка f64 ($T_{\mathrm{ideal}} = 2$) подтверждает учёт размера элемента в формуле $T_{\mathrm{ideal}} = \lceil \mathit{active} \cdot s / 128 \rceil$.
 
 \begin{table}[h]
   \caption{Результаты теста \texttt{bank\_conflicts}}
   \label{tab:bank_conflicts_test}
   \centering
-  \begin{tabular}{lrrr}
+  \begin{tabular}{lrr}
     \toprule
-    \textbf{Шаблон} & $C_{\mathrm{bank,expected}}$ & $C_{\mathrm{bank,emu}}$ & Статус \\
+    \textbf{Шаблон} & $C_{\mathrm{bank,expected}}$ & $C_{\mathrm{bank,emu}}$ \\
     \midrule
-    Шаг 4 B    & 0  & 0  & PASS \\
-    Шаг 128 B  & 31 & 31 & PASS \\
-    Шаг 8 B    & 1  & 1  & PASS \\
+    Шаг 4 B    & 0  & 0  \\
+    Шаг 128 B  & 31 & 31 \\
+    Шаг 8 B    & 1  & 1  \\
     \bottomrule
   \end{tabular}
 \end{table}
-
-\subsubsection{Тест метрики \texttt{global\_coalescing}}
-
-\textbf{Описание.}
-Пять шаблонов доступа для \texttt{ld.global.f32} ($s=4$~байта):
 
 \begin{table}[h]
   \caption{Результаты теста \texttt{global\_coalescing}}
   \label{tab:coalescing_test}
   \centering
-  \begin{tabular}{lrrrrrr}
+  \begin{tabular}{lrrrr}
     \toprule
-    \textbf{Шаблон} & $s$, Б & $T_{\mathrm{ideal}}$ & $\kappa_{\mathrm{exp}}$ &
-    $T_{\mathrm{actual,emu}}$ & $\kappa_{\mathrm{emu}}$ & $\Delta$ \\
+    \textbf{Шаблон} & $T_{\mathrm{ideal}}$ & $\kappa_{\mathrm{exp}}$ &
+    $T_{\mathrm{actual,emu}}$ & $\kappa_{\mathrm{emu}}$ \\
     \midrule
-    Последовательный, f32 & 4 & 1 & 1.000 & 1  & 1.000 & 0.000 \\
-    Шаг 128~Б, f32        & 4 & 1 & 0.031 & 32 & 0.031 & 0.000 \\
-    Шаг 16~Б, f32         & 4 & 1 & 0.250 & 4  & 0.250 & 0.000 \\
-    Широковещательный     & 4 & 1 & 1.000 & 1  & 1.000 & 0.000 \\
-    Последовательный, f64 & 8 & 2 & 1.000 & 2  & 1.000 & 0.000 \\
+    Последовательный, f32 & 1 & 1.000 & 1  & 1.000 \\
+    Шаг 128~Б, f32        & 1 & 0.031 & 32 & 0.031 \\
+    Шаг 16~Б, f32         & 1 & 0.250 & 4  & 0.250 \\
+    Широковещательный     & 1 & 1.000 & 1  & 1.000 \\
+    Последовательный, f64 & 2 & 1.000 & 2  & 1.000 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\textbf{Вывод.}
-Корректность случая \texttt{f64} ($T_{\mathrm{ideal}} = 2$) подтверждает
-учёт размера элемента в формуле $T_{\mathrm{ideal}} = \lceil \mathit{active} \cdot s / 128 \rceil$.
-
-\subsubsection{Тест статистики регистров (\texttt{write\_ops})}
-
-\textbf{Описание.}
-Ядро \texttt{vadd\_custom}: 3~инструкции с результатом, 1~блок, 1~варп,
-полная маска. Аналитически: \texttt{write\_ops[\%f] = 1 × 32 × 1 × 1 = 32}.
-
-\textbf{Вывод.}
-Подтверждает корректность детектирования \texttt{dst\_reg\_prefix}
-и накопления \texttt{write\_ops}.
-
-\subsubsection{Тест аннотации исходного кода через \texttt{.loc}}
-
-\newpage
+\subsubsection{Привязка инструкций к исходному коду}
 
 \textbf{Описание.}
 Ядро \texttt{fft\_custom.cu} компилируется с \texttt{nvcc -lineinfo}.
@@ -412,7 +361,7 @@ $\overline{\eta}_{\mathrm{branch}}$ на операции с разделяем�
 Подтверждает корректность разбора \texttt{.file}/\texttt{.loc}
 в \texttt{ptx\_parser.py}.
 
-\subsubsection{Тест агрегации: ручной расчёт vs. отчёт}
+\subsubsection{Сквозная проверка цепочки профилировщика}
 
 \textbf{Описание.}
 Ядро \texttt{vadd\_custom} с полностью известной структурой.
@@ -421,17 +370,17 @@ $\overline{\eta}_{\mathrm{branch}} = 1.0$, $C_{\mathrm{bank}} = 0$,
 \texttt{global\_mem\_transactions~= 2}.
 
 \begin{table}[h]
-  \caption{Результаты теста агрегации}
+  \caption{Сквозная проверка цепочки профилировщика}
   \label{tab:aggregation_test}
   \centering
-  \begin{tabular}{lrrr}
+  \begin{tabular}{lrr}
     \toprule
-    \textbf{Метрика} & \textbf{Ожидаемое} & \textbf{HTML-отчёт} & $\Delta$ \\
+    \textbf{Метрика} & \textbf{Ожидаемое} & \textbf{HTML-отчёт} \\
     \midrule
-    \texttt{exec\_count}          & 96    & 96    & 0 \\
-    $\overline{\eta}_{\mathrm{branch}}$  & 1.000 & 1.000 & 0.000 \\
-    \texttt{bank\_conflicts\_total} & 0     & 0     & 0 \\
-    \texttt{global\_mem\_txns}     & 2     & 2     & 0 \\
+    \texttt{exec\_count}          & 96    & 96    \\
+    $\overline{\eta}_{\mathrm{branch}}$  & 1.000 & 1.000 \\
+    \texttt{bank\_conflicts\_total} & 0     & 0     \\
+    \texttt{global\_mem\_txns}     & 2     & 2     \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -440,5 +389,3 @@ $\overline{\eta}_{\mathrm{branch}} = 1.0$, $C_{\mathrm{bank}} = 0$,
 Нулевые отклонения подтверждают корректность всей цепочки:
 \texttt{profiling.txt} $\to$ \texttt{parser.py} $\to$
 \texttt{aggregator.py} $\to$ \texttt{renderer.py}.
-
-\newpage
