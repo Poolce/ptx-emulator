@@ -30,7 +30,7 @@ $\mathrm{PC}_C = 50$~--- PC метки \texttt{C}.
   \caption{Трассировка стека дивергенции}
   \label{tab:pdom_trace}
   \centering
-  \begin{tabular}{clp{8cm}}
+  \begin{tabular}{cp{4.5cm}p{9cm}}
     \toprule
     \textbf{Шаг} & \textbf{Текущий PC / инструкция} & \textbf{Стек $S$ (вершина справа)} \\
     \midrule
@@ -50,15 +50,17 @@ $\mathrm{PC}_C = 50$~--- PC метки \texttt{C}.
     & & push $\{PC_C, \texttt{0x0000FFFF}, T\}$,
         push $\{PC_B, \texttt{0x0000FF00}, F\}$ \\
     & & $S = [\{100,M_0,T\},\{PC_D,M_{\mathrm{not\_outer}},F\},$ \\
-    & & $\quad\quad \{PC_C,\texttt{0x0000FFFF},T\},\{PC_B,\texttt{0x0000FF00},F\}]$ \\
+    & & $\quad\quad \{PC_C,\texttt{0x0000FFFF},T\},$ \\
+    & & $\quad\quad \{PC_B,\texttt{0x0000FF00},F\}]$ \\
     \midrule
     3 & Исполнение $\mathrm{bb\_A}$ ($M = \texttt{0x000000FF}$)
       & $S$ без изменений \\
     \midrule
     4 & PC = $PC_B$ (цикл реконвергенции)
       & Снимаем $\{PC_B, \texttt{0x0000FF00}, F\}$: \\
-    & & $M \leftarrow \texttt{0x0000FF00}$,
-        $S = [\{100,M_0,T\},\{PC_D,M_{\mathrm{not}},F\},\{PC_C,\texttt{0x0000FFFF},T\}]$ \\
+    & & $M \leftarrow \texttt{0x0000FF00}$, \\
+    & & $S = [\{100,M_0,T\},\{PC_D,M_{\mathrm{not}},F\},$ \\
+    & & $\quad\{PC_C,\texttt{0x0000FFFF},T\}]$ \\
     \midrule
     5 & Исполнение $\mathrm{bb\_B}$ ($M = \texttt{0x0000FF00}$)
       & $S$ без изменений \\

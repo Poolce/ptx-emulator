@@ -29,7 +29,7 @@ $M$~--- маска исполнения, $R[t][\tau][k]$~--- значение р
 \textbf{\texttt{mul.hi.u32 \%d, \%a, \%b}:}
 \[
   R'[t][\mathtt{u32}][d] =
-  \left\lfloor \frac{R[t][\mathtt{u32}][a] \cdot R[t][\mathtt{u32}][b]}{2^{32}} \right\rfloor.
+  \left\lfloor \frac{R[t][a] \cdot R[t][b]}{2^{32}} \right\rfloor.
 \]
 
 \textbf{\texttt{fma.rn.f32 \%d, \%a, \%b, \%c}:}
@@ -49,16 +49,16 @@ $M$~--- маска исполнения, $R[t][\tau][k]$~--- значение р
 \subsection*{Инструкции сравнения}
 
 \textbf{\texttt{setp.lt.s32 \%p, \%a, \%b}:}
-\[
-  P'[t] = \bigl(R[t][\mathtt{s32}][a] < R[t][\mathtt{s32}][b]\bigr),
-  \quad \forall t \in \activeset(M).
-\]
+\begin{align*}
+  P'[t] &= \bigl(R[t][a] < R[t][b]\bigr), \\
+  &\quad \forall t \in \activeset(M).
+\end{align*}
 
 \textbf{\texttt{setp.gt.f32 \%p|\%q, \%a, \%b}:}
-\[
-  P'[t] = \bigl(R[t][\mathtt{f32}][a] > R[t][\mathtt{f32}][b]\bigr),
-  \quad Q'[t] = \neg P'[t].
-\]
+\begin{align*}
+  P'[t] &= \bigl(R[t][a] > R[t][b]\bigr), \\
+  Q'[t] &= \neg P'[t].
+\end{align*}
 
 \textbf{\texttt{selp.f32 \%d, \%a, \%b, \%p}:}
 \[

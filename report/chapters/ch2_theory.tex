@@ -123,9 +123,11 @@ PTX определяет шесть пространств адресов, от�
   \item \texttt{.const}~--- константная память, только для чтения.
 \end{itemize}
 
-Формально вводится функция пространства:
-$\mathit{space} : \mathit{Addr} \to \{\mathit{global}, \mathit{shared},
-\mathit{local}, \mathit{param}, \mathit{const}\}$,
+Формально вводится функция пространства
+\[
+  \mathit{space} : \mathit{Addr} \to
+    \{\mathit{global},\;\mathit{shared},\;\mathit{local},\;\mathit{param},\;\mathit{const}\},
+\]
 используемая исполнителями \texttt{ld} и \texttt{st} для выбора
 соответствующего обработчика обращения к памяти.
 
@@ -306,11 +308,10 @@ $T_{\mathrm{actual}}$ и $\kappa$ по формулам~\eqref{eq:t_actual_ch7}-
 в которой он ищет адрес каждого используемого символа~\cite{LinuxManLdso, Stolyarov2011}.
 
 При помещении \texttt{libemuruntime.so} на позицию $l_1$
-(через \texttt{LD\_PRELOAD=libemuruntime.so}) все вызовы
-\texttt{cudaMalloc}, \texttt{cudaLaunchKernel} и прочих
-функций CUDA Runtime разрешаются в реализации эмулятора
-согласно правилу первого совпадения в цепочке разрешения символов, не достигая оригинальной
-\texttt{libcudart.so}.
+(через \texttt{LD\_PRELOAD}) вызовы CUDA Runtime~---
+\texttt{cudaMalloc}, \texttt{cudaLaunchKernel} и прочие~---
+разрешаются в эмуляторе по правилу первого совпадения,
+не достигая \texttt{libcudart.so}.
 
 
 \subsection{Обзор смежных работ}
@@ -347,7 +348,8 @@ GPGPU-Sim~\cite{Bakhoda2009}~--- timing-accurate симулятор, воспр�
   \caption{Сравнение инструментов эмуляции/симуляции CUDA}
   \label{tab:related_work}
   \centering
-  \begin{tabularx}{\linewidth}{lXXXX}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{p{2cm}XXXX}
     \toprule
     \textbf{Инструмент} & \textbf{PTX ISA} & \textbf{Перехват} &
     \textbf{Профилировщик} & \textbf{Тип} \\

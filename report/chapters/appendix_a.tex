@@ -19,14 +19,14 @@
   \multicolumn{4}{l}{\textbf{Арифметические}} \\
   \texttt{add}  & s16/s32/s64, u16/u32/u64, f32/f64 & --- & \texttt{test\_executors} \\
   \texttt{sub}  & s16/s32/s64, u16/u32/u64, f32/f64 & --- & \texttt{test\_executors} \\
-  \texttt{mul}  & s16/s32, u16/u32, f32/f64          & rn/rz/ru/rd (f) & \texttt{test\_executors} \\
-  \texttt{div}  & s32/u32/s64/u64, f32/f64           & rn/rz/ru/rd (f) & \texttt{test\_executors} \\
+  \texttt{mul}  & s16/s32, u16/u32, f32/f64          & rn, rz, ru, rd (f) & \texttt{test\_executors} \\
+  \texttt{div}  & s32/u32/s64/u64, f32/f64           & rn, rz, ru, rd (f) & \texttt{test\_executors} \\
   \texttt{rem}  & s32/u32/s64/u64                    & ---             & \texttt{test\_executors} \\
   \texttt{abs}  & s16/s32/s64, f32/f64               & ---             & \texttt{test\_executors} \\
   \texttt{neg}  & s16/s32/s64, f32/f64               & ---             & \texttt{test\_executors} \\
   \texttt{min}  & s32/u32/s64/u64, f32/f64           & ---             & \texttt{test\_executors} \\
   \texttt{max}  & s32/u32/s64/u64, f32/f64           & ---             & \texttt{test\_executors} \\
-  \texttt{fma}  & f32/f64                            & rn/rz/ru/rd     & \texttt{test\_executors} \\
+  \texttt{fma}  & f32/f64                            & rn, rz, ru, rd     & \texttt{test\_executors} \\
   \texttt{mad}  & s32/u32                            & ---             & \texttt{test\_executors} \\
   \midrule
   \multicolumn{4}{l}{\textbf{Логические и битовые}} \\
@@ -52,7 +52,7 @@
   \texttt{cvta} & u64 (to/from generic)              & ---  & \texttt{test\_executors} \\
   \midrule
   \multicolumn{4}{l}{\textbf{Преобразования типов}} \\
-  \texttt{cvt}  & все пары $\{s8..f64\}$             & rn/rz/ru/rd/rni & \texttt{test\_executors} \\
+  \texttt{cvt}  & все пары $\{s8..f64\}$             & rn, rz, ru, rd, rni & \texttt{test\_executors} \\
   \midrule
   \multicolumn{4}{l}{\textbf{Управление потоком}} \\
   \texttt{bra}  & ---                                & ---  & \texttt{test\_barrier} \\
@@ -65,7 +65,7 @@
   \texttt{membar}    & cta/gl/sys      & ---  & \texttt{test\_barrier} \\
   \texttt{ex2}       & f32             & ---  & \texttt{test\_executors} \\
   \texttt{lg2}       & f32             & ---  & \texttt{test\_executors} \\
-  \texttt{rcp}       & f32/f64         & rn/rz/ru/rd & \texttt{test\_executors} \\
+  \texttt{rcp}       & f32/f64         & rn, rz, ru, rd & \texttt{test\_executors} \\
   \texttt{sqrt}      & f32/f64         & rn/rz       & \texttt{test\_executors} \\
   \texttt{sin}       & f32             & ---         & \texttt{test\_executors} \\
   \texttt{cos}       & f32             & ---         & \texttt{test\_executors} \\

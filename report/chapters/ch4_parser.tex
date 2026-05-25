@@ -23,9 +23,9 @@ PTX-текст имеет строго линейную структуру: по
 
 \subsubsection{Однопроходный инкрементный разбор}
 
-Анализатор реализует конечный автомат~\cite{Martynenko2004} с тремя состояниями:
-$Q = \{q_{\mathrm{init}}, q_{\mathrm{func}}, q_{\mathrm{block}}\}$
-и следующими переходами:
+Анализатор реализует конечный автомат~\cite{Martynenko2004}
+с состояниями $Q = \{q_{\mathrm{init}}, q_{\mathrm{func}}, q_{\mathrm{block}}\}$
+и переходами:
 \begin{itemize}
   \item $q_{\mathrm{init}} \xrightarrow{\texttt{.entry/.func}} q_{\mathrm{func}}$:
         встретили заголовок функции.
@@ -114,16 +114,18 @@ constexpr std::string_view Pattern = "^\\.?(@%p[0-9]+\\s)?([a-z]+2?).*$";
 По имени мнемоники функция \texttt{makeInstruction} диспетчеризует
 управление в соответствующий автогенерированный класс.
 
+\begin{sloppypar}
 \textbf{Фаза~2: Специальное регулярное выражение.}
 Каждый класс \texttt{\{name\}Instruction} порождается скриптом
 \texttt{autogen.py} из описания в \texttt{instructions.json}
 и компилируется в файл \texttt{instructions.cpp}.
+\end{sloppypar}
 Статический метод \texttt{Make(line)} применяет единственное
 скомпилированное регулярное выражение, охватывающее всю строку,
 и одним вызовом \texttt{std::regex\_match} извлекает
 все поля~--- предикат, модификаторы и операнды. Например, для \texttt{fma}:
 
-\begin{lstlisting}[language=C++, caption={Фрагмент автогенерированного instructions.cpp для fma}]
+\begin{lstlisting}[language=C++, breaklines=true, breakatwhitespace=false, caption={Фрагмент автогенерированного instructions.cpp для fma}]
 // regexp_template (instructions.json):
 // "fma\.($mode)\.($data)\s*($dst),\s*($src1),\s*($src2)?($imm1)?,\s*($src3)?($imm2)?;"
 constexpr std::string_view Pattern = R"ptx(...)ptx";
@@ -213,9 +215,9 @@ public:
 \end{lstlisting}
 
 Монотонный PC присваивается инструкции при разборе PTX и хранится
-в \texttt{InstructionList} модуля как индекс в глобальном векторе.
+как индекс в глобальном векторе модуля.
 При исполнении \texttt{Module::GetInstruction(pc)} возвращает
-\texttt{const Instruction\&} за O(1) через \texttt{instruction\_table\_[pc]}.
+\texttt{const Instruction\&} за $O(1)$ через прямую индексацию вектора.
 Тот же PC используется как ключ в записях \texttt{profiling.txt},
 обеспечивая инъективное соответствие между трассой и таблицей инструкций.
 
