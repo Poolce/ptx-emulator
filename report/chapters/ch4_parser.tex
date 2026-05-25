@@ -23,7 +23,7 @@ PTX-текст имеет строго линейную структуру: по
 
 \subsubsection{Однопроходный инкрементный разбор}
 
-Анализатор реализует конечный автомат с тремя состояниями:
+Анализатор реализует конечный автомат~\cite{Martynenko2004} с тремя состояниями:
 $Q = \{q_{\mathrm{init}}, q_{\mathrm{func}}, q_{\mathrm{block}}\}$
 и следующими переходами:
 \begin{itemize}
@@ -52,7 +52,7 @@ $Q = \{q_{\mathrm{init}}, q_{\mathrm{func}}, q_{\mathrm{block}}\}$
 
 \subsubsection{Разбор объявлений функций и параметров}
 
-Заголовок функции разбирается регулярным выражением~\cite{Thompson1968, Cox2007} (файл \texttt{module.cpp}):
+Заголовок функции разбирается регулярным выражением~\cite{Thompson1968, Cox2007, Martynenko2004} (файл \texttt{module.cpp}):
 
 \begin{lstlisting}[language=C++, caption={Регулярное выражение для заголовка функции (module.cpp)}]
 constexpr std::string_view Pattern =
@@ -155,7 +155,7 @@ if (std::regex_match(line, match, re)) {
 
 \subsubsection{Разрешение операндов}
 
-Классификация каждого операнда производится единожды при разборе,
+Классификация каждого операнда производится единожды при разборе~\cite{Martynenko2004},
 а не при каждом исполнении инструкции:
 
 \begin{itemize}

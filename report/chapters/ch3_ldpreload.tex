@@ -6,7 +6,7 @@
 
 Центральная идея механизма перехвата состоит в том, что CUDA-приложение
 вызывает функции из \texttt{libcudart.so} через PLT, а динамический
-загрузчик \texttt{ld.so}~\cite{LinuxManLdso, Drepper2011} разрешает эти символы в реализации из
+загрузчик \texttt{ld.so}~\cite{LinuxManLdso, Drepper2011, Stolyarov2011} разрешает эти символы в реализации из
 \texttt{libemuruntime.so}, заблаговременно помещённой в переменную
 \texttt{LD\_PRELOAD}.
 
@@ -69,7 +69,7 @@ cuobjdump --dump-ptx <binary> > ptx_text.txt
 \end{lstlisting}
 
 \texttt{cuobjdump} извлекает PTX-текст из секции \texttt{.nv\_fatbin}
-ELF-файла и выводит его в стандартный вывод. Эмулятор читает этот
+ELF-файла~\cite{Stolyarov2011} и выводит его в стандартный вывод. Эмулятор читает этот
 вывод и передаёт PTX-текст в \texttt{PtxModule::Make()},
 которая создаёт модуль и строит таблицу инструкций. Полученный \texttt{Module}
 сохраняется в \texttt{GlobalContext} под ключом-дескриптором.
@@ -78,7 +78,7 @@ ELF-файла и выводит его в стандартный вывод. Э
 \begin{enumerate}
   \item Прочитать путь к бинарному файлу из \texttt{CUEMU\_TARGET\_EXEC}.
   \item Выполнить \texttt{cuobjdump --dump-ptx <binary>},
-        захватить stdout через \texttt{popen()}.
+        захватить stdout через \texttt{popen()}~\cite{Stolyarov2011}.
   \item Передать полученный текст в \texttt{PtxModule::Make()},
         получить объект \texttt{Module} с таблицей инструкций.
   \item Сохранить \texttt{Module} в \texttt{GlobalContext}
