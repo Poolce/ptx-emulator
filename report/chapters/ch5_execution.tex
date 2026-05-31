@@ -191,7 +191,7 @@ rounding}).
   R'[t][\mathtt{s32}][d] = \mathrm{round}_n(R[t][\mathtt{f32}][a]),
   \quad \forall t \in \activeset(M),
 \end{equation}
-где $\mathrm{round}_n$~--- округление к ближайшему чётному (roundTiesToEven по IEEE~754).
+где $\mathrm{round}_n$~--- округление к ближайшему целому; при равноудалённости~--- к ближайшему чётному (roundTiesToEven по IEEE~754).
 
 \textbf{\texttt{cvt.rz.f32.s64 \%fd, \%ra}:}
 преобразование \texttt{s64} $\to$ \texttt{f32} с усечением дробной части:

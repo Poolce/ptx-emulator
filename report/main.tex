@@ -1,28 +1,23 @@
 %!TEX encoding = UTF-8 Unicode
-%!TEX program = pdflatex
+%!TEX program = xelatex
 \documentclass[12pt, a4paper]{extarticle}
 
-\usepackage{cmap}
-\usepackage[utf8]{inputenc}
-\usepackage[T2A]{fontenc}
-\usepackage{mathptmx}
-\DeclareFontFamily{T2A}{ptm}{}
-\DeclareFontShape{T2A}{ptm}{m}{n}{<->sub*cmr/m/n}{}
-\DeclareFontShape{T2A}{ptm}{bx}{n}{<->sub*cmr/bx/n}{}
-\DeclareFontShape{T2A}{ptm}{b}{n}{<->sub*cmr/bx/n}{}
-\DeclareFontShape{T2A}{ptm}{m}{it}{<->sub*cmr/m/it}{}
-\DeclareFontShape{T2A}{ptm}{bx}{it}{<->sub*cmr/bx/it}{}
-\DeclareFontShape{T2A}{ptm}{m}{sl}{<->sub*cmr/m/sl}{}
-\DeclareFontShape{T2A}{ptm}{b}{it}{<->sub*cmr/bx/it}{}
+\usepackage{fontspec}
+\defaultfontfeatures{Ligatures=TeX}
+\setmainfont{Times New Roman}
+\setmonofont{Liberation Mono}
+\usepackage{mathtools}
+\usepackage{unicode-math}
+\setmathfont{TeX Gyre Termes Math}
 \usepackage[a4paper,
-  left=2cm,
-  right=2cm,
+  left=2.5cm,
+  right=1.5cm,
   top=2cm,
   bottom=2cm]{geometry}
 \usepackage[russian]{babel}
 
 %% ===== Абзацные отступы =====
-\setlength{\parindent}{0.8cm}
+\setlength{\parindent}{1.25cm}
 \setlength{\parskip}{0.4cm}
 
 %% ===== Цвета =====
@@ -32,7 +27,7 @@
 \definecolor{mauve}{rgb}{0.58,0,0.82}
 
 %% ===== Листинги =====
-\usepackage{listingsutf8}
+\usepackage{listings}
 \lstset{
   frame=none,
   language=C++,
@@ -48,27 +43,37 @@
   stringstyle=\color{mauve},
   breaklines=true,
   breakatwhitespace=true,
-  tabsize=4,
-  extendedchars=true,
-  inputencoding=utf8/latin1
+  tabsize=4
 }
 
 %% ===== Математика =====
-\usepackage{mathtools}
-\usepackage{amsmath}
-\usepackage{amssymb}
 \usepackage{amsthm}
 
 %% ===== Иллюстрации =====
 \usepackage{graphicx}
 \graphicspath{{images/}}
-\usepackage{caption}
+\usepackage[font=footnotesize,justification=centering,labelsep=period]{caption}
 \usepackage{subcaption}
+
+%% ===== Заголовки: 16 пт, полужирный, прямой =====
+\usepackage{titlesec}
+\titleformat{\section}
+  {\normalfont\fontsize{16}{19}\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}
+  {\normalfont\fontsize{14}{17}\bfseries}{\thesubsection.}{0.5em}{}
+\titleformat{\subsubsection}
+  {\normalfont\fontsize{12}{14.4}\bfseries}{\thesubsubsection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{24pt}{12pt}
+\titlespacing*{\subsection}{0pt}{12pt}{6pt}
+\titlespacing*{\subsubsection}{0pt}{12pt}{6pt}
 
 %% ===== Оглавление =====
 \usepackage{tocloft}
 \renewcommand{\contentsname}{}
 \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+
+%% ===== Межстрочный интервал =====
+\usepackage{setspace}
 
 %% ===== Первый абзац =====
 \usepackage{indentfirst}
@@ -90,14 +95,19 @@
 
 %% ===== Библиография =====
 \usepackage[numbers,sort&compress]{natbib}
-\bibliographystyle{plain}
+\bibliographystyle{ugost2008}
 
 %% ===== Микротипографика =====
-\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage[protrusion=true]{microtype}
 \emergencystretch=3em
 
 %% ===== Гиперссылки =====
 \usepackage[hidelinks]{hyperref}
+\pdfstringdefDisableCommands{%
+  \renewcommand*{\geq}{>=}%
+  \renewcommand*{\leq}{<=}%
+  \renewcommand*{\neq}{!=}%
+}
 
 %% ===== Русские подписи =====
 \addto\captionsrussian{
@@ -119,6 +129,7 @@
 
 % ================================================================
 \begin{document}
+\onehalfspacing
 
 %% Титульный лист
 \include{title}
@@ -144,8 +155,13 @@
 
 %% Приложения
 \appendix
+\counterwithin{equation}{section}
+\counterwithin{figure}{section}
+\counterwithin{table}{section}
+\renewcommand{\theequation}{\thesection\arabic{equation}}
+\renewcommand{\thefigure}{\thesection\arabic{figure}}
+\renewcommand{\thetable}{\thesection\arabic{table}}
 \include{chapters/appendix_a}
-\include{chapters/appendix_b}
 \include{chapters/appendix_c}
 \include{chapters/appendix_d}
 \include{chapters/appendix_e}

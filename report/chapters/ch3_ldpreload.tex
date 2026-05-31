@@ -26,9 +26,11 @@
 для функций, не требующих реализации в рамках эмулятора
 (например, управление событиями, профили потоков).
 
+\begin{sloppypar}
 Большинство ядер не проверяют коды возврата вспомогательных вызовов
 (\texttt{cudaEventCreate} и~т.\,п.), поэтому заглушка с возвратом
 \texttt{cudaSuccess} достаточна для корректного исполнения ядра.
+\end{sloppypar}
 
 \subsubsection{Реализованные точки перехвата CUDA Runtime API}
 
@@ -101,14 +103,18 @@ CUDA Runtime API определяет, что при вызове \texttt{cudaLa
 \begin{equation}
   \mathit{functions\_}[\mathtt{ptr}] = \mathit{name},
 \end{equation}
+\begin{sloppypar}
 где \texttt{ptr}~--- числовое представление указателя на заглушку,
 \texttt{name}~--- строка вида \texttt{"\_Z11vadd\_kernelPfS\_S\_i"}.
+\end{sloppypar}
 
+\begin{sloppypar}
 При последующем вызове \texttt{cudaLaunchKernel(ptr, ...)} эмулятор
 извлекает строковое имя из отображения по ключу \texttt{ptr}
 и напрямую ищет функцию в \texttt{PtxModule::GetEntryFunction(name)}
 без демангла~--- PTX-имя уже является декорированным символом,
 которым \texttt{cuobjdump} подписывает каждую точку входа.
+\end{sloppypar}
 
 Использование указателя вместо строкового имени~--- не случайное решение:
 компоновщик C++ не гарантирует сохранение символьных имён, поэтому CUDA

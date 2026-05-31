@@ -1,7 +1,7 @@
 This is BibTeX, Version 0.99d (TeX Live 2023/Debian)
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
-The style file: plain.bst
+The style file: ugost2008.bst
 A level-1 auxiliary file: title.aux
 A level-1 auxiliary file: chapters/ch1_intro.aux
 A level-1 auxiliary file: chapters/ch2_theory.aux
@@ -18,49 +18,48 @@ A level-1 auxiliary file: chapters/appendix_c.aux
 A level-1 auxiliary file: chapters/appendix_d.aux
 A level-1 auxiliary file: chapters/appendix_e.aux
 A level-1 auxiliary file: chapters/appendix_f.aux
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: references.bib
-Warning--entry type for "IEEE754-2008" isn't style-file defined
---line 29 of file references.bib
-Warning--to sort, need author or key in IEEE754-2008
+Reallocated singl_function (elt_size=4) to 100 items from 50.
 You've used 24 entries,
-            2118 wiz_defined-function locations,
-            651 strings with 8804 characters,
-and the built_in function-call counts, 7209 in all, are:
-= -- 684
-> -- 340
-< -- 4
-+ -- 138
-- -- 112
-* -- 432
-:= -- 1190
-add.period$ -- 69
+            5635 wiz_defined-function locations,
+            1747 strings with 21015 characters,
+and the built_in function-call counts, 7928 in all, are:
+= -- 899
+> -- 225
+< -- 31
++ -- 81
+- -- 57
+* -- 433
+:= -- 848
+add.period$ -- 84
 call.type$ -- 24
-change.case$ -- 118
+change.case$ -- 0
 chr.to.int$ -- 0
-cite$ -- 25
-duplicate$ -- 304
-empty$ -- 609
-format.name$ -- 112
-if$ -- 1528
+cite$ -- 24
+duplicate$ -- 435
+empty$ -- 1001
+format.name$ -- 57
+if$ -- 2137
 int.to.chr$ -- 0
 int.to.str$ -- 24
-missing$ -- 21
-newline$ -- 119
-num.names$ -- 46
+missing$ -- 0
+newline$ -- 161
+num.names$ -- 64
 pop$ -- 176
 preamble$ -- 1
-purify$ -- 104
+purify$ -- 0
 quote$ -- 0
-skip$ -- 206
+skip$ -- 275
 stack$ -- 0
-substring$ -- 321
-swap$ -- 71
-text.length$ -- 4
+substring$ -- 219
+swap$ -- 259
+text.length$ -- 7
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 86
-warning$ -- 1
-while$ -- 66
+type$ -- 0
+warning$ -- 0
+while$ -- 48
 width$ -- 26
-write$ -- 248
-(There were 2 warnings)
+write$ -- 332

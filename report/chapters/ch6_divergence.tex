@@ -162,10 +162,12 @@ IPDOM обнаруживается позже, когда ветка перех�
 
 \subsubsection{Обнаружение IPDOM и цикл реконвергенции}
 
+\begin{sloppypar}
 \textbf{Обнаружение точки слияния (PDOM\_Merge).}
 NVCC всегда завершает ветку перехода безусловным прыжком вперёд к точке
 слияния. Исполнитель \texttt{braInstruction::ExecuteBranch} обрабатывает
 этот прыжок следующим образом:
+\end{sloppypar}
 
 \begin{algorithm}[H]
   \caption{PDOM\_Merge --- безусловный \texttt{bra \$L} при непустом стеке}
@@ -261,8 +263,10 @@ PDOM\_Diverge корректно разделяет «продолжающие»
 потоков в маске:
 $M' = M \setminus \{t \mid \text{поток } t \text{ исполняет exit}\}$.
 
+\begin{sloppypar}
 При $M' = 0$ метод \texttt{isActive()} возвращает \texttt{false}:
 диспетчер блока (\texttt{rt\_stream.cpp}) останавливает варп. Модуль исполнения варпа только обновляет
 маску~--- сигнал останова передаётся через публичный метод.
+\end{sloppypar}
 
 \newpage
