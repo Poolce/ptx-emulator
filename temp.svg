@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" font-family="DejaVu Sans, Arial, sans-serif">
+  <defs>
+    <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1e3a8a"/>
+    </marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#166534"/>
+    </marker>
+    <marker id="arrO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/>
+    </marker>
+  </defs>
+
+  <rect width="1280" height="720" fill="#ffffff"/>
+
+  <!-- ============ LEFT PANEL: ПЕРЕХВАТ ============ -->
+  <rect x="40" y="86" width="560" height="600" rx="18" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>
+  <text x="320" y="125" text-anchor="middle" font-size="26" font-weight="bold" fill="#1e3a8a">1. Перехват (LD_PRELOAD)</text>
+
+  <!-- A -->
+  <rect x="100" y="150" width="440" height="74" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="320" y="195" text-anchor="middle" font-size="25" font-weight="bold" fill="#1e3a8a">CUDA-приложение</text>
+
+  <line x1="320" y1="224" x2="320" y2="294" stroke="#1e3a8a" stroke-width="2.5" marker-end="url(#arrB)"/>
+  <text x="332" y="266" font-size="17" font-style="italic" fill="#475569">вызов CUDA Runtime API (PLT)</text>
+
+  <!-- B -->
+  <rect x="100" y="298" width="440" height="92" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="320" y="335" text-anchor="middle" font-size="25" font-weight="bold" fill="#1e3a8a">libemuruntime.so</text>
+  <text x="320" y="367" text-anchor="middle" font-size="18" fill="#1e40af">заглушки вместо libcudart.so</text>
+
+  <line x1="320" y1="390" x2="320" y2="458" stroke="#1e3a8a" stroke-width="2.5" marker-end="url(#arrB)"/>
+  <text x="332" y="430" font-size="17" font-style="italic" fill="#475569">__cudaRegisterFatBinary</text>
+
+  <!-- C -->
+  <rect x="100" y="462" width="440" height="92" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="320" y="499" text-anchor="middle" font-size="25" font-weight="bold" fill="#1e3a8a">cuobjdump --dump-ptx</text>
+  <text x="320" y="531" text-anchor="middle" font-size="18" fill="#1e40af">извлечение PTX из fatbin</text>
+
+
+  <!-- ============ RIGHT PANEL: ПАРСИНГ ============ -->
+  <rect x="680" y="86" width="560" height="600" rx="18" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="2"/>
+  <text x="960" y="125" text-anchor="middle" font-size="26" font-weight="bold" fill="#166534">2. Однопроходный анализатор PTX</text>
+
+  <!-- D -->
+  <rect x="740" y="156" width="440" height="92" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
+  <text x="960" y="193" text-anchor="middle" font-size="25" font-weight="bold" fill="#166534">PtxModule::Make()</text>
+  <text x="960" y="225" text-anchor="middle" font-size="18" fill="#15803d">init &#8594; func &#8594; basic_block &#8594; instr</text>
+
+  <line x1="960" y1="248" x2="960" y2="316" stroke="#166534" stroke-width="2.5" marker-end="url(#arrG)"/>
+
+  <!-- E -->
+  <rect x="740" y="320" width="440" height="92" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
+  <text x="960" y="357" text-anchor="middle" font-size="25" font-weight="bold" fill="#166534">Разбор инструкции</text>
+  <text x="960" y="389" text-anchor="middle" font-size="18" fill="#15803d">regex &#8594; типизированные поля</text>
+
+  <line x1="960" y1="412" x2="960" y2="480" stroke="#166534" stroke-width="2.5" marker-end="url(#arrG)"/>
+
+  <!-- F -->
+  <rect x="740" y="484" width="440" height="92" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5"/>
+  <text x="960" y="521" text-anchor="middle" font-size="25" font-weight="bold" fill="#166534">Module</text>
+  <text x="960" y="553" text-anchor="middle" font-size="18" fill="#15803d">таблица инструкций (PC) + basic_block граф</text>
+
+  <!-- ============ HANDOFF ============ -->
+  <path d="M540,508 C 640,508 600,200 738,200" fill="none" stroke="#c2410c" stroke-width="3" marker-end="url(#arrO)"/>
+  <rect x="560" y="610" width="160" height="52" rx="26" fill="#ffedd5" stroke="#c2410c" stroke-width="2.5"/>
+  <text x="640" y="643" text-anchor="middle" font-size="22" font-weight="bold" fill="#9a3412">PTX-текст</text>
+
+</svg>
