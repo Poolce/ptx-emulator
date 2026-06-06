@@ -10,7 +10,7 @@
 
 constexpr int N = 512;
 constexpr int MAX_ITER = 20;
-constexpr float TOL = 1e-4f;
+constexpr float TOL = 1e-5f;
 
 template <int block_size>
 __global__ void gemv(const float* A, const float* x, float* y, int n)
@@ -233,7 +233,7 @@ int main()
     {
         const float diff = std::abs(out[i] - ref_out[i]);
         const float denom = std::max(std::abs(ref_out[i]), 1e-6f);
-        if (diff / denom > 1e-3f)
+        if (diff / denom > 1e-5f)
         {
             std::cerr << "FAIL: out[" << i << "] = " << out[i] << ", expected " << ref_out[i]
                       << "  (rel_diff=" << diff / denom << ")\n";

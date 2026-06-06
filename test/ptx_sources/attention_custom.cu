@@ -144,7 +144,7 @@ int main()
     cpu_scale_softmax(ref_scores.data(), ref_attn.data(), S, S, inv_scale);
     cpu_matmul(ref_attn.data(), S, S, V.data(), D, ref_out.data());
 
-    constexpr float tol = 1e-3f;
+    constexpr float tol = 5e-5f;
     bool ok = true;
 
     for (int i = 0; i < S && ok; ++i)
@@ -154,6 +154,7 @@ int main()
             const int idx = i * D + j;
             const float diff = std::abs(out[idx] - ref_out[idx]);
             const float denom = std::max(std::abs(ref_out[idx]), 1e-6f);
+            if (diff < 1e-7f) continue;
             if (diff / denom > tol)
             {
                 std::cerr << "FAIL: out[" << i << "][" << j << "] = " << out[idx] << ", expected " << ref_out[idx]

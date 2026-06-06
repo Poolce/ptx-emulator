@@ -143,7 +143,7 @@ int main()
     bool ok = true;
     for (int i = 0; i < ROWS; ++i)
     {
-        if (std::fabs(h_row[i] - h_ref_row[i]) > 1e-3f)
+        if (std::fabs(h_row[i] - h_ref_row[i]) > 1e-6f)
         {
             std::printf("FAIL row_reduce[%d]: got %.4f expected %.4f\n", i, h_row[i], h_ref_row[i]);
             ok = false;
@@ -151,7 +151,7 @@ int main()
     }
     for (int i = 0; i < COLS; ++i)
     {
-        if (std::fabs(h_col[i] - h_ref_col[i]) > 1e-3f)
+        if (std::fabs(h_col[i] - h_ref_col[i]) > 1e-6f)
         {
             std::printf("FAIL col_reduce[%d]: got %.4f expected %.4f\n", i, h_col[i], h_ref_col[i]);
             ok = false;

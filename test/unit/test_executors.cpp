@@ -701,7 +701,7 @@ TEST(TanhExecutor, F32PositiveSaturation)
 
     tanhInstruction::Make("tanh.approx.ftz.f32 %r1, %r0;")->Execute(wc);
 
-    EXPECT_NEAR(r32<float>(wc, 1), 1.0F, 1e-5F);
+    EXPECT_NEAR(r32<float>(wc, 1), 1.0F, 1e-6F);
 }
 
 TEST(TanhExecutor, F32MatchesStdTanh)

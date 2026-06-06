@@ -79,7 +79,7 @@ int main()
     launch_cuda_softmax(in.data(), out.data(), rows);
     cpu_softmax(in.data(), ref.data(), rows, cols);
 
-    constexpr float tol = 1e-4f;
+    constexpr float tol = 1e-6f;
     bool ok = true;
 
     for (int i = 0; i < rows * cols; ++i)

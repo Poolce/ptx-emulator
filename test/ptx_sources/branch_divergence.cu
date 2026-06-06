@@ -118,12 +118,12 @@ int main()
     bool ok = true;
     for (int i = 0; i < N; ++i)
     {
-        if (std::fabs(h_out_div[i] - h_ref_div[i]) > 1e-4f)
+        if (std::fabs(h_out_div[i] - h_ref_div[i]) > 1e-6f)
         {
             std::printf("FAIL divergent[%d]: got %.6f expected %.6f\n", i, h_out_div[i], h_ref_div[i]);
             ok = false;
         }
-        if (std::fabs(h_out_conv[i] - h_ref_conv[i]) > 1e-4f)
+        if (std::fabs(h_out_conv[i] - h_ref_conv[i]) > 1e-6f)
         {
             std::printf("FAIL convergent[%d]: got %.6f expected %.6f\n", i, h_out_conv[i], h_ref_conv[i]);
             ok = false;

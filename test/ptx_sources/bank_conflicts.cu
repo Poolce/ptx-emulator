@@ -86,12 +86,12 @@ int main()
     bool ok = true;
     for (int i = 0; i < TILE; ++i)
     {
-        if (std::fabs(h_out_c[i] - h_ref[i]) > 1e-3f)
+        if (std::fabs(h_out_c[i] - h_ref[i]) > 1e-6f)
         {
             std::printf("FAIL conflicted[%d]: got %.4f expected %.4f\n", i, h_out_c[i], h_ref[i]);
             ok = false;
         }
-        if (std::fabs(h_out_f[i] - h_ref[i]) > 1e-3f)
+        if (std::fabs(h_out_f[i] - h_ref[i]) > 1e-6f)
         {
             std::printf("FAIL conflict_free[%d]: got %.4f expected %.4f\n", i, h_out_f[i], h_ref[i]);
             ok = false;

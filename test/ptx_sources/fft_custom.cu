@@ -152,7 +152,7 @@ int main()
     std::vector<float> ref_r(FFT_N);
     std::vector<float> ref_i(FFT_N);
 
-    constexpr float tol = 1e-3f;
+    constexpr float tol = 5e-5f;
     bool ok = true;
 
     for (int b = 0; b < BATCHES && ok; ++b)

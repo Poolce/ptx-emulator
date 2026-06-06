@@ -63,7 +63,7 @@ int main()
 
     launch_cuda_gelu(in.data(), out.data(), N);
 
-    constexpr float tol = 1e-4f;
+    constexpr float tol = 5e-5f;
     bool ok = true;
     for (std::size_t i = 0; i < N; ++i)
     {
