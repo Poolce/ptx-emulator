@@ -1,0 +1,216 @@
+\begin{thebibliography}{10}
+\def\selectlanguageifdefined#1{
+\expandafter\ifx\csname date#1\endcsname\relax
+\else\selectlanguage{#1}\fi}
+\providecommand*{\href}[2]{{\small #2}}
+\providecommand*{\url}[1]{{\small #1}}
+\providecommand*{\BibUrl}[1]{\url{#1}}
+\providecommand{\BibAnnote}[1]{}
+\providecommand*{\BibEmph}[1]{#1}
+\ProvideTextCommandDefault{\cyrdash}{\iflanguage{russian}{\hbox
+  to.8em{--\hss--}}{\textemdash}}
+\providecommand*{\BibDash}{\ifdim\lastskip>0pt\unskip\nobreak\hskip.2em plus
+  0.1em\fi
+\cyrdash\hskip.2em plus 0.1em\ignorespaces}
+\renewcommand{\newblock}{\ignorespaces}
+
+\bibitem{Nickolls2008}
+\selectlanguageifdefined{english}
+Scalable Parallel Programming with {CUDA}~/ Nickolls~John, Buck~Ian,
+  Garland~Michael, and Skadron~Kevin~//
+  \href{https://doi.org/10.1145/1365490.1365500}{\BibEmph{ACM Queue}}. \BibDash
+\newblock 2008. \BibDash
+\newblock Vol.~6, no.~2. \BibDash
+\newblock P.~40--53.
+
+\bibitem{Lindholm2008}
+\selectlanguageifdefined{english}
+{NVIDIA Tesla}: A Unified Graphics and Computing Architecture~/ Lindholm~Erik,
+  Nickolls~John, Oberman~Stuart, and Montrym~John~//
+  \href{https://doi.org/10.1109/MM.2008.31}{\BibEmph{IEEE Micro}}. \BibDash
+\newblock 2008. \BibDash
+\newblock Vol.~28, no.~2. \BibDash
+\newblock P.~39--55.
+
+\bibitem{PTXISA}
+\selectlanguageifdefined{english}
+{NVIDIA Corporation}. \BibDash
+\newblock {PTX ISA} Version 8.0. \BibDash
+\newblock NVIDIA Corporation, 2023. \BibDash
+\newblock Access mode:
+  \BibUrl{https://docs.nvidia.com/cuda/parallel-thread-execution/}.
+
+\bibitem{Diamos2010}
+\selectlanguageifdefined{english}
+Diamos~Gregory~F., Kerr~Andrew~R., Yalamanchili~Sudhakar. Translating GPU
+  binaries to tiered {SIMD} architectures with {Ocelot}~// Proceedings of the
+  ACM International Conference on Parallel Architectures and Compilation
+  Techniques. \BibDash
+\newblock 2010.
+
+\bibitem{Bakhoda2009}
+\selectlanguageifdefined{english}
+\href{https://doi.org/10.1109/ISPASS.2009.4919648}{Analyzing {CUDA} workloads
+  using a detailed {GPU} simulator}~/ Bakhoda~Ali, Yuan~George~L.,
+  Fung~Wilson~W.L., Wong~Henry, and Aamodt~Tor~M.~// 2009 IEEE International
+  Symposium on Performance Analysis of Systems and Software (ISPASS). \BibDash
+\newblock 2009. \BibDash
+\newblock P.~163--174.
+
+\bibitem{DaoudKamal2023}
+\selectlanguageifdefined{english}
+Daoud~Khalid, Kamal~Mohammed. Survey on GPU Emulation Frameworks~//
+  \BibEmph{Journal of Parallel and Distributed Computing}. \BibDash
+\newblock 2023. \BibDash
+\newblock Vol. 178. \BibDash
+\newblock P.~1--15.
+
+\bibitem{NVCC}
+\selectlanguageifdefined{english}
+{NVIDIA Corporation}. \BibDash
+\newblock {NVCC}: The CUDA Compiler Driver. \BibDash
+\newblock NVIDIA Corporation, 2023. \BibDash
+\newblock Access mode:
+  \BibUrl{https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/}.
+
+\bibitem{Lattner2004}
+\selectlanguageifdefined{english}
+Lattner~Chris, Adve~Vikram.
+  \href{https://doi.org/10.1109/CGO.2004.1281665}{{LLVM}: A Compilation
+  Framework for Lifelong Program Analysis and Transformation}~// Proceedings of
+  the International Symposium on Code Generation and Optimization (CGO).
+  \BibDash
+\newblock 2004. \BibDash
+\newblock P.~75--86.
+
+\bibitem{IEEE754-2008}
+\selectlanguageifdefined{english}
+{IEEE}. \BibDash
+\newblock \href{https://doi.org/10.1109/IEEESTD.2008.4610935}{{IEEE Standard
+  for Floating-Point Arithmetic} ({IEEE} Std 754-2008)}. \BibDash
+\newblock IEEE, 2008.
+
+\bibitem{LinuxManLdso}
+\selectlanguageifdefined{english}
+{Linux man-pages project}. \BibDash
+\newblock ld.so(8) --- Linux manual page~: 2023. \BibDash
+\newblock Access mode:
+  \BibUrl{https://man7.org/linux/man-pages/man8/ld.so.8.html}.
+
+\bibitem{Stolyarov2011}
+\selectlanguageifdefined{russian}
+Столяров~Алексей~Викторович. Введение в
+  операционные системы семейства {Unix}. \BibDash
+\newblock Москва~: Московский государственный
+  университет им. М.В. Ломоносова, 2011.
+
+\bibitem{Martynenko2004}
+\selectlanguageifdefined{russian}
+Мартыненко~Борис~Константинович. Языки и
+  трансляции. \BibDash
+\newblock Санкт-Петербург~: Санкт-Петербургский
+  государственный университет, 2004. \BibDash
+\newblock
+  ISBN:~\href{http://isbndb.com/search-all.html?kw=5-288-03230-7}{5-288-03230-7}.
+
+\bibitem{GergelStrongin2003}
+\selectlanguageifdefined{russian}
+Гергель~Виктор~Павлович,
+  Стронгин~Роман~Григорьевич. Основы
+  параллельных вычислений для
+  многопроцессорных вычислительных систем.
+  \BibDash
+\newblock Нижний Новгород~: Нижегородский
+  государственный университет им. Н.И.
+  Лобачевского, 2003.
+
+\bibitem{Kornyakov2010}
+\selectlanguageifdefined{russian}
+Инструменты параллельного
+  программирования в системах с общей
+  памятью~/ Корняков~Кирилл~Владимирович,
+  Кустикова~Валентина~Дмитриевна,
+  Мееров~Иосиф~Борисович,
+  Сиднев~Алексей~Андреевич,
+  Сысоев~Александр~Владимирович ^^d0^^b8
+  Шишков~Алексей~Владимирович. \BibDash
+\newblock Москва~: Московский государственный
+  университет им. М.В. Ломоносова, 2010.
+
+\bibitem{Lengauer1979}
+\selectlanguageifdefined{english}
+Lengauer~Thomas, Tarjan~Robert~Endre. A Fast Algorithm for Finding Dominators
+  in a Flowgraph~// \href{https://doi.org/10.1145/357062.357071}{\BibEmph{ACM
+  Transactions on Programming Languages and Systems}}. \BibDash
+\newblock 1979. \BibDash
+\newblock Vol.~1, no.~1. \BibDash
+\newblock P.~121--141.
+
+\bibitem{AhoUllman2006}
+\selectlanguageifdefined{english}
+Compilers: Principles, Techniques, and Tools~/ Aho~Alfred~V., Lam~Monica~S.,
+  Sethi~Ravi, and Ullman~Jeffrey~D. \BibDash
+\newblock 2nd ed. \BibDash
+\newblock Addison-Wesley, 2006.
+
+\bibitem{Fung2007}
+\selectlanguageifdefined{english}
+\href{https://doi.org/10.1109/MICRO.2007.12}{Dynamic warp formation and
+  scheduling for efficient {GPU} control flow}~/ Fung~Wilson~W.L., Sham~Ivan,
+  Yuan~George, and Aamodt~Tor~M.~// Proceedings of the 40th Annual IEEE/ACM
+  International Symposium on Microarchitecture (MICRO). \BibDash
+\newblock 2007. \BibDash
+\newblock P.~407--420.
+
+\bibitem{BenSalem2016}
+\selectlanguageifdefined{english}
+Ben-Salem~Walid, Boukoros~Riad. Modeling Divergent Control Flow for {SIMT}
+  Processors~// International Conference on High Performance Computing.
+  \BibDash
+\newblock 2016.
+
+\bibitem{Narasiman2011}
+\selectlanguageifdefined{english}
+\href{https://doi.org/10.1145/2155620.2155656}{Improving {GPU} Performance via
+  Large Warps and Two-Level Warp Scheduling}~/ Narasiman~Veynu,
+  Shebanow~Michael, Lee~Chang~Joo, Miftakhutdinov~Rustam, Mutlu~Onur, and
+  Patt~Yale~N.~// Proceedings of the 44th Annual IEEE/ACM International
+  Symposium on Microarchitecture (MICRO). \BibDash
+\newblock 2011. \BibDash
+\newblock P.~308--317.
+
+\bibitem{VoltaWhitepaper}
+\selectlanguageifdefined{english}
+{NVIDIA Corporation}. \BibDash
+\newblock {NVIDIA Tesla V100 GPU Architecture}. \BibDash
+\newblock NVIDIA Corporation, 2017. \BibDash
+\newblock Access mode:
+  \BibUrl{https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf}.
+
+\bibitem{CUDAProgrammingGuide}
+\selectlanguageifdefined{english}
+{NVIDIA Corporation}. \BibDash
+\newblock {CUDA C++} Programming Guide Version 12.3. \BibDash
+\newblock NVIDIA Corporation, 2023. \BibDash
+\newblock Access mode:
+  \BibUrl{https://docs.nvidia.com/cuda/cuda-c-programming-guide/}.
+
+\bibitem{AmpereWhitepaper}
+\selectlanguageifdefined{english}
+{NVIDIA Corporation}. \BibDash
+\newblock NVIDIA Ampere GA102 GPU Architecture. \BibDash
+\newblock NVIDIA Corporation, 2021.
+
+\bibitem{GoogleTest}
+\selectlanguageifdefined{english}
+{Google LLC}. {GoogleTest}: Google's C++ test and mock framework. \BibDash
+\newblock 2023. \BibDash
+\newblock Access mode: \BibUrl{https://github.com/google/googletest}.
+
+\bibitem{Plotkin1981}
+\selectlanguageifdefined{english}
+Plotkin~Gordon~D. A structural approach to operational semantics~// Report
+  DAIMI FN-19~/ Aarhus University. \BibDash
+\newblock 1981.
+
+\end{thebibliography}

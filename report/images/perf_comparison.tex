@@ -1,0 +1,47 @@
+% Диаграмма сравнения производительности: эмулятор (без/со профайлингом) vs V100.
+% Данные из таблицы tab:integration_results (ch8_testing.tex).
+% Лог. шкала по Y: значения V100 (мкс) и эмулятора (мс) различаются на ~5 порядков.
+% Подключается в главе через: \input{images/perf_comparison.tex}
+% Требует в преамбуле: \usepackage{pgfplots}\pgfplotsset{compat=1.18}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=15cm, height=8.5cm,
+        ybar=1.5pt,
+        bar width=8pt,
+        ymode=log,
+        log basis y=10,
+        log origin y=infty,
+        ymin=0.001, ymax=10000,
+        ylabel={Время исполнения, мс (лог. шкала)},
+        symbolic x coords={vadd,gelu,softmax,fft,mmul,attention,conj\_grad},
+        xtick=data,
+        x tick label style={font=\small},
+        ymajorgrids=true,
+        grid style={gray!25},
+        enlarge x limits=0.08,
+        legend style={at={(0.5,-0.16)}, anchor=north, legend columns=3,
+                      font=\small, draw=none},
+        legend cell align=left,
+      ]
+      % Эмулятор без профайлинга
+      \addplot[ybar, draw=black, line width=0.4pt, fill=gray!50] coordinates {
+        (vadd,20.5) (gelu,46.8) (softmax,60.9) (fft,52.6)
+        (mmul,111.7) (attention,300.5) (conj\_grad,890.6)};
+      % Эмулятор со сбором профайлинга
+      \addplot[ybar, draw=black, line width=0.4pt, fill=gray!90] coordinates {
+        (vadd,34.8) (gelu,121.8) (softmax,268.4) (fft,218.0)
+        (mmul,970.5) (attention,2074.1) (conj\_grad,1879.7)};
+      % V100-PCIE (значения переведены из мкс в мс)
+      \addplot[ybar, draw=black, line width=0.4pt, fill=white] coordinates {
+        (vadd,0.0072) (gelu,0.0080) (softmax,0.0078) (fft,0.0089)
+        (mmul,0.0178) (attention,0.1319) (conj\_grad,0.4763)};
+      \legend{Эмулятор (без проф.), Эмулятор (со сбором проф.), V100-PCIE}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Время исполнения ядер: эмулятор без профайлинга, со сбором
+           профайлинга и реальный GPU V100-PCIE. Логарифмическая шкала;
+           значения V100 переведены из микросекунд в миллисекунды.}
+  \label{fig:perf_comparison}
+\end{figure}
